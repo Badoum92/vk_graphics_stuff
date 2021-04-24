@@ -56,15 +56,30 @@ add_subdirectory(third_party/glfw)
 
 add_executable(main
     src/main.cc
+
+    src/api/window/window.cc
+    src/api/vk_context/vk_context.cc
+    src/api/instance/instance.cc
+    src/api/surface/surface.cc
+    src/api/physical_device/physical_device.cc
+    src/api/device/device.cc
+    src/api/swapchain/swapchain.cc
+    src/api/pipeline/pipeline.cc
+    src/api/shader/shader.cc
+    src/api/render_pass/render_pass.cc
+    src/api/framebuffer/framebuffer.cc
+    src/api/command_pool/command_pool.cc
+    src/api/command_buffers/command_buffers.cc
 )
 
 target_include_directories(main PRIVATE
+    SYSTEM ${Vulkan_INCLUDE_DIRS}
     SYSTEM third_party/glfw/include
     SYSTEM third_party/glm
     SYSTEM third_party/imgui
     SYSTEM third_party
-    SYSTEM ${Vulkan_INCLUDE_DIRS}
     src
+    src/api
 )
 
 target_link_libraries(main
@@ -79,3 +94,35 @@ add_definitions(
     -DGLM_FORCE_RADIANS
     -DGLM_FORCE_DEPTH_ZERO_TO_ONE
 )
+
+
+# --- SHADERS ---
+file(GLOB_RECURSE GLSL_SOURCE_FILES
+    "shaders/*.vert"
+    "shaders/*.frag"
+    "shaders/*.comp"
+    "shaders/*.geom"
+)
+
+foreach(GLSL ${GLSL_SOURCE_FILES})
+    get_filename_component(FILE_NAME ${GLSL} NAME)
+    set(SPIRV "${PROJECT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
+    add_custom_command(
+        OUTPUT ${SPIRV}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${GLSL} -o ${SPIRV}
+        DEPENDS ${GLSL}
+    )
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+endforeach(GLSL)
+
+add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})
+add_dependencies(main shaders)
+
+add_custom_command(TARGET main POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:main>/shaders/"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_BINARY_DIR}/shaders"
+        "$<TARGET_FILE_DIR:main>/shaders"
+)
+# ---------------
