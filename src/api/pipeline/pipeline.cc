@@ -2,15 +2,18 @@
 
 #include "vk_context/vk_context.hh"
 #include "shader/shader.hh"
+#include "vertex.hh"
 
 void Pipeline::create()
 {
+    auto desc = Vertex::get_description(0);
+
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_info.vertexBindingDescriptionCount = 0;
-    vertex_input_info.pVertexBindingDescriptions = nullptr;
-    vertex_input_info.vertexAttributeDescriptionCount = 0;
-    vertex_input_info.pVertexAttributeDescriptions = nullptr;
+    vertex_input_info.vertexBindingDescriptionCount = 1;
+    vertex_input_info.pVertexBindingDescriptions = &desc.binding();
+    vertex_input_info.vertexAttributeDescriptionCount = desc.attributes().size();
+    vertex_input_info.pVertexAttributeDescriptions = desc.attributes().data();
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info{};
     input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -80,12 +83,6 @@ void Pipeline::create()
     color_blend_info.blendConstants[2] = 0.0f;
     color_blend_info.blendConstants[3] = 0.0f;
 
-    /* VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_LINE_WIDTH};
-    VkPipelineDynamicStateCreateInfo dynamic_state{};
-    dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state.dynamicStateCount = 3;
-    dynamic_state.pDynamicStates = dynamic_states; */
-
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = 0;
@@ -111,7 +108,7 @@ void Pipeline::create()
     pipeline_info.pMultisampleState = &multisampling_info;
     pipeline_info.pDepthStencilState = nullptr;
     pipeline_info.pColorBlendState = &color_blend_info;
-    pipeline_info.pDynamicState = nullptr; // &dynamic_state;
+    pipeline_info.pDynamicState = nullptr;
     pipeline_info.layout = layout_;
     pipeline_info.renderPass = VkContext::renderpass;
     pipeline_info.subpass = 0;

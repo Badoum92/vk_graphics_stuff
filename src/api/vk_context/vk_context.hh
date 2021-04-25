@@ -1,5 +1,10 @@
 #pragma once
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-extension"
+#include <vma/vk_mem_alloc.h>
+#pragma clang diagnostic pop
+
 #include <vulkan/vulkan.h>
 #include <vector>
 
@@ -13,6 +18,7 @@
 #include "pipeline/pipeline.hh"
 #include "command_pool/command_pool.hh"
 #include "command_buffers/command_buffers.hh"
+#include "buffer/buffer.hh"
 
 #include "vk_tools.hh"
 
@@ -47,4 +53,11 @@ struct VkContext
     static std::vector<VkSemaphore> render_finished_semaphores;
     static std::vector<VkFence> in_flight_fences;
     static std::vector<VkFence> images_in_flight;
+
+    static VmaAllocator allocator;
+
+    /* --- */
+
+    static Buffer vertex_buffer;
+    static Buffer index_buffer;
 };

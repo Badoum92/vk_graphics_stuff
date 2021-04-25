@@ -43,12 +43,10 @@ add_subdirectory(third_party/glfw)
 #     third_party/imgui/
 #     third_party/imgui/backends
 #     third_party/glfw/include
-#     third_party/glad/include
 # )
 # target_link_libraries(imgui PRIVATE
 #     ${OPENGL_LIBRARIES}
 #     glfw
-#     glad
 # )
 # set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
 # add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
@@ -56,6 +54,8 @@ add_subdirectory(third_party/glfw)
 
 add_executable(main
     src/main.cc
+
+    src/implems.cc
 
     src/api/window/window.cc
     src/api/vk_context/vk_context.cc
@@ -70,16 +70,20 @@ add_executable(main
     src/api/framebuffer/framebuffer.cc
     src/api/command_pool/command_pool.cc
     src/api/command_buffers/command_buffers.cc
+    src/api/buffer/buffer.cc
 )
 
-target_include_directories(main PRIVATE
-    SYSTEM ${Vulkan_INCLUDE_DIRS}
-    SYSTEM third_party/glfw/include
-    SYSTEM third_party/glm
-    SYSTEM third_party/imgui
-    SYSTEM third_party
-    src
-    src/api
+target_include_directories(main
+    PRIVATE src
+    PRIVATE src/api
+)
+
+target_include_directories(main
+    SYSTEM PRIVATE ${Vulkan_INCLUDE_DIRS}
+    SYSTEM PRIVATE third_party/glfw/include
+    SYSTEM PRIVATE third_party/glm
+    SYSTEM PRIVATE third_party/imgui
+    SYSTEM PRIVATE third_party
 )
 
 target_link_libraries(main

@@ -1,6 +1,9 @@
 #include "vk_context.hh"
 
+#include <vma/vk_mem_alloc.h>
+
 #include "window/window.hh"
+#include "vertex.hh"
 
 const int VkContext::FRAMES_IN_FLIGHT = 2;
 size_t VkContext::current_frame = 0;
@@ -21,12 +24,27 @@ std::vector<VkSemaphore> VkContext::render_finished_semaphores;
 std::vector<VkFence> VkContext::in_flight_fences;
 std::vector<VkFence> VkContext::images_in_flight;
 
+VmaAllocator VkContext::allocator;
+
+/* --- */
+
+Buffer VkContext::vertex_buffer;
+Buffer VkContext::index_buffer;
+
 void VkContext::create()
 {
     instance.create();
     surface.create();
     physical_device.create();
     device.create();
+
+    VmaAllocatorCreateInfo allocator_info = {};
+    allocator_info.vulkanApiVersion = VK_API_VERSION_1_2;
+    allocator_info.instance = instance;
+    allocator_info.physicalDevice = physical_device;
+    allocator_info.device = device;
+    vmaCreateAllocator(&allocator_info, &allocator);
+
     command_pool.create();
     swapchain.create();
     renderpass.create();
@@ -37,6 +55,22 @@ void VkContext::create()
     {
         framebuffers[i].create(renderpass, swapchain.image_views()[i]);
     }
+
+    // clang-format off
+    const std::vector<Vertex> vertices = {
+        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    const std::vector<uint16_t> indices = {
+        0, 1, 2,
+        2, 3, 0
+    };
+    // clang-format on
+    vertex_buffer.create_vertex(vertices.data(), vertices.size() * sizeof(Vertex));
+    index_buffer.create_index(indices.data(), indices.size() * sizeof(uint16_t));
 
     command_buffers.create();
     for (size_t i = 0; i < command_buffers.size(); ++i)
@@ -62,6 +96,11 @@ void VkContext::destroy()
     pipeline.destroy();
     renderpass.destroy();
     swapchain.destroy();
+
+    vertex_buffer.destroy();
+    index_buffer.destroy();
+    vmaDestroyAllocator(allocator);
+
     device.destroy();
     physical_device.destroy();
     surface.destroy();

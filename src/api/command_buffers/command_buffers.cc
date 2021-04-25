@@ -29,7 +29,7 @@ void CommandBuffers::record(size_t i)
 {
     VkCommandBufferBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT; // FIXME
+    begin_info.flags = 0;
     begin_info.pInheritanceInfo = nullptr;
 
     VK_CHECK(vkBeginCommandBuffer(handles_[i], &begin_info));
@@ -50,7 +50,10 @@ void CommandBuffers::record(size_t i)
 
     vkCmdBindPipeline(handles_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext::pipeline);
 
-    vkCmdDraw(handles_[i], 3, 1, 0, 0);
+    VkContext::vertex_buffer.bind_vertex(handles_[i], 0, 0);
+    VkContext::index_buffer.bind_index(handles_[i], 0, VK_INDEX_TYPE_UINT16);
+
+    vkCmdDrawIndexed(handles_[i], VkContext::index_buffer.count<uint16_t>(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(handles_[i]);
 
