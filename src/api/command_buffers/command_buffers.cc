@@ -16,7 +16,9 @@ void CommandBuffers::create()
 }
 
 void CommandBuffers::destroy()
-{}
+{
+    vkFreeCommandBuffers(VkContext::device, VkContext::command_pool, handles_.size(), handles_.data());
+}
 
 size_t CommandBuffers::size() const
 {

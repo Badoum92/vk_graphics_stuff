@@ -22,9 +22,12 @@ struct VkContext
     static size_t current_frame;
 
     static void draw_frame();
+    static void wait_idle();
 
     static void create();
     static void destroy();
+
+    static void refresh();
 
     static Instance instance;
     static Surface surface;

@@ -7,6 +7,7 @@ static void key_callback(GLFWwindow*, int, int, int, int);
 
 int Window::width_{0};
 int Window::height_{0};
+bool Window::resized_{false};
 GLFWwindow* Window::handle_{nullptr};
 
 void Window::create(int width, int height, const std::string& title)
@@ -22,7 +23,6 @@ void Window::create(int width, int height, const std::string& title)
     height_ = height;
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     handle_ = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 
@@ -45,7 +45,6 @@ void Window::destroy()
     width_ = 0;
     height_ = 0;
 }
-
 
 void Window::resize(int width, int height)
 {
@@ -75,9 +74,14 @@ void Window::set_size(int width, int height)
     height_ = height;
 }
 
-void Window::update()
+void Window::poll_events()
 {
     glfwPollEvents();
+}
+
+void Window::wait_events()
+{
+    glfwWaitEvents();
 }
 
 void Window::close()
@@ -90,11 +94,27 @@ bool Window::should_close()
     return glfwWindowShouldClose(handle_) != 0;
 }
 
+bool Window::resized(bool set)
+{
+    if (set)
+    {
+        resized_ = true;
+        return true;
+    }
+    else
+    {
+        bool ret = resized_;
+        resized_ = false;
+        return ret;
+    }
+}
+
 /* GLFW callbacks */
 
-static void framebuffer_size_callback(GLFWwindow* w, int width, int height)
+static void framebuffer_size_callback(GLFWwindow*, int width, int height)
 {
     Window::set_size(width, height);
+    Window::resized(true);
 }
 
 /* static void cursor_pos_callback(GLFWwindow*, double x_pos, double y_pos)

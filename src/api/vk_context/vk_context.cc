@@ -1,5 +1,7 @@
 #include "vk_context.hh"
 
+#include "window/window.hh"
+
 const int VkContext::FRAMES_IN_FLIGHT = 2;
 size_t VkContext::current_frame = 0;
 
@@ -66,6 +68,40 @@ void VkContext::destroy()
     instance.destroy();
 }
 
+void VkContext::refresh()
+{
+    while (Window::width() == 0 || Window::height() == 0)
+    {
+        Window::wait_events();
+        Window::resized();
+    }
+
+    wait_idle();
+
+    for (auto& framebuffer : framebuffers)
+    {
+        framebuffer.destroy();
+    }
+
+    command_buffers.destroy();
+    pipeline.destroy();
+    renderpass.destroy();
+    swapchain.destroy();
+
+    swapchain.create();
+    renderpass.create();
+    pipeline.create();
+    for (size_t i = 0; i < framebuffers.size(); ++i)
+    {
+        framebuffers[i].create(renderpass, swapchain.image_views()[i]);
+    }
+    command_buffers.create();
+    for (size_t i = 0; i < command_buffers.size(); ++i)
+    {
+        command_buffers.record(i);
+    }
+}
+
 void VkContext::create_sync()
 {
     image_available_semaphores.resize(FRAMES_IN_FLIGHT);
@@ -103,8 +139,18 @@ void VkContext::draw_frame()
     vkWaitForFences(device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
 
     uint32_t image_index;
-    vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_available_semaphores[current_frame], VK_NULL_HANDLE,
-                          &image_index);
+    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_available_semaphores[current_frame],
+                                            VK_NULL_HANDLE, &image_index);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        refresh();
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("Failed to acquire swapchain image");
+    }
 
     if (images_in_flight[image_index] != VK_NULL_HANDLE)
     {
@@ -142,7 +188,21 @@ void VkContext::draw_frame()
     present_info.pImageIndices = &image_index;
     present_info.pResults = nullptr;
 
-    vkQueuePresentKHR(device.present_queue(), &present_info);
+    result = vkQueuePresentKHR(device.present_queue(), &present_info);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || Window::resized())
+    {
+        refresh();
+    }
+    else if (result != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to present swapchain image");
+    }
 
     current_frame = (current_frame + 1) % FRAMES_IN_FLIGHT;
+}
+
+void VkContext::wait_idle()
+{
+    vkDeviceWaitIdle(device);
 }

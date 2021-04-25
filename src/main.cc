@@ -12,11 +12,11 @@ int main(int, char**)
 
         while (!Window::should_close())
         {
-            Window::update();
+            Window::poll_events();
             VkContext::draw_frame();
         }
 
-        vkDeviceWaitIdle(VkContext::device);
+        VkContext::wait_idle();
 
         VkContext::destroy();
         Window::destroy();
