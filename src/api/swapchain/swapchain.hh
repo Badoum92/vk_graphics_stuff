@@ -12,6 +12,7 @@ public:
     const VkFormat& format() const;
     const VkExtent2D& extent() const;
     const std::vector<VkImageView>& image_views() const;
+    size_t size() const;
 
     inline VkSwapchainKHR handle() const
     {

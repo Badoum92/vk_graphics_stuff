@@ -57,6 +57,7 @@ add_executable(main
 
     src/implems.cc
 
+    src/api/vk_tools.cc
     src/api/window/window.cc
     src/api/vk_context/vk_context.cc
     src/api/instance/instance.cc

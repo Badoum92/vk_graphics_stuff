@@ -148,3 +148,8 @@ const std::vector<VkImageView>& SwapChain::image_views() const
 {
     return image_views_;
 }
+
+size_t SwapChain::size() const
+{
+    return images_.size();
+}

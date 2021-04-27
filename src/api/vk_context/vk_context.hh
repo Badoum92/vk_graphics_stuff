@@ -46,9 +46,6 @@ struct VkContext
     static std::vector<FrameBuffer> framebuffers;
     static CommandBuffers command_buffers;
 
-    static void create_sync();
-    static void destroy_sync();
-
     static std::vector<VkSemaphore> image_available_semaphores;
     static std::vector<VkSemaphore> render_finished_semaphores;
     static std::vector<VkFence> in_flight_fences;
@@ -60,4 +57,11 @@ struct VkContext
 
     static Buffer vertex_buffer;
     static Buffer index_buffer;
+
+private:
+    static void inner_create();
+    static void inner_destroy();
+
+    static void create_sync();
+    static void destroy_sync();
 };

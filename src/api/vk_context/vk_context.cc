@@ -1,6 +1,8 @@
 #include "vk_context.hh"
 
 #include <vma/vk_mem_alloc.h>
+#include <stdexcept>
+#include <iostream>
 
 #include "window/window.hh"
 #include "vertex.hh"
@@ -37,6 +39,7 @@ void VkContext::create()
     surface.create();
     physical_device.create();
     device.create();
+    command_pool.create();
 
     VmaAllocatorCreateInfo allocator_info = {};
     allocator_info.vulkanApiVersion = VK_API_VERSION_1_2;
@@ -45,12 +48,29 @@ void VkContext::create()
     allocator_info.device = device;
     vmaCreateAllocator(&allocator_info, &allocator);
 
-    command_pool.create();
+    inner_create();
+}
+
+void VkContext::destroy()
+{
+    inner_destroy();
+
+    vmaDestroyAllocator(allocator);
+
+    command_pool.destroy();
+    device.destroy();
+    physical_device.destroy();
+    surface.destroy();
+    instance.destroy();
+}
+
+void VkContext::inner_create()
+{
     swapchain.create();
     renderpass.create();
     pipeline.create();
 
-    framebuffers.resize(swapchain.image_views().size());
+    framebuffers.resize(swapchain.size());
     for (size_t i = 0; i < framebuffers.size(); ++i)
     {
         framebuffers[i].create(renderpass, swapchain.image_views()[i]);
@@ -81,12 +101,11 @@ void VkContext::create()
     create_sync();
 }
 
-void VkContext::destroy()
+void VkContext::inner_destroy()
 {
     destroy_sync();
 
     command_buffers.destroy();
-    command_pool.destroy();
 
     for (auto& framebuffer : framebuffers)
     {
@@ -99,12 +118,6 @@ void VkContext::destroy()
 
     vertex_buffer.destroy();
     index_buffer.destroy();
-    vmaDestroyAllocator(allocator);
-
-    device.destroy();
-    physical_device.destroy();
-    surface.destroy();
-    instance.destroy();
 }
 
 void VkContext::refresh()
@@ -117,28 +130,8 @@ void VkContext::refresh()
 
     wait_idle();
 
-    for (auto& framebuffer : framebuffers)
-    {
-        framebuffer.destroy();
-    }
-
-    command_buffers.destroy();
-    pipeline.destroy();
-    renderpass.destroy();
-    swapchain.destroy();
-
-    swapchain.create();
-    renderpass.create();
-    pipeline.create();
-    for (size_t i = 0; i < framebuffers.size(); ++i)
-    {
-        framebuffers[i].create(renderpass, swapchain.image_views()[i]);
-    }
-    command_buffers.create();
-    for (size_t i = 0; i < command_buffers.size(); ++i)
-    {
-        command_buffers.record(i);
-    }
+    inner_destroy();
+    inner_create();
 }
 
 void VkContext::create_sync()
@@ -146,7 +139,7 @@ void VkContext::create_sync()
     image_available_semaphores.resize(FRAMES_IN_FLIGHT);
     render_finished_semaphores.resize(FRAMES_IN_FLIGHT);
     in_flight_fences.resize(FRAMES_IN_FLIGHT);
-    images_in_flight.resize(swapchain.image_views().size(), VK_NULL_HANDLE);
+    images_in_flight.resize(swapchain.size(), VK_NULL_HANDLE);
 
     VkSemaphoreCreateInfo semaphore_info{};
     semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -171,6 +164,8 @@ void VkContext::destroy_sync()
         vkDestroySemaphore(device, render_finished_semaphores[i], nullptr);
         vkDestroyFence(device, in_flight_fences[i], nullptr);
     }
+    images_in_flight.clear();
+    images_in_flight.resize(swapchain.size(), VK_NULL_HANDLE);
 }
 
 void VkContext::draw_frame()

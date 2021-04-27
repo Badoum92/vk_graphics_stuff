@@ -55,38 +55,13 @@ void Buffer::fill(const Buffer& staging_buffer)
 {
     assert(size_ == staging_buffer.size_);
 
-    VkCommandBufferAllocateInfo alloc_info{};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandPool = VkContext::command_pool;
-    alloc_info.commandBufferCount = 1;
-
-    VkCommandBuffer command_buffer;
-    vkAllocateCommandBuffers(VkContext::device, &alloc_info, &command_buffer);
-
-    VkCommandBufferBeginInfo begin_info{};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(command_buffer, &begin_info);
-
-    VkBufferCopy copy_region{};
-    copy_region.srcOffset = 0;
-    copy_region.dstOffset = 0;
-    copy_region.size = size_;
-    vkCmdCopyBuffer(command_buffer, staging_buffer.handle_, handle_, 1, &copy_region);
-
-    vkEndCommandBuffer(command_buffer);
-
-    VkSubmitInfo submit_info{};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffer;
-
-    vkQueueSubmit(VkContext::device.graphics_queue(), 1, &submit_info, VK_NULL_HANDLE);
-    vkQueueWaitIdle(VkContext::device.graphics_queue());
-
-    vkFreeCommandBuffers(VkContext::device, VkContext::command_pool, 1, &command_buffer);
+    vk_execute_once([&](VkCommandBuffer command_buffer) {
+        VkBufferCopy copy_region{};
+        copy_region.srcOffset = 0;
+        copy_region.dstOffset = 0;
+        copy_region.size = size_;
+        vkCmdCopyBuffer(command_buffer, staging_buffer.handle_, handle_, 1, &copy_region);
+    });
 }
 
 void Buffer::create_staging(const void* data, size_t size)
