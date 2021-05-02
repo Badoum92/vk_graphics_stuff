@@ -18,3 +18,15 @@ void CommandPool::destroy()
 {
     vkDestroyCommandPool(VkContext::device, handle_, nullptr);
 }
+
+void CommandPool::reset()
+{
+    VK_CHECK(vkResetCommandPool(VkContext::device, handle_, 0));
+}
+
+CommandBuffer CommandPool::allocate_command_buffer() const
+{
+    CommandBuffer cmd;
+    cmd.create(handle_);
+    return cmd;
+}

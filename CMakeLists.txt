@@ -3,7 +3,7 @@ enable_language(C CXX)
 project(vk_graphics_stuff CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_COMPILER clang++)
+#set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -pedantic -g3")
 
 if (UNIX)
@@ -32,6 +32,10 @@ option(GLFW_INSTALL OFF)
 add_subdirectory(third_party/glfw)
 # ------------
 
+# --- SPIRV-Cross ---
+add_subdirectory(third_party/SPIRV-Cross)
+# ------------
+
 # --- IMGUI ---
 # file(GLOB IMGUI_SOURCES
 #     third_party/imgui/*.cpp
@@ -58,6 +62,7 @@ add_executable(main
     src/implems.cc
 
     src/api/vk_tools.cc
+    src/api/time/time.cc
     src/api/window/window.cc
     src/api/vk_context/vk_context.cc
     src/api/instance/instance.cc
@@ -70,8 +75,11 @@ add_executable(main
     src/api/render_pass/render_pass.cc
     src/api/framebuffer/framebuffer.cc
     src/api/command_pool/command_pool.cc
-    src/api/command_buffers/command_buffers.cc
-    src/api/buffer/buffer.cc
+    src/api/command_buffer/command_buffer.cc
+    src/api/buffers/buffer.cc
+    src/api/descriptor_pool/descriptor_pool.cc
+    src/api/descriptor_set/descriptor_set.cc
+    src/api/frame_data/frame_data.cc
 )
 
 target_include_directories(main
@@ -91,6 +99,8 @@ target_link_libraries(main
     ${Vulkan_LIBRARIES}
     glfw
 #    imgui
+    spirv-cross-reflect
+    spirv-cross-core
 )
 
 add_definitions(
@@ -115,7 +125,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     add_custom_command(
         OUTPUT ${SPIRV}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
-        COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${GLSL} -o ${SPIRV}
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/shaders/include --target-env=vulkan1.2 -std=460 ${GLSL} -o ${SPIRV}
         DEPENDS ${GLSL}
     )
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})

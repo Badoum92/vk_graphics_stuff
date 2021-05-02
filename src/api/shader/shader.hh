@@ -1,7 +1,11 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <unordered_map>
+#include <vector>
 #include <string>
+
+#include "descriptor_set/descriptor_set.hh"
 
 class Shader
 {
@@ -14,12 +18,22 @@ public:
         COMPUTE
     };
 
-    Shader(const std::string& file_path, Stage stage);
-    ~Shader();
+    void create(const std::string& vertex, const std::string& fragment);
+    void create(const std::string& compute);
+    void destroy();
 
-    const VkPipelineShaderStageCreateInfo& stage_info() const;
+    DescriptorSet& get_descriptor_set(size_t n);
+
+    const std::vector<VkPipelineShaderStageCreateInfo>& stages_info() const;
+    const std::vector<VkDescriptorSetLayout>& set_layouts() const;
 
 private:
-    VkShaderModule handle_;
-    VkPipelineShaderStageCreateInfo stage_info_{};
+    std::vector<VkShaderModule> handles_;
+    std::vector<VkPipelineShaderStageCreateInfo> stages_info_;
+    std::vector<VkDescriptorSetLayout> set_layouts_;
+    std::vector<DescriptorSet::Layout> tmp_set_layouts_;
+    std::vector<DescriptorSet> descriptor_sets_;
+
+    void process(const std::string& file_path, Stage stage);
+    void create_descriptor_sets();
 };

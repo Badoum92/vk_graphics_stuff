@@ -1,4 +1,4 @@
-#version 460
+#include "global.glsl"
 
 layout(location = 0) in vec3 in_color;
 

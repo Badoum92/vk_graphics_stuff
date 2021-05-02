@@ -6,6 +6,10 @@
 
 void Pipeline::create()
 {
+    bind_point_ = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+    shader_.create("shaders/triangle.vert.spv", "shaders/triangle.frag.spv");
+
     auto desc = Vertex::get_description(0);
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
@@ -85,22 +89,17 @@ void Pipeline::create()
 
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 0;
-    pipeline_layout_info.pSetLayouts = nullptr;
+    pipeline_layout_info.setLayoutCount = shader_.set_layouts().size();
+    pipeline_layout_info.pSetLayouts = shader_.set_layouts().data();
     pipeline_layout_info.pushConstantRangeCount = 0;
     pipeline_layout_info.pPushConstantRanges = nullptr;
 
     VK_CHECK(vkCreatePipelineLayout(VkContext::device, &pipeline_layout_info, nullptr, &layout_));
 
-    Shader vert_shader("shaders/triangle.vert.spv", Shader::Stage::VERTEX);
-    Shader frag_shader("shaders/triangle.frag.spv", Shader::Stage::FRAGMENT);
-
-    VkPipelineShaderStageCreateInfo shader_stages[] = {vert_shader.stage_info(), frag_shader.stage_info()};
-
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_info.stageCount = 2;
-    pipeline_info.pStages = shader_stages;
+    pipeline_info.stageCount = shader_.stages_info().size();
+    pipeline_info.pStages = shader_.stages_info().data();
     pipeline_info.pVertexInputState = &vertex_input_info;
     pipeline_info.pInputAssemblyState = &input_assembly_info;
     pipeline_info.pViewportState = &viewport_state_info;
@@ -120,6 +119,22 @@ void Pipeline::create()
 
 void Pipeline::destroy()
 {
+    shader_.destroy();
     vkDestroyPipeline(VkContext::device, handle_, nullptr);
     vkDestroyPipelineLayout(VkContext::device, layout_, nullptr);
+}
+
+void Pipeline::bind()
+{
+    vkCmdBindPipeline(FrameData::current().cmd_buffer, bind_point_, handle_);
+}
+
+void Pipeline::bind_set(size_t n)
+{
+    shader_.get_descriptor_set(n).bind(bind_point_, layout_);
+}
+
+VkPipelineBindPoint Pipeline::bind_point() const
+{
+    return bind_point_;
 }

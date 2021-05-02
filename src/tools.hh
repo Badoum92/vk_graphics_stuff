@@ -19,7 +19,8 @@ namespace Tools
         file.seekg(0, std::ios::beg);
         std::streampos begin = file.tellg();
 
-        T result(static_cast<size_t>(end - begin));
+        T result;
+        result.resize(static_cast<size_t>(end - begin) / sizeof(typename T::value_type));
 
         file.seekg(0, std::ios::beg);
         file.read(reinterpret_cast<char*>(result.data()), end - begin);

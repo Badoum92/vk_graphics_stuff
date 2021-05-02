@@ -38,6 +38,11 @@ void Buffer::destroy()
 {
     if (size_ != 0)
     {
+        if (mapped_data_ != nullptr)
+        {
+            vmaUnmapMemory(VkContext::allocator, alloc_);
+            mapped_data_ = nullptr;
+        }
         vmaDestroyBuffer(VkContext::allocator, handle_, alloc_);
         size_ = 0;
     }
@@ -45,10 +50,17 @@ void Buffer::destroy()
 
 void Buffer::fill(const void* data, size_t size)
 {
-    void* mapped_data;
-    vmaMapMemory(VkContext::allocator, alloc_, &mapped_data);
-    memcpy(mapped_data, data, size);
-    vmaUnmapMemory(VkContext::allocator, alloc_);
+    assert(size_ == size);
+
+    bool map_unmap = mapped_data_ == nullptr;
+    if (map_unmap)
+        vmaMapMemory(VkContext::allocator, alloc_, &mapped_data_);
+    memcpy(mapped_data_, data, size);
+    if (map_unmap)
+    {
+        vmaUnmapMemory(VkContext::allocator, alloc_);
+        mapped_data_ = nullptr;
+    }
 }
 
 void Buffer::fill(const Buffer& staging_buffer)
@@ -86,6 +98,20 @@ void Buffer::create_index(const void* data, size_t size)
     fill(staging);
 }
 
+void Buffer::create_storage(const void* data, size_t size)
+{
+    Buffer staging;
+    staging.create_staging(data, size);
+    create(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    fill(staging);
+}
+
+void Buffer::create_uniform(size_t size)
+{
+    create(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    vmaMapMemory(VkContext::allocator, alloc_, &mapped_data_);
+}
+
 void Buffer::bind_vertex(const VkCommandBuffer& cmd, uint32_t binding, size_t offset) const
 {
     assert(buffer_usage_ & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -96,4 +122,36 @@ void Buffer::bind_index(const VkCommandBuffer& cmd, size_t offset, VkIndexType t
 {
     assert(buffer_usage_ & VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     vkCmdBindIndexBuffer(cmd, handle_, offset, type);
+}
+
+VkBufferUsageFlags Buffer::buffer_usage() const
+{
+    return buffer_usage_;
+}
+
+size_t Buffer::size() const
+{
+    return size_;
+}
+
+size_t Buffer::push(const void* data, size_t size)
+{
+    if (offset_ + size >= size_)
+    {
+        offset_ = 0;
+    }
+
+    bool map_unmap = mapped_data_ == nullptr;
+    if (map_unmap)
+        vmaMapMemory(VkContext::allocator, alloc_, &mapped_data_);
+    memcpy(reinterpret_cast<uint8_t*>(mapped_data_) + offset_, data, size);
+    if (map_unmap)
+    {
+        vmaUnmapMemory(VkContext::allocator, alloc_);
+        mapped_data_ = nullptr;
+    }
+
+    size_t ret = offset_;
+    offset_ += size;
+    return ret;
 }

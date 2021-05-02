@@ -2,11 +2,16 @@
 
 #include <vulkan/vulkan.h>
 
+#include "command_buffer/command_buffer.hh"
+
 class CommandPool
 {
 public:
     void create();
     void destroy();
+    void reset();
+
+    CommandBuffer allocate_command_buffer() const;
 
     inline VkCommandPool handle() const
     {

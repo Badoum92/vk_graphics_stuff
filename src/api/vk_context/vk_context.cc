@@ -7,24 +7,19 @@
 #include "window/window.hh"
 #include "vertex.hh"
 
-const int VkContext::FRAMES_IN_FLIGHT = 2;
 size_t VkContext::current_frame = 0;
+std::array<FrameData, VkContext::FRAMES_IN_FLIGHT> VkContext::frames;
 
 Instance VkContext::instance;
 Surface VkContext::surface;
 PhysicalDevice VkContext::physical_device;
 Device VkContext::device;
+CommandPool VkContext::command_pool;
+DescriptorPool VkContext::descriptor_pool;
 SwapChain VkContext::swapchain;
 RenderPass VkContext::renderpass;
 Pipeline VkContext::pipeline;
 std::vector<FrameBuffer> VkContext::framebuffers;
-CommandPool VkContext::command_pool;
-CommandBuffers VkContext::command_buffers;
-
-std::vector<VkSemaphore> VkContext::image_available_semaphores;
-std::vector<VkSemaphore> VkContext::render_finished_semaphores;
-std::vector<VkFence> VkContext::in_flight_fences;
-std::vector<VkFence> VkContext::images_in_flight;
 
 VmaAllocator VkContext::allocator;
 
@@ -32,6 +27,7 @@ VmaAllocator VkContext::allocator;
 
 Buffer VkContext::vertex_buffer;
 Buffer VkContext::index_buffer;
+Buffer VkContext::global_uniform_buffer;
 
 void VkContext::create()
 {
@@ -40,6 +36,7 @@ void VkContext::create()
     physical_device.create();
     device.create();
     command_pool.create();
+    descriptor_pool.create();
 
     VmaAllocatorCreateInfo allocator_info = {};
     allocator_info.vulkanApiVersion = VK_API_VERSION_1_2;
@@ -57,6 +54,7 @@ void VkContext::destroy()
 
     vmaDestroyAllocator(allocator);
 
+    descriptor_pool.destroy();
     command_pool.destroy();
     device.destroy();
     physical_device.destroy();
@@ -76,6 +74,11 @@ void VkContext::inner_create()
         framebuffers[i].create(renderpass, swapchain.image_views()[i]);
     }
 
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+    {
+        frames[i].create();
+    }
+
     // clang-format off
     const std::vector<Vertex> vertices = {
         {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -91,21 +94,20 @@ void VkContext::inner_create()
     // clang-format on
     vertex_buffer.create_vertex(vertices.data(), vertices.size() * sizeof(Vertex));
     index_buffer.create_index(indices.data(), indices.size() * sizeof(uint16_t));
+    global_uniform_buffer.create_uniform(4 * KB);
 
-    command_buffers.create();
-    for (size_t i = 0; i < command_buffers.size(); ++i)
-    {
-        command_buffers.record(i);
-    }
-
-    create_sync();
+    DescriptorSet::global_set.bind_buffer(0, global_uniform_buffer, 16 * sizeof(float));
+    DescriptorSet::global_set.update();
 }
 
 void VkContext::inner_destroy()
 {
-    destroy_sync();
+    DescriptorSet::destroy_global_set();
 
-    command_buffers.destroy();
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+    {
+        frames[i].destroy();
+    }
 
     for (auto& framebuffer : framebuffers)
     {
@@ -118,6 +120,7 @@ void VkContext::inner_destroy()
 
     vertex_buffer.destroy();
     index_buffer.destroy();
+    global_uniform_buffer.destroy();
 }
 
 void VkContext::refresh()
@@ -134,46 +137,12 @@ void VkContext::refresh()
     inner_create();
 }
 
-void VkContext::create_sync()
-{
-    image_available_semaphores.resize(FRAMES_IN_FLIGHT);
-    render_finished_semaphores.resize(FRAMES_IN_FLIGHT);
-    in_flight_fences.resize(FRAMES_IN_FLIGHT);
-    images_in_flight.resize(swapchain.size(), VK_NULL_HANDLE);
-
-    VkSemaphoreCreateInfo semaphore_info{};
-    semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fence_info{};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT; i++)
-    {
-        VK_CHECK(vkCreateSemaphore(device, &semaphore_info, nullptr, &image_available_semaphores[i]));
-        VK_CHECK(vkCreateSemaphore(device, &semaphore_info, nullptr, &render_finished_semaphores[i]));
-        VK_CHECK(vkCreateFence(device, &fence_info, nullptr, &in_flight_fences[i]));
-    }
-}
-
-void VkContext::destroy_sync()
-{
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT; i++)
-    {
-        vkDestroySemaphore(device, image_available_semaphores[i], nullptr);
-        vkDestroySemaphore(device, render_finished_semaphores[i], nullptr);
-        vkDestroyFence(device, in_flight_fences[i], nullptr);
-    }
-    images_in_flight.clear();
-    images_in_flight.resize(swapchain.size(), VK_NULL_HANDLE);
-}
-
 void VkContext::draw_frame()
 {
-    vkWaitForFences(device, 1, &in_flight_fences[current_frame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(device, 1, &frames[current_frame].render_fence, VK_TRUE, UINT64_MAX);
 
     uint32_t image_index;
-    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, image_available_semaphores[current_frame],
+    VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, frames[current_frame].render_semaphore,
                                             VK_NULL_HANDLE, &image_index);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -186,31 +155,33 @@ void VkContext::draw_frame()
         throw std::runtime_error("Failed to acquire swapchain image");
     }
 
-    if (images_in_flight[image_index] != VK_NULL_HANDLE)
-    {
-        vkWaitForFences(device, 1, &images_in_flight[image_index], VK_TRUE, UINT64_MAX);
-    }
-
-    images_in_flight[image_index] = in_flight_fences[current_frame];
+    // if (images_in_flight[image_index] != VK_NULL_HANDLE)
+    // {
+    //     vkWaitForFences(device, 1, &images_in_flight[image_index], VK_TRUE, UINT64_MAX);
+    // }
+    // images_in_flight[image_index] = in_flight_fences[current_frame];
 
     VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore wait_semaphores[] = {image_available_semaphores[current_frame]};
+    frames[current_frame].begin_frame();
+    frames[current_frame].cmd_buffer.record(image_index);
+
+    VkSemaphore wait_semaphores[] = {frames[current_frame].render_semaphore};
     VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = wait_semaphores;
     submit_info.pWaitDstStageMask = wait_stages;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffers[image_index];
+    submit_info.pCommandBuffers = &frames[current_frame].cmd_buffer.handle();
 
-    VkSemaphore signal_semaphores[] = {render_finished_semaphores[current_frame]};
+    VkSemaphore signal_semaphores[] = {frames[current_frame].present_semaphore};
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_semaphores;
 
-    vkResetFences(device, 1, &in_flight_fences[current_frame]);
+    vkResetFences(device, 1, &frames[current_frame].render_fence);
 
-    VK_CHECK(vkQueueSubmit(device.graphics_queue(), 1, &submit_info, in_flight_fences[current_frame]));
+    VK_CHECK(vkQueueSubmit(device.graphics_queue(), 1, &submit_info, frames[current_frame].render_fence));
 
     VkPresentInfoKHR present_info{};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

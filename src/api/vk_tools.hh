@@ -23,3 +23,6 @@ const char* vk_result_to_str(VkResult result);
             throw std::runtime_error(error_str__);                                                                       \
         }                                                                                                              \
     } while (0)
+
+#define KB (1 << 10)
+#define MB (1 << 20)

@@ -2,6 +2,7 @@
 
 #include "window/window.hh"
 #include "vk_context/vk_context.hh"
+#include "time/time.hh"
 
 int main(int, char**)
 {
@@ -12,6 +13,7 @@ int main(int, char**)
 
         while (!Window::should_close())
         {
+            Time::update();
             Window::poll_events();
             VkContext::draw_frame();
         }
