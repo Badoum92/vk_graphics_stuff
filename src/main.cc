@@ -1,8 +1,12 @@
 #include <iostream>
 
+#include <memory>
+
 #include "window/window.hh"
-#include "vk_context/vk_context.hh"
 #include "time/time.hh"
+#include "vk_context/vk_context.hh"
+
+#include "test_app/test_app.hh"
 
 int main(int, char**)
 {
@@ -11,14 +15,16 @@ int main(int, char**)
         Window::create(1280, 720, "Test Vulkan");
         VkContext::create();
 
-        while (!Window::should_close())
         {
-            Time::update();
-            Window::poll_events();
-            VkContext::draw_frame();
+            TestApp app;
+            while (!Window::should_close())
+            {
+                Time::update();
+                Window::poll_events();
+                app.update();
+            }
+            VkContext::wait_idle();
         }
-
-        VkContext::wait_idle();
 
         VkContext::destroy();
         Window::destroy();

@@ -1,0 +1,96 @@
+#include "command_buffer.hh"
+
+#include <glm/glm.hpp>
+
+#include "vk_context/vk_context.hh"
+
+void CommandBuffer::create(VkCommandPool pool)
+{
+    pool_ = pool;
+
+    VkCommandBufferAllocateInfo alloc_info{};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+
+    VK_CHECK(vkAllocateCommandBuffers(VkContext::device, &alloc_info, &handle_));
+}
+
+void CommandBuffer::destroy()
+{
+    vkFreeCommandBuffers(VkContext::device, pool_, 1, &handle_);
+}
+
+void CommandBuffer::begin()
+{
+    VkCommandBufferBeginInfo begin_info{};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = 0;
+    begin_info.pInheritanceInfo = nullptr;
+    VK_CHECK(vkBeginCommandBuffer(handle_, &begin_info));
+}
+
+void CommandBuffer::end()
+{
+    VK_CHECK(vkEndCommandBuffer(handle_));
+}
+
+void CommandBuffer::begin_renderpass(const RenderPass& renderpass, const FrameBuffer& framebuffer)
+{
+    VkClearValue clear_color{};
+    clear_color.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+
+    VkRenderPassBeginInfo renderpass_info{};
+    renderpass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderpass_info.renderPass = renderpass;
+    renderpass_info.framebuffer = framebuffer;
+    renderpass_info.renderArea.offset = {0, 0};
+    renderpass_info.renderArea.extent = VkContext::swapchain.extent();
+    renderpass_info.clearValueCount = 1;
+    renderpass_info.pClearValues = &clear_color;
+
+    vkCmdBeginRenderPass(handle_, &renderpass_info, VK_SUBPASS_CONTENTS_INLINE);
+}
+
+void CommandBuffer::end_renderpass()
+{
+    vkCmdEndRenderPass(handle_);
+}
+
+void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t index_offset)
+{
+    vkCmdDrawIndexed(handle_, index_count, 1, index_offset, 0, 0);
+}
+
+void CommandBuffer::bind_vertex_buffer(const Buffer& buffer, size_t offset)
+{
+    vkCmdBindVertexBuffers(handle_, 0, 1, &buffer.handle(), &offset);
+}
+
+void CommandBuffer::bind_index_buffer(const Buffer& buffer, size_t offset, VkIndexType index_type)
+{
+    vkCmdBindIndexBuffer(handle_, buffer, offset, index_type);
+}
+
+void CommandBuffer::bind_pipeline(const Pipeline& pipeline)
+{
+    vkCmdBindPipeline(handle_, pipeline.bind_point(), pipeline);
+}
+
+void CommandBuffer::bind_descriptor_set(const Pipeline& pipeline, uint32_t n)
+{
+    const auto& set = pipeline.descriptor_set(n);
+    vkCmdBindDescriptorSets(handle_, pipeline.bind_point(), pipeline.layout(), n, 1, &set.handle(),
+                            set.dynamic_offsets().size(), set.dynamic_offsets().data());
+}
+
+void CommandBuffer::set_viewport(const VkViewport& viewport)
+{
+    vkCmdSetViewport(handle_, 0, 1, &viewport);
+}
+
+void CommandBuffer::set_scissor(const VkRect2D& scissor)
+{
+    vkCmdSetScissor(handle_, 0, 1, &scissor);
+}

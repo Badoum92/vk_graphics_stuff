@@ -60,31 +60,37 @@ add_executable(main
     src/main.cc
 
     src/implems.cc
+    src/test_app/test_app.cc
 
-    src/api/vk_tools.cc
     src/api/time/time.cc
     src/api/window/window.cc
-    src/api/vk_context/vk_context.cc
-    src/api/instance/instance.cc
-    src/api/surface/surface.cc
-    src/api/physical_device/physical_device.cc
-    src/api/device/device.cc
-    src/api/swapchain/swapchain.cc
-    src/api/pipeline/pipeline.cc
-    src/api/shader/shader.cc
-    src/api/render_pass/render_pass.cc
-    src/api/framebuffer/framebuffer.cc
-    src/api/command_pool/command_pool.cc
-    src/api/command_buffer/command_buffer.cc
-    src/api/buffers/buffer.cc
-    src/api/descriptor_pool/descriptor_pool.cc
-    src/api/descriptor_set/descriptor_set.cc
-    src/api/frame_data/frame_data.cc
+
+    src/api/vulkan/vk_tools.cc
+    src/api/vulkan/vk_context/vk_context.cc
+    src/api/vulkan/instance/instance.cc
+    src/api/vulkan/surface/surface.cc
+    src/api/vulkan/physical_device/physical_device.cc
+    src/api/vulkan/device/device.cc
+    src/api/vulkan/swapchain/swapchain.cc
+    src/api/vulkan/pipeline/pipeline.cc
+    src/api/vulkan/shader/shader.cc
+    src/api/vulkan/render_pass/render_pass.cc
+    src/api/vulkan/framebuffer/framebuffer.cc
+    src/api/vulkan/command_pool/command_pool.cc
+    src/api/vulkan/command_buffer/command_buffer.cc
+    src/api/vulkan/buffer/buffer.cc
+    src/api/vulkan/image/image.cc
+    src/api/vulkan/image_view/image_view.cc
+    src/api/vulkan/sampler/sampler.cc
+    src/api/vulkan/descriptor_pool/descriptor_pool.cc
+    src/api/vulkan/descriptor_set/descriptor_set.cc
+    src/api/vulkan/frame_data/frame_data.cc
 )
 
 target_include_directories(main
     PRIVATE src
     PRIVATE src/api
+    PRIVATE src/api/vulkan
 )
 
 target_include_directories(main
