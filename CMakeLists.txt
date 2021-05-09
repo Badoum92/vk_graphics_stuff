@@ -64,6 +64,8 @@ add_executable(main
 
     src/api/time/time.cc
     src/api/window/window.cc
+    src/api/camera/camera.cc
+    src/api/event/event.cc
 
     src/api/vulkan/vk_tools.cc
     src/api/vulkan/vk_context/vk_context.cc
@@ -114,6 +116,7 @@ add_definitions(
     -DGLFW_INCLUDE_VULKAN
     -DGLM_FORCE_RADIANS
     -DGLM_FORCE_DEPTH_ZERO_TO_ONE
+    -DGLM_FORCE_RIGHT_HANDED
 )
 
 
