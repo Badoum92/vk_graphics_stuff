@@ -1,12 +1,13 @@
 #include "global.glsl"
 
-layout(location = 0) out vec3 out_color;
-layout(location = 1) out vec2 out_tex_coord;
+layout(location = 0) out vec2 out_tex_coord;
 
 struct Vertex
 {
-    vec2 pos;
+    vec3 pos;
+    float _pad0;
     vec2 tex_coord;
+    vec2 _pad1;
 };
 
 layout(set = 1, binding = 0) buffer VertexBuffer
@@ -16,7 +17,6 @@ layout(set = 1, binding = 0) buffer VertexBuffer
 
 void main()
 {
-    gl_Position = vec4(vertices[gl_VertexIndex].pos, 0.0, 1.0);
-    out_color = global.colors[gl_VertexIndex].xyz;
+    gl_Position = global.proj * global.view * vec4(vertices[gl_VertexIndex].pos, 1.0);
     out_tex_coord = vertices[gl_VertexIndex].tex_coord;
 }

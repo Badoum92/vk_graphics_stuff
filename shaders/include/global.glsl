@@ -3,11 +3,10 @@
 
 layout (set = 0, binding = 0) uniform GlobalUniform
 {
-    vec4 colors[4];
-    // vec4 color_0;
-    // vec4 color_1;
-    // vec4 color_2;
-    // vec4 color_3;
+    mat4 view;
+    mat4 inv_view;
+    mat4 proj;
+    mat4 inv_proj;
 } global;
 
 #endif

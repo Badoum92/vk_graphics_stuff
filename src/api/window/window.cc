@@ -33,6 +33,8 @@ void Window::create(int width, int height, const std::string& title)
         return;
     }
 
+    glfwSetInputMode(handle_, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
     glfwSetFramebufferSizeCallback(handle_, framebuffer_size_callback);
     glfwSetCursorPosCallback(handle_, cursor_pos_callback);
     glfwSetMouseButtonCallback(handle_, mouse_button_callback);

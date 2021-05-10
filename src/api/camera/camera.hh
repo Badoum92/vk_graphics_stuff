@@ -29,7 +29,7 @@ public:
     void set_perspective(float fov);
     void set_orthographic(float ortho_size);
 
-    void on_update();
+    void update();
     void on_key_event(int key, int action);
     void on_mouse_moved(float x, float y);
 

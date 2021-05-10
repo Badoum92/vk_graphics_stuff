@@ -66,6 +66,7 @@ add_executable(main
     src/api/window/window.cc
     src/api/camera/camera.cc
     src/api/event/event.cc
+    src/api/input/input.cc
 
     src/api/vulkan/vk_tools.cc
     src/api/vulkan/vk_context/vk_context.cc
@@ -117,6 +118,7 @@ add_definitions(
     -DGLM_FORCE_RADIANS
     -DGLM_FORCE_DEPTH_ZERO_TO_ONE
     -DGLM_FORCE_RIGHT_HANDED
+    # -DGLM_FORCE_LEFT_HANDED
 )
 
 

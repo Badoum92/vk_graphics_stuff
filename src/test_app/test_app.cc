@@ -3,20 +3,35 @@
 #include <iostream>
 #include <glm/glm.hpp>
 
+#include "input/input.hh"
+
 struct Vertex
 {
-    glm::vec2 pos;
+    glm::vec3 pos;
+    float _pad0;
     glm::vec2 tex_coord;
-};
+    glm::vec2 _pad1;
+} __attribute__((packed));
+
+struct GlobalUniform
+{
+    glm::mat4 view;
+    glm::mat4 inv_view;
+    glm::mat4 proj;
+    glm::mat4 inv_proj;
+} __attribute__((packed));
 
 TestApp::TestApp()
 {
+    EventHandler::register_key_callback(this);
+    EventHandler::register_cursor_pos_callback(this);
+
     // clang-format off
     const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 1.0f}}
+        {{-0.5f, -0.5f, 1.0f}, 0.0f, {0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, 1.0f}, 0.0f, {1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, 0.5f, 1.0f}, 0.0f, {1.0f, 1.0f}, {0.0f, 0.0f}},
+        {{-0.5f, 0.5f, 1.0f}, 0.0f, {0.0f, 1.0f}, {0.0f, 0.0f}}
     };
 
     const std::vector<uint16_t> indices = {
@@ -33,7 +48,7 @@ TestApp::TestApp()
     image.create("../../image.jpg");
     sampler.create();
 
-    pipeline.descriptor_set(0).bind_buffer(0, global_uniform_buffer, 16 * sizeof(float));
+    pipeline.descriptor_set(0).bind_buffer(0, global_uniform_buffer, sizeof(GlobalUniform));
     pipeline.descriptor_set(0).update();
 
     pipeline.descriptor_set(1).bind_buffer(0, vertex_buffer);
@@ -42,11 +57,12 @@ TestApp::TestApp()
 }
 
 TestApp::~TestApp()
-{
-}
+{}
 
 void TestApp::update()
 {
+    camera.update();
+
     auto frame_data = VkContext::begin_frame();
     if (!frame_data.has_value())
         return;
@@ -55,7 +71,8 @@ void TestApp::update()
     cmd.set_viewport(VkContext::swapchain.default_viewport());
     cmd.set_scissor(VkContext::swapchain.default_scissor());
 
-    size_t offset = global_uniform_buffer.push<glm::mat4>({{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {1, 1, 1, 0}});
+    GlobalUniform global_uniform{camera.get_view(), camera.get_inv_view(), camera.get_proj(), camera.get_inv_proj()};
+    size_t offset = global_uniform_buffer.push(global_uniform);
     DescriptorSet::global_set.update_dynamic_offset(0, offset);
 
     cmd.begin_renderpass(VkContext::renderpass, framebuffer);
@@ -71,4 +88,29 @@ void TestApp::update()
     cmd.end_renderpass();
 
     VkContext::end_frame();
+}
+
+void TestApp::key_callback(const Event& event, void* object)
+{
+    TestApp& test_app = *reinterpret_cast<TestApp*>(object);
+    if (event.key() == GLFW_KEY_LEFT_ALT && event.key_action() == GLFW_PRESS)
+    {
+        Input::show_cursor(!Input::cursor_enabled());
+        auto [x, y] = Input::get_cursor_pos();
+        test_app.camera.set_last_x_y(x, y);
+        return;
+    }
+    else
+    {
+        test_app.camera.on_key_event(event.key(), event.key_action());
+    }
+}
+
+void TestApp::cursor_pos_callback(const Event& event, void* object)
+{
+    TestApp& test_app = *reinterpret_cast<TestApp*>(object);
+    if (!Input::cursor_enabled())
+    {
+        test_app.camera.on_mouse_moved(event.pos_x(), event.pos_y());
+    }
 }

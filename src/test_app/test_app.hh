@@ -7,6 +7,7 @@
 #include "sampler/sampler.hh"
 
 #include "event/event.hh"
+#include "camera/camera.hh"
 
 class TestApp
 {
@@ -15,6 +16,9 @@ public:
     ~TestApp();
 
     void update();
+
+    static void key_callback(const Event& event, void* object);
+    static void cursor_pos_callback(const Event& event, void* object);
 
 private:
     Buffer vertex_buffer;
@@ -25,4 +29,6 @@ private:
     Sampler sampler;
 
     Pipeline pipeline;
+
+    Camera camera;
 };

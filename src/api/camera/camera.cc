@@ -98,10 +98,7 @@ void Camera::compute_proj()
 
 const glm::mat4& Camera::get_view_proj()
 {
-    if (recompute_view_ || recompute_proj_)
-    {
-        view_proj_ = get_proj() * get_view();
-    }
+    view_proj_ = get_proj() * get_view();
     return view_proj_;
 }
 
@@ -134,7 +131,7 @@ void Camera::set_orthographic(float ortho_size)
     recompute_proj_ = true;
 }
 
-void Camera::on_update()
+void Camera::update()
 {
     static constexpr glm::ivec3 ivec3_zero{0, 0, 0};
     if (dir_ != ivec3_zero)
@@ -167,9 +164,9 @@ void Camera::on_key_event(int key, int action)
     if (key == GLFW_KEY_A)
         dir.x -= 1;
     if (key == GLFW_KEY_SPACE)
-        dir.y += 1;
-    if (key == GLFW_KEY_C)
         dir.y -= 1;
+    if (key == GLFW_KEY_C)
+        dir.y += 1;
 
     dir_ += dir * mult;
 }
@@ -186,7 +183,7 @@ void Camera::on_mouse_moved(float x, float y)
     }
 
     float x_offset = x - last_x_;
-    float y_offset = last_y_ - y;
+    float y_offset = y - last_y_;
     last_x_ = x;
     last_y_ = y;
 
