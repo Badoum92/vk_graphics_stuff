@@ -1,8 +1,10 @@
 #include "window.hh"
 
+#include "event/event.hh"
+
 static void framebuffer_size_callback(GLFWwindow*, int, int);
-// static void cursor_pos_callback(GLFWwindow*, double, double);
-// static void mouse_button_callback(GLFWwindow*, int, int, int);
+ static void cursor_pos_callback(GLFWwindow*, double, double);
+ static void mouse_button_callback(GLFWwindow*, int, int, int);
 static void key_callback(GLFWwindow*, int, int, int, int);
 
 int Window::width_{0};
@@ -32,8 +34,8 @@ void Window::create(int width, int height, const std::string& title)
     }
 
     glfwSetFramebufferSizeCallback(handle_, framebuffer_size_callback);
-    // glfwSetCursorPosCallback(handle_, cursor_pos_callback);
-    // glfwSetMouseButtonCallback(handle_, mouse_button_callback);
+    glfwSetCursorPosCallback(handle_, cursor_pos_callback);
+    glfwSetMouseButtonCallback(handle_, mouse_button_callback);
     glfwSetKeyCallback(handle_, key_callback);
 }
 
@@ -117,12 +119,12 @@ static void framebuffer_size_callback(GLFWwindow*, int width, int height)
     Window::resized(true);
 }
 
-/* static void cursor_pos_callback(GLFWwindow*, double x_pos, double y_pos)
+static void cursor_pos_callback(GLFWwindow*, double x_pos, double y_pos)
 {
     Event event(EventType::CURSOR_POS);
     event.data.cursor_pos.x = x_pos;
     event.data.cursor_pos.y = y_pos;
-    EventDispatcher::dispatch(event);
+    EventHandler::dispatch(event);
 }
 
 static void mouse_button_callback(GLFWwindow*, int button, int action, int mods)
@@ -131,8 +133,8 @@ static void mouse_button_callback(GLFWwindow*, int button, int action, int mods)
     event.data.mouse_button.button = button;
     event.data.mouse_button.action = action;
     event.data.mouse_button.mods = mods;
-    EventDispatcher::dispatch(event);
-} */
+    EventHandler::dispatch(event);
+}
 
 static void key_callback(GLFWwindow*, int key, int, int action, int mods)
 {
@@ -140,9 +142,10 @@ static void key_callback(GLFWwindow*, int key, int, int action, int mods)
     {
         Window::close();
     }
-    // Event event(EventType::KEY);
-    // event.data.key.key = key;
-    // event.data.key.action = action;
-    // event.data.key.mods = mods;
-    // EventDispatcher::dispatch(event);
+
+    Event event(EventType::KEY);
+    event.data.key.key = key;
+    event.data.key.action = action;
+    event.data.key.mods = mods;
+    EventHandler::dispatch(event);
 }

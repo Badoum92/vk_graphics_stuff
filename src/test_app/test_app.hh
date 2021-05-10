@@ -1,20 +1,20 @@
 #pragma once
 
-#include <application/application.hh>
-
 #include "vk_context/vk_context.hh"
 #include "buffer/buffer.hh"
 #include "pipeline/pipeline.hh"
 #include "image/image.hh"
 #include "sampler/sampler.hh"
 
-class TestApp : public Application
+#include "event/event.hh"
+
+class TestApp
 {
 public:
     TestApp();
     ~TestApp();
 
-    virtual void update() override;
+    void update();
 
 private:
     Buffer vertex_buffer;

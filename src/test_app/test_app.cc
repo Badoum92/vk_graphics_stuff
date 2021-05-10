@@ -10,7 +10,6 @@ struct Vertex
 };
 
 TestApp::TestApp()
-    : Application("TestApp")
 {
     // clang-format off
     const std::vector<Vertex> vertices = {

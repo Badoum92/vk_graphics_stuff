@@ -8,9 +8,9 @@
 
 enum class EventType
 {
+    KEY,
     CURSOR_POS,
-    MOUSE_BUTTON,
-    KEY
+    MOUSE_BUTTON
 };
 
 struct Event
@@ -85,17 +85,59 @@ struct Event
     }
 };
 
-class EventDispatcher
+template <typename T>
+concept HasKeyCallback = requires(T, const Event& event, void* object)
+{
+    T::key_callback(event, object);
+};
+
+template <typename T>
+concept HasCursorPosCallback = requires(T, const Event& event, void* object)
+{
+    T::cursor_pos_callback(event, object);
+};
+
+template <typename T>
+concept HasMouseButtonCallback = requires(T, const Event& event, void* object)
+{
+    T::mouse_button_callback(event, object);
+};
+
+class EventHandler
 {
 public:
-    using EventCallback = std::function<void(const Event&)>;
-    using EventMap = std::unordered_map<EventType, std::vector<EventCallback>>;
+    struct EventCallbackData
+    {
+        std::function<void(const Event&, void*)> callback;
+        void* object;
+    };
 
-    static void add_callback(EventType type, const EventCallback& callback);
+    using EventMap = std::unordered_map<EventType, std::vector<EventCallbackData>>;
+
+    static void register_callback(EventType type, const EventCallbackData& callback_data);
     static void dispatch(const Event& event);
+
+    template <HasKeyCallback T>
+    static void register_key_callback(T* object)
+    {
+        EventCallbackData callback_data{&T::key_callback, object};
+        register_callback(EventType::KEY, callback_data);
+    }
+
+    template <HasCursorPosCallback T>
+    static void register_cursor_pos_callback(T* object)
+    {
+        EventCallbackData callback_data{&T::cursor_pos_callback, object};
+        register_callback(EventType::CURSOR_POS, callback_data);
+    }
+
+    template <HasMouseButtonCallback T>
+    static void register_cursor_pos_callback(T* object)
+    {
+        EventCallbackData callback_data{&T::mouse_button_callback, object};
+        register_callback(EventType::MOUSE_BUTTON, callback_data);
+    }
 
 private:
     static EventMap on_event;
 };
-
-#define BIND_EVENT_METHOD(M) std::bind(&M, this, std::placeholders::_1)

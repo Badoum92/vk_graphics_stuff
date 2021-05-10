@@ -2,17 +2,17 @@
 
 #include <algorithm>
 
-EventDispatcher::EventMap EventDispatcher::on_event;
+EventHandler::EventMap EventHandler::on_event;
 
-void EventDispatcher::add_callback(EventType type, const EventCallback& callback)
+void EventHandler::register_callback(EventType type, const EventCallbackData& callback_data)
 {
-    on_event[type].push_back(callback);
+    on_event[type].push_back(callback_data);
 }
 
-void EventDispatcher::dispatch(const Event& event)
+void EventHandler::dispatch(const Event& event)
 {
-    for (const auto& callback : on_event[event.type])
+    for (const auto& callback_data : on_event[event.type])
     {
-        callback(event);
+        callback_data.callback(event, callback_data.object);
     }
 }
