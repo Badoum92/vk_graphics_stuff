@@ -13,7 +13,7 @@ public:
     };
 
     Camera(const glm::vec3& pos = {0.0f, 0.0f, 0.0f}, const glm::vec3& world_up = {0.0f, 1.0f, 0.0f}, float yaw = 90.0f,
-           float pitch = 0.0f, float near = 0.1f, float far = 1000.0f);
+           float pitch = 0.0f, float near = 0.01f, float far = 1000.0f);
 
     void update_vectors();
     const glm::mat4& get_view();
@@ -42,8 +42,8 @@ public:
 protected:
     glm::vec3 pos_;
     glm::vec3 world_up_;
-    float yaw_ = 90.0f;
-    float pitch_ = 0.0f;
+    float yaw_;
+    float pitch_;
     glm::vec3 front_;
     glm::vec3 front_straight_;
     glm::vec3 up_;

@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <GLFW/glfw3.h>
 
+#include <iostream>
+
 #include "window/window.hh"
 #include "time/time.hh"
 
@@ -93,6 +95,7 @@ void Camera::compute_proj()
         float h = ortho_size_ * aspect_ratio_ * 0.5f;
         proj_ = glm::ortho(-h, h, -v, v, near_, far_);
     }
+    proj_[1][1] *= -1;
     inv_proj_ = glm::inverse(proj_);
 }
 
@@ -164,9 +167,9 @@ void Camera::on_key_event(int key, int action)
     if (key == GLFW_KEY_A)
         dir.x -= 1;
     if (key == GLFW_KEY_SPACE)
-        dir.y -= 1;
-    if (key == GLFW_KEY_C)
         dir.y += 1;
+    if (key == GLFW_KEY_C)
+        dir.y -= 1;
 
     dir_ += dir * mult;
 }
@@ -183,7 +186,7 @@ void Camera::on_mouse_moved(float x, float y)
     }
 
     float x_offset = x - last_x_;
-    float y_offset = y - last_y_;
+    float y_offset = last_y_ - y;
     last_x_ = x;
     last_y_ = y;
 
