@@ -107,7 +107,7 @@ void DescriptorSet::update()
 
 void DescriptorSet::bind(VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 {
-    vkCmdBindDescriptorSets(FrameData::current().cmd_buffer, bind_point, layout, 0, 1, &handle_,
+    vkCmdBindDescriptorSets(FrameData::current().cmd, bind_point, layout, 0, 1, &handle_,
                             dynamic_offsets_.size(), dynamic_offsets_.data());
 }
 

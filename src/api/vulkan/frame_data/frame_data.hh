@@ -20,5 +20,5 @@ struct FrameData
     VkFence render_fence;
 
     CommandPool command_pool;
-    CommandBuffer cmd_buffer;
+    CommandBuffer cmd;
 };

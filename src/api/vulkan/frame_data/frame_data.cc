@@ -16,7 +16,7 @@ void FrameData::create()
     VK_CHECK(vkCreateFence(VkContext::device, &fence_info, nullptr, &render_fence));
 
     command_pool.create();
-    cmd_buffer = command_pool.allocate_command_buffer();
+    cmd = command_pool.allocate_command_buffer();
 }
 
 void FrameData::destroy()
@@ -25,19 +25,19 @@ void FrameData::destroy()
     vkDestroySemaphore(VkContext::device, render_semaphore, nullptr);
     vkDestroyFence(VkContext::device, render_fence, nullptr);
 
-    cmd_buffer.destroy();
+    cmd.destroy();
     command_pool.destroy();
 }
 
 void FrameData::begin_frame()
 {
     command_pool.reset();
-    cmd_buffer.begin();
+    cmd.begin();
 }
 
 void FrameData::end_frame()
 {
-    cmd_buffer.end();
+    cmd.end();
 }
 
 FrameData& FrameData::current()

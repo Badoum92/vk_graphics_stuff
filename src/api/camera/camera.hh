@@ -38,6 +38,9 @@ public:
     void set_sensitivity(float sensitivity);
 
     const glm::vec3& get_pos() const;
+    const glm::vec3& get_front() const;
+    const glm::vec3& get_up() const;
+    const glm::vec3& get_right() const;
 
 protected:
     glm::vec3 pos_;
@@ -71,7 +74,7 @@ protected:
 
     glm::ivec3 dir_{0, 0, 0};
 
-    float speed_ = 75.0f;
+    float speed_ = 50.0f;
     float sensitivity_ = 0.1f;
 
     float last_x_;

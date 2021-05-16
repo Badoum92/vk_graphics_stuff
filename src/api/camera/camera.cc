@@ -223,3 +223,18 @@ const glm::vec3& Camera::get_pos() const
 {
     return pos_;
 }
+
+const glm::vec3& Camera::get_front() const
+{
+    return front_;
+}
+
+const glm::vec3& Camera::get_up() const
+{
+    return up_;
+}
+
+const glm::vec3& Camera::get_right() const
+{
+    return right_;
+}

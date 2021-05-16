@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "window/window.hh"
+#include "vk_imgui/vk_imgui.hh"
 
 size_t VkContext::current_frame = 0;
 std::array<FrameData, VkContext::FRAMES_IN_FLIGHT> VkContext::frames;
@@ -43,6 +44,23 @@ void VkContext::create()
     inner_create();
 }
 
+void VkContext::inner_create()
+{
+    swapchain.create();
+    VkImgui::init();
+
+    framebuffers.resize(swapchain.size());
+    for (size_t i = 0; i < framebuffers.size(); ++i)
+    {
+        framebuffers[i].create(renderpass, swapchain.image_views()[i]);
+    }
+
+    for (size_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
+    {
+        frames[i].create();
+    }
+}
+
 void VkContext::destroy()
 {
     inner_destroy();
@@ -60,22 +78,6 @@ void VkContext::destroy()
     instance.destroy();
 }
 
-void VkContext::inner_create()
-{
-    swapchain.create();
-
-    framebuffers.resize(swapchain.size());
-    for (size_t i = 0; i < framebuffers.size(); ++i)
-    {
-        framebuffers[i].create(renderpass, swapchain.image_views()[i]);
-    }
-
-    for (size_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
-    {
-        frames[i].create();
-    }
-}
-
 void VkContext::inner_destroy()
 {
     for (size_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
@@ -88,6 +90,7 @@ void VkContext::inner_destroy()
         framebuffer.destroy();
     }
 
+    VkImgui::shutdown();
     swapchain.destroy();
 }
 
@@ -127,14 +130,8 @@ std::optional<std::pair<CommandBuffer, FrameBuffer>> VkContext::begin_frame()
         throw std::runtime_error("Failed to acquire swapchain image");
     }
 
-    // if (images_in_flight[image_index] != VK_NULL_HANDLE)
-    // {
-    //     vkWaitForFences(device, 1, &images_in_flight[image_index], VK_TRUE, UINT64_MAX);
-    // }
-    // images_in_flight[image_index] = in_flight_fences[current_frame];
-
     frames[current_frame].begin_frame();
-    return std::make_pair(frames[current_frame].cmd_buffer, framebuffers[image_index]);
+    return std::make_pair(frames[current_frame].cmd, framebuffers[image_index]);
 }
 
 void VkContext::end_frame()
@@ -150,7 +147,7 @@ void VkContext::end_frame()
     submit_info.pWaitSemaphores = wait_semaphores;
     submit_info.pWaitDstStageMask = wait_stages;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &frames[current_frame].cmd_buffer.handle();
+    submit_info.pCommandBuffers = &frames[current_frame].cmd.handle();
 
     VkSemaphore signal_semaphores[] = {frames[current_frame].present_semaphore};
     submit_info.signalSemaphoreCount = 1;
@@ -164,9 +161,8 @@ void VkContext::end_frame()
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
     present_info.pWaitSemaphores = signal_semaphores;
-    VkSwapchainKHR swapchains[] = {swapchain};
     present_info.swapchainCount = 1;
-    present_info.pSwapchains = swapchains;
+    present_info.pSwapchains = &swapchain.handle();
     present_info.pImageIndices = &image_index;
     present_info.pResults = nullptr;
 

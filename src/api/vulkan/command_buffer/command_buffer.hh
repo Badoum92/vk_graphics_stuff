@@ -29,12 +29,12 @@ public:
     void set_viewport(const VkViewport& viewport);
     void set_scissor(const VkRect2D& scissor);
 
-    inline VkCommandBuffer& handle()
+    inline const VkCommandBuffer& handle() const
     {
         return handle_;
     }
 
-    inline operator VkCommandBuffer&()
+    inline operator const VkCommandBuffer&() const
     {
         return handle_;
     }

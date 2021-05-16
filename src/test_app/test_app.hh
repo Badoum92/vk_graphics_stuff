@@ -16,6 +16,7 @@ public:
     ~TestApp();
 
     void update();
+    void imgui_update();
 
     static void key_callback(const Event& event, void* object);
     static void cursor_pos_callback(const Event& event, void* object);

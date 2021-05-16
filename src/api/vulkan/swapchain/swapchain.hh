@@ -23,12 +23,12 @@ public:
     static void choose_swap_present_mode(const std::vector<VkPresentModeKHR>& present_modes);
     void choose_swap_extent();
 
-    inline VkSwapchainKHR handle() const
+    inline const VkSwapchainKHR& handle() const
     {
         return handle_;
     }
 
-    inline operator VkSwapchainKHR() const
+    inline operator const VkSwapchainKHR&() const
     {
         return handle_;
     }

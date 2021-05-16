@@ -37,23 +37,22 @@ add_subdirectory(third_party/SPIRV-Cross)
 # ------------
 
 # --- IMGUI ---
-# file(GLOB IMGUI_SOURCES
-#     third_party/imgui/*.cpp
-#     third_party/imgui/backends/imgui_impl_glfw.cpp
-#     third_party/imgui/backends/imgui_impl_opengl3.cpp
-# )
-# add_library(imgui STATIC ${IMGUI_SOURCES})
-# target_include_directories(imgui PRIVATE
-#     third_party/imgui/
-#     third_party/imgui/backends
-#     third_party/glfw/include
-# )
-# target_link_libraries(imgui PRIVATE
-#     ${OPENGL_LIBRARIES}
-#     glfw
-# )
-# set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
-# add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
+file(GLOB IMGUI_SOURCES
+    third_party/imgui/*.cpp
+    third_party/imgui/backends/imgui_impl_glfw.cpp
+    third_party/imgui/backends/imgui_impl_vulkan.cpp
+)
+add_library(imgui STATIC ${IMGUI_SOURCES})
+target_include_directories(imgui PRIVATE
+    third_party/imgui/
+    third_party/imgui/backends
+    third_party/glfw/include
+    ${Vulkan_INCLUDE_DIRS}
+)
+target_link_libraries(imgui PRIVATE
+    glfw
+)
+set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
 # ------------
 
 add_executable(main
@@ -69,6 +68,7 @@ add_executable(main
     src/api/input/input.cc
 
     src/api/vulkan/vk_tools.cc
+    src/api/vulkan/vk_imgui/vk_imgui.cc
     src/api/vulkan/vk_context/vk_context.cc
     src/api/vulkan/instance/instance.cc
     src/api/vulkan/surface/surface.cc
@@ -107,7 +107,7 @@ target_include_directories(main
 target_link_libraries(main
     ${Vulkan_LIBRARIES}
     glfw
-#    imgui
+    imgui
     spirv-cross-reflect
     spirv-cross-core
 )
