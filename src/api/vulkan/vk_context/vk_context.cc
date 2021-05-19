@@ -40,7 +40,7 @@ void VkContext::create()
     allocator_info.device = device;
     vmaCreateAllocator(&allocator_info, &allocator);
 
-    renderpass.create();
+    renderpass.create(1, true, true);
 
     inner_create();
 }
@@ -55,30 +55,13 @@ void VkContext::inner_create()
     framebuffers.resize(swapchain.size());
     for (size_t i = 0; i < framebuffers.size(); ++i)
     {
-        framebuffers[i].create(renderpass, swapchain.image_views()[i]);
+        framebuffers[i].create(renderpass, {swapchain.image_views()[i], depth_buffer.view()});
     }
 
     for (size_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
     {
         frames[i].create();
     }
-}
-
-void VkContext::destroy()
-{
-    inner_destroy();
-
-    DescriptorSet::global_set.destroy();
-    renderpass.destroy();
-
-    vmaDestroyAllocator(allocator);
-
-    descriptor_pool.destroy();
-    command_pool.destroy();
-    device.destroy();
-    physical_device.destroy();
-    surface.destroy();
-    instance.destroy();
 }
 
 void VkContext::inner_destroy()
@@ -97,6 +80,23 @@ void VkContext::inner_destroy()
 
     VkImgui::shutdown();
     swapchain.destroy();
+}
+
+void VkContext::destroy()
+{
+    inner_destroy();
+
+    DescriptorSet::global_set.destroy();
+    renderpass.destroy();
+
+    vmaDestroyAllocator(allocator);
+
+    descriptor_pool.destroy();
+    command_pool.destroy();
+    device.destroy();
+    physical_device.destroy();
+    surface.destroy();
+    instance.destroy();
 }
 
 void VkContext::refresh()
@@ -145,6 +145,7 @@ void VkContext::end_frame()
 
     VkSemaphore wait_semaphores[] = {frames[current_frame].render_semaphore};
     VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkSemaphore signal_semaphores[] = {frames[current_frame].present_semaphore};
 
     VkSubmitInfo submit_info{};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -153,8 +154,6 @@ void VkContext::end_frame()
     submit_info.pWaitDstStageMask = wait_stages;
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &frames[current_frame].cmd.handle();
-
-    VkSemaphore signal_semaphores[] = {frames[current_frame].present_semaphore};
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_semaphores;
 

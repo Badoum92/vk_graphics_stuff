@@ -5,8 +5,11 @@
 class RenderPass
 {
 public:
-    void create();
+    void create(uint32_t colors, bool depth, bool present);
     void destroy();
+
+    uint32_t colors() const;
+    bool depth() const;
 
     inline VkRenderPass handle() const
     {
@@ -20,4 +23,6 @@ public:
 
 private:
     VkRenderPass handle_;
+    uint32_t colors_;
+    bool depth_;
 };

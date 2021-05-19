@@ -88,19 +88,20 @@ void TestApp::update()
     size_t offset = global_uniform_buffer.push(global_uniform);
     DescriptorSet::global_set.update_dynamic_offset(0, offset);
 
-    cmd.begin_renderpass(VkContext::renderpass, framebuffer);
+    {
+        cmd.begin_renderpass(VkContext::renderpass, framebuffer);
 
-    cmd.bind_pipeline(pipeline);
-    cmd.bind_descriptor_set(pipeline, 0);
-    cmd.bind_descriptor_set(pipeline, 1);
+        cmd.bind_pipeline(pipeline);
+        cmd.bind_descriptor_set(pipeline, 0);
+        cmd.bind_descriptor_set(pipeline, 1);
 
-    cmd.bind_index_buffer(index_buffer, 0, VK_INDEX_TYPE_UINT16);
+        cmd.bind_index_buffer(index_buffer, 0, VK_INDEX_TYPE_UINT16);
+        cmd.draw_indexed(index_buffer.count<uint16_t>());
 
-    cmd.draw_indexed(index_buffer.count<uint16_t>());
+        VkImgui::render_draw_data(cmd);
 
-    VkImgui::render_draw_data(cmd);
-
-    cmd.end_renderpass();
+        cmd.end_renderpass();
+    }
 
     VkContext::end_frame();
 }

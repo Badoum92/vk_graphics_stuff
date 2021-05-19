@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <functional>
 
 #include "framebuffer/framebuffer.hh"
 #include "render_pass/render_pass.hh"

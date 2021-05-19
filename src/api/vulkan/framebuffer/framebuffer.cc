@@ -2,10 +2,8 @@
 
 #include "vk_context/vk_context.hh"
 
-void FrameBuffer::create(const RenderPass& renderpass, const VkImageView& color_attachment)
+void FrameBuffer::create(const RenderPass& renderpass, const std::vector<VkImageView>& attachments)
 {
-    std::array<VkImageView, 2> attachments = {color_attachment, VkContext::depth_buffer.view()};
-
     VkFramebufferCreateInfo framebuffer_info{};
     framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     framebuffer_info.renderPass = renderpass;
