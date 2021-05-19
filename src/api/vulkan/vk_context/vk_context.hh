@@ -16,6 +16,7 @@
 #include "command_pool/command_pool.hh"
 #include "descriptor_pool/descriptor_pool.hh"
 #include "frame_data/frame_data.hh"
+#include "image/image.hh"
 
 #include "vk_tools.hh"
 
@@ -45,6 +46,7 @@ struct VkContext
     static SwapChain swapchain;
     static RenderPass renderpass;
     static std::vector<FrameBuffer> framebuffers;
+    static Image depth_buffer;
 
     static VmaAllocator allocator;
 

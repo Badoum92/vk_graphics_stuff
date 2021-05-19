@@ -4,6 +4,25 @@
 
 #include "vk_context/vk_context.hh"
 
+bool has_stencil_component(VkFormat format)
+{
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+bool has_depth_component(VkFormat format)
+{
+    return format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT
+        || format == VK_FORMAT_D24_UNORM_S8_UINT;
+}
+
+VkFormat get_depth_format()
+{
+    static VkFormat format = VkContext::physical_device.get_supported_format(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    return format;
+}
+
 void vk_execute_once(const std::function<void(VkCommandBuffer)>& f)
 {
     VkCommandBufferAllocateInfo alloc_info{};

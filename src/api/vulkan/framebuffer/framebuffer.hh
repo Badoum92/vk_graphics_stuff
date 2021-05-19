@@ -7,7 +7,7 @@
 class FrameBuffer
 {
 public:
-    void create(const RenderPass& renderpass, const VkImageView& image_view);
+    void create(const RenderPass& renderpass, const VkImageView& color_attachment);
     void destroy();
 
     inline VkFramebuffer handle() const

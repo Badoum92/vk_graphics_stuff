@@ -44,7 +44,10 @@ void Image::create(uint32_t width, uint32_t height, uint32_t depth, VkFormat for
 
     VK_CHECK(vmaCreateImage(VkContext::allocator, &image_info, &alloc_info, &handle_, &alloc_, nullptr));
 
-    view_.create(handle_, type_, format_, VK_IMAGE_ASPECT_COLOR_BIT);
+    VkImageAspectFlags aspect_flags =
+        has_depth_component(format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
+    view_.create(handle_, type_, format_, aspect_flags);
 }
 
 void Image::destroy()
@@ -66,12 +69,20 @@ void Image::create(const std::filesystem::path& path)
     create(width, height);
     fill(data, width * height * 4);
     stbi_image_free(data);
+
+    transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void Image::create(uint32_t width, uint32_t height, uint32_t depth)
 {
     create(width, height, depth, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
            VK_SAMPLE_COUNT_1_BIT);
+}
+
+void Image::create_depth_attachment(uint32_t width, uint32_t height)
+{
+    create(width, height, 1, get_depth_format(),
+           VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_SAMPLE_COUNT_1_BIT);
 }
 
 void Image::fill(const void* data, size_t size)
@@ -97,8 +108,6 @@ void Image::fill(const void* data, size_t size)
 
         vkCmdCopyBufferToImage(cmd, staging, handle_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     });
-
-    transition_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void Image::transition_layout(VkImageLayout new_layout)

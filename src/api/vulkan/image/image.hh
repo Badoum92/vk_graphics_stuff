@@ -17,6 +17,7 @@ public:
 
     void create(const std::filesystem::path& path);
     void create(uint32_t width, uint32_t height, uint32_t depth = 1);
+    void create_depth_attachment(uint32_t width, uint32_t height);
 
     void fill(const void* data, size_t size);
 

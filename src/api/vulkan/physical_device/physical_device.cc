@@ -79,7 +79,6 @@ void PhysicalDevice::check_ext_support() const
     for (const auto& ext : required_ext)
     {
         error_str += " " + ext;
-        std::cerr << "Unsupported device extension: " << ext << "\n";
     }
     throw std::runtime_error("Unsupported device extension(s):" + error_str);
 }
@@ -139,4 +138,25 @@ void PhysicalDevice::set_swapchain_support_details() const
     vkGetPhysicalDeviceSurfacePresentModesKHR(handle_, VkContext::surface.handle(), &present_mode_count,
                                               present_modes.data());
     SwapChain::choose_swap_present_mode(present_modes);
+}
+
+VkFormat PhysicalDevice::get_supported_format(const std::vector<VkFormat>& formats, VkImageTiling tiling,
+                                              VkFormatFeatureFlags features) const
+{
+    for (VkFormat format : formats)
+    {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(handle_, format, &props);
+
+        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
+        {
+            return format;
+        }
+        else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+        {
+            return format;
+        }
+    }
+
+    throw std::runtime_error("Requested VkFormats not supported");
 }

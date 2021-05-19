@@ -19,6 +19,15 @@ void Pipeline::create(const std::string& vertex, const std::string& fragment)
 
     shader_.create(vertex, fragment);
 
+    VkPipelineLayoutCreateInfo pipeline_layout_info{};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = shader_.set_layouts().size();
+    pipeline_layout_info.pSetLayouts = shader_.set_layouts().data();
+    pipeline_layout_info.pushConstantRangeCount = 0;
+    pipeline_layout_info.pPushConstantRanges = nullptr;
+
+    VK_CHECK(vkCreatePipelineLayout(VkContext::device, &pipeline_layout_info, nullptr, &layout_));
+
     VkPipelineVertexInputStateCreateInfo vertex_input_info{};
     vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_info.vertexBindingDescriptionCount = 0;
@@ -44,23 +53,9 @@ void Pipeline::create(const std::string& vertex, const std::string& fragment)
     rasterizer_info.rasterizerDiscardEnable = VK_FALSE;
     rasterizer_info.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer_info.lineWidth = 1.0f;
-    // rasterizer_info.cullMode = VK_CULL_MODE_BACK_BIT;
-    // rasterizer_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
     rasterizer_info.cullMode = VK_CULL_MODE_NONE;
     rasterizer_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
-
-    // rasterizer_info.cullMode = VK_CULL_MODE_BACK_BIT;
-    // rasterizer_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
-
-    // rasterizer_info.cullMode = VK_CULL_MODE_BACK_BIT;
-    // rasterizer_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
-    // rasterizer_info.cullMode = VK_CULL_MODE_FRONT_BIT;
-    // rasterizer_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
-
-    // rasterizer_info.cullMode = VK_CULL_MODE_FRONT_BIT;
-    // rasterizer_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     rasterizer_info.depthBiasEnable = VK_FALSE;
     rasterizer_info.depthBiasConstantFactor = 0.0f;
@@ -75,6 +70,15 @@ void Pipeline::create(const std::string& vertex, const std::string& fragment)
     multisampling_info.pSampleMask = nullptr;
     multisampling_info.alphaToCoverageEnable = VK_FALSE;
     multisampling_info.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineDepthStencilStateCreateInfo depth_stencil{};
+    depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_stencil.depthTestEnable = VK_TRUE;
+    depth_stencil.depthWriteEnable = VK_TRUE;
+    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+    depth_stencil.depthBoundsTestEnable = VK_FALSE;
+    depth_stencil.minDepthBounds = 0.0f;
+    depth_stencil.maxDepthBounds = 1.0f;
 
     VkPipelineColorBlendAttachmentState color_blend_attachment{};
     color_blend_attachment.colorWriteMask =
@@ -98,15 +102,6 @@ void Pipeline::create(const std::string& vertex, const std::string& fragment)
     color_blend_info.blendConstants[2] = 0.0f;
     color_blend_info.blendConstants[3] = 0.0f;
 
-    VkPipelineLayoutCreateInfo pipeline_layout_info{};
-    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = shader_.set_layouts().size();
-    pipeline_layout_info.pSetLayouts = shader_.set_layouts().data();
-    pipeline_layout_info.pushConstantRangeCount = 0;
-    pipeline_layout_info.pPushConstantRanges = nullptr;
-
-    VK_CHECK(vkCreatePipelineLayout(VkContext::device, &pipeline_layout_info, nullptr, &layout_));
-
     std::vector<VkDynamicState> dynamic_states{VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
     VkPipelineDynamicStateCreateInfo dynamic_state_info{};
     dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
@@ -122,7 +117,7 @@ void Pipeline::create(const std::string& vertex, const std::string& fragment)
     pipeline_info.pViewportState = &viewport_state_info;
     pipeline_info.pRasterizationState = &rasterizer_info;
     pipeline_info.pMultisampleState = &multisampling_info;
-    pipeline_info.pDepthStencilState = nullptr;
+    pipeline_info.pDepthStencilState = &depth_stencil;
     pipeline_info.pColorBlendState = &color_blend_info;
     pipeline_info.pDynamicState = &dynamic_state_info;
     pipeline_info.layout = layout_;

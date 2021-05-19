@@ -20,6 +20,7 @@ DescriptorPool VkContext::descriptor_pool;
 SwapChain VkContext::swapchain;
 RenderPass VkContext::renderpass;
 std::vector<FrameBuffer> VkContext::framebuffers;
+Image VkContext::depth_buffer;
 
 VmaAllocator VkContext::allocator;
 
@@ -48,6 +49,8 @@ void VkContext::inner_create()
 {
     swapchain.create();
     VkImgui::init();
+
+    depth_buffer.create_depth_attachment(swapchain.extent().width, swapchain.extent().height);
 
     framebuffers.resize(swapchain.size());
     for (size_t i = 0; i < framebuffers.size(); ++i)
@@ -89,6 +92,8 @@ void VkContext::inner_destroy()
     {
         framebuffer.destroy();
     }
+
+    depth_buffer.destroy();
 
     VkImgui::shutdown();
     swapchain.destroy();

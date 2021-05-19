@@ -38,6 +38,10 @@ public:
     QueueFamilyIndices get_queue_family_indices() const;
     void set_swapchain_support_details() const;
 
+    VkFormat get_supported_format(const std::vector<VkFormat>& formats, VkImageTiling tiling,
+                                  VkFormatFeatureFlags features) const;
+    VkFormat get_depth_format() const;
+
 private:
     VkPhysicalDevice handle_;
     VkPhysicalDeviceProperties props_;
