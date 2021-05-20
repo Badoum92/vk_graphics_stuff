@@ -139,5 +139,6 @@ size_t Buffer::push(const void* data, size_t size)
 
     size_t ret = offset_;
     offset_ += size;
+    offset_ += offset_ % VkContext::physical_device.get_limits().minUniformBufferOffsetAlignment;
     return ret;
 }

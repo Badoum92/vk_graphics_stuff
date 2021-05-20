@@ -8,11 +8,11 @@
 #include "event/event.hh"
 #include "camera/camera.hh"
 
-class TestApp
+class VoxelApp
 {
 public:
-    TestApp();
-    ~TestApp();
+    VoxelApp();
+    ~VoxelApp();
 
     void update();
     void imgui_update();
@@ -21,8 +21,7 @@ public:
     static void cursor_pos_callback(const Event& event, void* object);
 
 private:
-    Buffer vertex_buffer;
-    Buffer index_buffer;
+    Buffer voxels;
     Buffer global_uniform_buffer;
 
     Image image;

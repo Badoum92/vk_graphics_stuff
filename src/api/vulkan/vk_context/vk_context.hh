@@ -2,6 +2,7 @@
 
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
 #include <vector>
 #include <array>
 
@@ -53,4 +54,16 @@ struct VkContext
 private:
     static void inner_create();
     static void inner_destroy();
+};
+
+struct GlobalUniform
+{
+    glm::mat4 view;
+    glm::mat4 inv_view;
+    glm::mat4 proj;
+    glm::mat4 inv_proj;
+    glm::vec3 camera_pos;
+    float pad0;
+    glm::ivec2 resolution;
+    glm::vec2 pad1;
 };

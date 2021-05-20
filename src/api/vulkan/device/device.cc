@@ -25,6 +25,8 @@ void Device::create()
     }
 
     VkPhysicalDeviceFeatures device_features{};
+    device_features.fillModeNonSolid = true;
+    device_features.wideLines = true;
 
     VkDeviceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

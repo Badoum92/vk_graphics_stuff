@@ -87,7 +87,7 @@ void Camera::compute_proj()
     if (proj_type_ == ProjectionType::PERSPECTIVE)
     {
         float fov = glm::radians(fov_);
-        proj_ = glm::perspective(fov, aspect_ratio_, near_, far_);
+        proj_ = glm::perspective(fov, aspect_ratio_, far_, near_);
     }
     else if (proj_type_ == ProjectionType::ORTHOGRAPHIC)
     {

@@ -7,6 +7,7 @@
 #include "vk_context/vk_context.hh"
 
 #include "test_app/test_app.hh"
+#include "voxel_app/voxel_app.hh"
 
 int main(int, char**)
 {
@@ -16,7 +17,8 @@ int main(int, char**)
         VkContext::create();
 
         {
-            TestApp app;
+            // TestApp app;
+            VoxelApp app;
             while (!Window::should_close())
             {
                 Time::update();

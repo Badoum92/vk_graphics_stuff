@@ -1,4 +1,4 @@
-#include "test_app.hh"
+#include "voxel_app.hh"
 
 #include <iostream>
 #include <glm/glm.hpp>
@@ -18,37 +18,27 @@ struct Vertex
     glm::vec2 _pad1;
 };
 
-TestApp::TestApp()
+struct Voxel
+{
+    glm::vec4 pos;
+    glm::vec4 color;
+};
+
+VoxelApp::VoxelApp()
 {
     EventHandler::register_key_callback(this);
     EventHandler::register_cursor_pos_callback(this);
 
     // clang-format off
-    const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f, 1.0f}, 0.0f, {1.0f, 1.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 1.0f}, 0.0f, {0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f, 1.0f}, 0.0f, {0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{-0.5f, 0.5f, 1.0f}, 0.0f, {1.0f, 0.0f}, {0.0f, 0.0f}},
-
-        {{-1.8f, -0.8f, 0.5f}, 0.0f, {1.0f, 1.0f}, {0.0f, 0.0f}},
-        {{-0.8f, -0.8f, 0.5f}, 0.0f, {0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{-0.8f, 0.2f, 0.5f}, 0.0f, {0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{-1.8f, 0.2f, 0.5f}, 0.0f, {1.0f, 0.0f}, {0.0f, 0.0f}}
-    };
-
-    const std::vector<uint16_t> indices = {
-        0, 1, 2,
-        2, 3, 0,
-
-        4, 5, 6,
-        6, 7, 4
+    const std::vector<Voxel> voxel_data = {
+        {{0.0f, 0.0f, 2.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}}
     };
     // clang-format on
-    vertex_buffer.create_storage(vertices.data(), vertices.size() * sizeof(Vertex));
-    index_buffer.create_index(indices.data(), indices.size() * sizeof(uint16_t));
+    voxels.create_storage(voxel_data.data(), voxel_data.size() * sizeof(Voxel));
     global_uniform_buffer.create_uniform(4 * KB);
 
-    PipelineInfo pipeline_info("shaders/test.vert.spv", "shaders/test.frag.spv");
+    PipelineInfo pipeline_info("shaders/voxel.vert.spv", "shaders/voxel.frag.spv");
+    pipeline_info.set_topology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     pipeline.create(pipeline_info);
 
     image.create("../../image.jpg");
@@ -57,15 +47,14 @@ TestApp::TestApp()
     pipeline.descriptor_set(0).bind_buffer(0, global_uniform_buffer, sizeof(GlobalUniform));
     pipeline.descriptor_set(0).update();
 
-    pipeline.descriptor_set(1).bind_buffer(0, vertex_buffer);
-    pipeline.descriptor_set(1).bind_image_sampler(1, image, sampler);
+    pipeline.descriptor_set(1).bind_buffer(0, voxels);
     pipeline.descriptor_set(1).update();
 }
 
-TestApp::~TestApp()
+VoxelApp::~VoxelApp()
 {}
 
-void TestApp::update()
+void VoxelApp::update()
 {
     camera.update();
 
@@ -97,8 +86,7 @@ void TestApp::update()
         cmd.bind_descriptor_set(pipeline, 0);
         cmd.bind_descriptor_set(pipeline, 1);
 
-        cmd.bind_index_buffer(index_buffer, 0, VK_INDEX_TYPE_UINT16);
-        cmd.draw_indexed(index_buffer.count<uint16_t>());
+        cmd.draw(1);
 
         VkImgui::render_draw_data(cmd);
 
@@ -108,7 +96,7 @@ void TestApp::update()
     VkContext::end_frame();
 }
 
-void TestApp::imgui_update()
+void VoxelApp::imgui_update()
 {
     VkImgui::new_frame();
 
@@ -153,9 +141,9 @@ void TestApp::imgui_update()
     VkImgui::render();
 }
 
-void TestApp::key_callback(const Event& event, void* object)
+void VoxelApp::key_callback(const Event& event, void* object)
 {
-    TestApp& test_app = *reinterpret_cast<TestApp*>(object);
+    VoxelApp& test_app = *reinterpret_cast<VoxelApp*>(object);
     if (event.key() == GLFW_KEY_LEFT_ALT && event.key_action() == GLFW_PRESS)
     {
         Input::show_cursor(!Input::cursor_enabled());
@@ -166,9 +154,9 @@ void TestApp::key_callback(const Event& event, void* object)
     test_app.camera.on_key_event(event.key(), event.key_action());
 }
 
-void TestApp::cursor_pos_callback(const Event& event, void* object)
+void VoxelApp::cursor_pos_callback(const Event& event, void* object)
 {
-    TestApp& test_app = *reinterpret_cast<TestApp*>(object);
+    VoxelApp& test_app = *reinterpret_cast<VoxelApp*>(object);
     if (!Input::cursor_enabled())
     {
         test_app.camera.on_mouse_moved(event.pos_x(), event.pos_y());

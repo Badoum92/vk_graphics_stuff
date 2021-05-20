@@ -47,7 +47,7 @@ void CommandBuffer::begin_renderpass(const RenderPass& renderpass, const FrameBu
 
     if (renderpass.depth())
     {
-        clear_values.back().depthStencil = {1.0f, 0};
+        clear_values.back().depthStencil = {0.0f, 0};
     }
 
     VkRenderPassBeginInfo renderpass_info{};
@@ -65,6 +65,11 @@ void CommandBuffer::begin_renderpass(const RenderPass& renderpass, const FrameBu
 void CommandBuffer::end_renderpass()
 {
     vkCmdEndRenderPass(handle_);
+}
+
+void CommandBuffer::draw(uint32_t vertex_count)
+{
+    vkCmdDraw(handle_, vertex_count, 1, 0, 0);
 }
 
 void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t index_offset)

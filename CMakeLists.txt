@@ -60,6 +60,7 @@ add_executable(main
 
     src/implems.cc
     src/test_app/test_app.cc
+    src/voxel_app/voxel_app.cc
 
     src/api/time/time.cc
     src/api/window/window.cc
@@ -118,7 +119,6 @@ add_definitions(
     -DGLM_FORCE_RADIANS
     -DGLM_FORCE_DEPTH_ZERO_TO_ONE
     -DGLM_FORCE_RIGHT_HANDED
-    # -DGLM_FORCE_LEFT_HANDED
 )
 
 

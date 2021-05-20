@@ -140,19 +140,24 @@ void PhysicalDevice::set_swapchain_support_details() const
     SwapChain::choose_swap_present_mode(present_modes);
 }
 
+const VkPhysicalDeviceLimits& PhysicalDevice::get_limits() const
+{
+    return props_.limits;
+}
+
 VkFormat PhysicalDevice::get_supported_format(const std::vector<VkFormat>& formats, VkImageTiling tiling,
                                               VkFormatFeatureFlags features) const
 {
     for (VkFormat format : formats)
     {
-        VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(handle_, format, &props);
+        VkFormatProperties format_props;
+        vkGetPhysicalDeviceFormatProperties(handle_, format, &format_props);
 
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features)
+        if (tiling == VK_IMAGE_TILING_LINEAR && (format_props.linearTilingFeatures & features) == features)
         {
             return format;
         }
-        else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+        else if (tiling == VK_IMAGE_TILING_OPTIMAL && (format_props.optimalTilingFeatures & features) == features)
         {
             return format;
         }
