@@ -66,7 +66,7 @@ public:
     }
 
 private:
-    VkPipeline handle_;
+    VkPipeline handle_ = VK_NULL_HANDLE;
     VkPipelineLayout layout_;
     Shader shader_;
 

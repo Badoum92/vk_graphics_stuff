@@ -22,7 +22,7 @@ public:
     }
 
 private:
-    VkDevice handle_;
+    VkDevice handle_ = VK_NULL_HANDLE;
     VkQueue graphics_queue_;
     VkQueue present_queue_;
 };

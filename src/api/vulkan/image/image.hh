@@ -39,7 +39,7 @@ public:
     }
 
 private:
-    VkImage handle_;
+    VkImage handle_ = VK_NULL_HANDLE;
     VmaAllocation alloc_;
     ImageView view_;
 

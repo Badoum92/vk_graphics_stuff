@@ -24,5 +24,5 @@ public:
     }
 
 private:
-    VkCommandPool handle_;
+    VkCommandPool handle_ = VK_NULL_HANDLE;
 };

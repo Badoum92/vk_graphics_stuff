@@ -19,5 +19,5 @@ public:
     }
 
 private:
-    VkSurfaceKHR handle_;
+    VkSurfaceKHR handle_ = VK_NULL_HANDLE;
 };

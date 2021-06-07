@@ -22,7 +22,7 @@ public:
     std::vector<VkPhysicalDevice> get_physical_devices() const;
 
 private:
-    VkInstance handle_;
+    VkInstance handle_ = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debug_handle_;
 
     void setup_debug_messenger();

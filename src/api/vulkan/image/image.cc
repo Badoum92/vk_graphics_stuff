@@ -7,7 +7,10 @@
 
 Image::~Image()
 {
-    destroy();
+    if (handle_ != VK_NULL_HANDLE)
+    {
+        destroy();
+    }
 }
 
 void Image::create(uint32_t width, uint32_t height, uint32_t depth, VkFormat format, VkImageUsageFlags usage,
@@ -55,6 +58,7 @@ void Image::destroy()
     view_.destroy();
 
     vmaDestroyImage(VkContext::allocator, handle_, alloc_);
+    handle_ = VK_NULL_HANDLE;
 }
 
 void Image::create(const std::filesystem::path& path)

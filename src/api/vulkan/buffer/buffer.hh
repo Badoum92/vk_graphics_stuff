@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    VkBuffer handle_;
+    VkBuffer handle_ = VK_NULL_HANDLE;
     VmaAllocation alloc_;
     void* mapped_data_{nullptr};
 

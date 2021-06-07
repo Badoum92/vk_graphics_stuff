@@ -27,7 +27,6 @@ int main(int, char**)
             }
             VkContext::wait_idle();
         }
-
         VkContext::destroy();
         Window::destroy();
     }

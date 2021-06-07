@@ -19,5 +19,5 @@ public:
     }
 
 private:
-    VkDescriptorPool handle_;
+    VkDescriptorPool handle_ = VK_NULL_HANDLE;
 };

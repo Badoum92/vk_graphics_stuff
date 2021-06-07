@@ -22,7 +22,7 @@ public:
     }
 
 private:
-    VkRenderPass handle_;
+    VkRenderPass handle_ = VK_NULL_HANDLE;
     uint32_t colors_;
     bool depth_;
 };

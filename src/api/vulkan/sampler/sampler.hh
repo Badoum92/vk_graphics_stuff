@@ -21,5 +21,5 @@ public:
     }
 
 private:
-    VkSampler handle_;
+    VkSampler handle_ = VK_NULL_HANDLE;
 };

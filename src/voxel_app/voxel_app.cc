@@ -41,9 +41,6 @@ VoxelApp::VoxelApp()
     pipeline_info.set_topology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     pipeline.create(pipeline_info);
 
-    image.create("../../image.jpg");
-    sampler.create();
-
     pipeline.descriptor_set(0).bind_buffer(0, global_uniform_buffer, sizeof(GlobalUniform));
     pipeline.descriptor_set(0).update();
 

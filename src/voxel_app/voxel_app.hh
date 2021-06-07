@@ -24,9 +24,6 @@ private:
     Buffer voxels;
     Buffer global_uniform_buffer;
 
-    Image image;
-    Sampler sampler;
-
     Pipeline pipeline;
 
     Camera camera;

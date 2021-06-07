@@ -34,7 +34,7 @@ public:
     }
 
 private:
-    VkSwapchainKHR handle_;
+    VkSwapchainKHR handle_ = VK_NULL_HANDLE;
 
     static VkPresentModeKHR present_mode_;
     static VkSurfaceFormatKHR surface_format_;

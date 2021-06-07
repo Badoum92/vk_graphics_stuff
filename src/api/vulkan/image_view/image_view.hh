@@ -19,5 +19,5 @@ public:
     }
 
 private:
-    VkImageView handle_;
+    VkImageView handle_ = VK_NULL_HANDLE;
 };

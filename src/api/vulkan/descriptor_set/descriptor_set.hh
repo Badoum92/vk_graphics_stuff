@@ -40,7 +40,7 @@ public:
     }
 
 private:
-    VkDescriptorSet handle_;
+    VkDescriptorSet handle_ = VK_NULL_HANDLE;
     std::vector<VkWriteDescriptorSet> writes_;
     std::vector<VkDescriptorBufferInfo> buffer_infos_;
     std::vector<VkDescriptorImageInfo> image_infos_;

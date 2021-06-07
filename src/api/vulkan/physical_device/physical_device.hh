@@ -44,6 +44,6 @@ public:
     VkFormat get_depth_format() const;
 
 private:
-    VkPhysicalDevice handle_;
+    VkPhysicalDevice handle_ = VK_NULL_HANDLE;
     VkPhysicalDeviceProperties props_;
 };

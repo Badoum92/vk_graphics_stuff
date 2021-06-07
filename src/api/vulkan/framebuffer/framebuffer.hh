@@ -22,5 +22,5 @@ public:
     }
 
 private:
-    VkFramebuffer handle_;
+    VkFramebuffer handle_ = VK_NULL_HANDLE;
 };

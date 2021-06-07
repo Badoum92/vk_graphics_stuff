@@ -42,6 +42,6 @@ public:
     }
 
 private:
-    VkCommandBuffer handle_;
+    VkCommandBuffer handle_ = VK_NULL_HANDLE;
     VkCommandPool pool_;
 };
