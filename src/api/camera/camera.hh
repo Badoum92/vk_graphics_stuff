@@ -12,7 +12,7 @@ public:
         ORTHOGRAPHIC
     };
 
-    Camera(const glm::vec3& pos = {0.0f, 0.0f, 0.0f}, const glm::vec3& world_up = {0.0f, 1.0f, 0.0f}, float yaw = 90.0f,
+    Camera(const glm::vec3& pos = {0.0f, 0.0f, 0.0f}, const glm::vec3& world_up = {0.0f, 1.0f, 0.0f}, float yaw = -90.0f,
            float pitch = 0.0f, float near = 0.001f, float far = 1000.0f);
 
     void update_vectors();

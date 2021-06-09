@@ -24,6 +24,9 @@ private:
     Buffer voxels;
     Buffer global_uniform_buffer;
 
+    Buffer cube_vbo;
+    Buffer cube_ebo;
+
     Pipeline pipeline;
 
     Camera camera;

@@ -14,8 +14,8 @@ struct Vertex
 {
     glm::vec3 pos;
     float _pad0;
-    glm::vec2 tex_coord;
-    glm::vec2 _pad1;
+    glm::vec3 normal;
+    float _pad1;
 };
 
 struct Voxel
@@ -24,6 +24,110 @@ struct Voxel
     glm::vec4 color;
 };
 
+// clang-format off
+/* static std::vector<float> cube_vertices = {
+    // back
+     0.0f,  0.0f,  0.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+    -1.0f,  0.0f,  0.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+     0.0f,  1.0f,  0.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+    -1.0f,  1.0f,  0.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+
+    // front
+    -1.0f,  0.0f,  1.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+     0.0f,  0.0f,  1.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+    -1.0f,  1.0f,  1.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+     0.0f,  1.0f,  1.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+
+     // left
+     0.0f,  0.0f,  1.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+     0.0f,  0.0f,  0.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+     0.0f,  1.0f,  1.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+     0.0f,  1.0f,  0.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+
+     // right
+    -1.0f,  0.0f,  0.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+    -1.0f,  0.0f,  1.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+    -1.0f,  1.0f,  0.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+    -1.0f,  1.0f,  1.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+
+    // up
+     0.0f,  1.0f,  0.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+    -1.0f,  1.0f,  0.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+     0.0f,  1.0f,  1.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+    -1.0f,  1.0f,  1.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+
+     // down
+     0.0f,  0.0f,  1.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f),
+    -1.0f,  0.0f,  1.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f),
+     0.0f,  0.0f,  0.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f),
+    -1.0f,  0.0f,  0.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f)
+}; */
+
+static std::vector<float> cube_vertices = {
+    // back
+     0.0f,  0.0f,  0.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+     1.0f,  0.0f,  0.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+     0.0f,  1.0f,  0.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+     1.0f,  1.0f,  0.0f, (0.0f),     0.0f,  0.0f,  1.0f, (0.0f),
+
+    // front
+     1.0f,  0.0f,  1.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+     0.0f,  0.0f,  1.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+     1.0f,  1.0f,  1.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+     0.0f,  1.0f,  1.0f, (0.0f),     0.0f,  0.0f, -1.0f, (0.0f),
+
+     // left
+     0.0f,  0.0f,  1.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+     0.0f,  0.0f,  0.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+     0.0f,  1.0f,  1.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+     0.0f,  1.0f,  0.0f, (0.0f),    -1.0f,  0.0f,  0.0f, (0.0f),
+
+     // right
+     1.0f,  0.0f,  0.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+     1.0f,  0.0f,  1.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+     1.0f,  1.0f,  0.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+     1.0f,  1.0f,  1.0f, (0.0f),     1.0f,  0.0f,  0.0f, (0.0f),
+
+    // up
+     0.0f,  1.0f,  0.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+     1.0f,  1.0f,  0.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+     0.0f,  1.0f,  1.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+     1.0f,  1.0f,  1.0f, (0.0f),     0.0f,  1.0f,  0.0f, (0.0f),
+
+     // down
+     0.0f,  0.0f,  1.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f),
+     1.0f,  0.0f,  1.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f),
+     0.0f,  0.0f,  0.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f),
+     1.0f,  0.0f,  0.0f, (0.0f),     0.0f, -1.0f,  0.0f, (0.0f)
+};
+
+static std::vector<unsigned> cube_indices = {
+    // back
+    0, 2, 3,
+    0, 3, 1,
+
+    // front
+    4, 6, 7,
+    4, 7, 5,
+
+    // left
+    8, 10, 11,
+    8, 11, 9,
+
+    // right
+    12, 14, 15,
+    12, 15, 13,
+
+    // up
+    16, 18, 19,
+    16, 19, 17,
+
+    // down
+    20, 22, 23,
+    20, 23, 21
+};
+// clang-format on
+
 VoxelApp::VoxelApp()
 {
     EventHandler::register_key_callback(this);
@@ -31,20 +135,30 @@ VoxelApp::VoxelApp()
 
     // clang-format off
     const std::vector<Voxel> voxel_data = {
-        {{0.0f, 0.0f, 2.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}}
+        {{ 0.0f,  0.0f, -2.0f, 1.0f}, {1.0f, 0.2f, 0.2f, 1.0f}},
+        {{ 0.0f,  1.0f, -4.0f, 1.0f}, {0.2f, 0.2f, 1.0f, 1.0f}},
+        {{ 2.0f, -1.0f, -3.0f, 1.0f}, {0.2f, 1.0f, 0.2f, 1.0f}},
+        {{-2.0f, -1.0f, -3.0f, 1.0f}, {1.0f, 1.0f, 0.2f, 1.0f}}
     };
     // clang-format on
     voxels.create_storage(voxel_data.data(), voxel_data.size() * sizeof(Voxel));
     global_uniform_buffer.create_uniform(4 * KB);
 
+    cube_vbo.create_storage(cube_vertices.data(), cube_vertices.size() * sizeof(float));
+    cube_ebo.create_index(cube_indices.data(), cube_indices.size() * sizeof(unsigned));
+
+    // PipelineInfo pipeline_info("shaders/voxel.vert.spv", "shaders/voxel.frag.spv");
+    // pipeline_info.set_topology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+    // pipeline.create(pipeline_info);
     PipelineInfo pipeline_info("shaders/voxel.vert.spv", "shaders/voxel.frag.spv");
-    pipeline_info.set_topology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     pipeline.create(pipeline_info);
 
     pipeline.descriptor_set(0).bind_buffer(0, global_uniform_buffer, sizeof(GlobalUniform));
     pipeline.descriptor_set(0).update();
 
     pipeline.descriptor_set(1).bind_buffer(0, voxels);
+    pipeline.descriptor_set(1).update();
+    pipeline.descriptor_set(1).bind_buffer(1, cube_vbo);
     pipeline.descriptor_set(1).update();
 }
 
@@ -83,7 +197,8 @@ void VoxelApp::update()
         cmd.bind_descriptor_set(pipeline, 0);
         cmd.bind_descriptor_set(pipeline, 1);
 
-        cmd.draw(1);
+        cmd.bind_index_buffer(cube_ebo);
+        cmd.draw_indexed(cube_indices.size(), 0, 4);
 
         VkImgui::render_draw_data(cmd);
 

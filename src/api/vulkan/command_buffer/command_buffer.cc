@@ -72,9 +72,9 @@ void CommandBuffer::draw(uint32_t vertex_count)
     vkCmdDraw(handle_, vertex_count, 1, 0, 0);
 }
 
-void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t index_offset)
+void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t index_offset, uint32_t instance_count)
 {
-    vkCmdDrawIndexed(handle_, index_count, 1, index_offset, 0, 0);
+    vkCmdDrawIndexed(handle_, index_count, instance_count, index_offset, 0, 0);
 }
 
 void CommandBuffer::bind_vertex_buffer(const Buffer& buffer, size_t offset)

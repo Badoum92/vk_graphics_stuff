@@ -21,7 +21,7 @@ public:
     void end_renderpass();
 
     void draw(uint32_t vertex_count);
-    void draw_indexed(uint32_t index_count, uint32_t index_offset = 0);
+    void draw_indexed(uint32_t index_count, uint32_t index_offset = 0, uint32_t instance_count = 1);
 
     void bind_vertex_buffer(const Buffer& buffer, size_t offset = 0);
     void bind_index_buffer(const Buffer& buffer, size_t offset = 0, VkIndexType index_type = VK_INDEX_TYPE_UINT32);

@@ -16,8 +16,7 @@ struct Box
     vec3 rot;
 };
 
-bool test_box(Box box, Ray ray, out float dist, out vec3 normal, const bool can_start_in_box,
-                     const bool oriented)
+bool test_box(Box box, Ray ray, out float dist, out vec3 normal, const bool can_start_in_box, const bool oriented)
 {
     ray.pos = ray.pos - box.center;
     if (oriented)
@@ -40,6 +39,27 @@ bool test_box(Box box, Ray ray, out float dist, out vec3 normal, const bool can_
     dist = (sgn.x != 0) ? d.x : ((sgn.y != 0) ? d.y : d.z);
     normal = oriented ? (box.rot * sgn) : sgn;
     return (sgn.x != 0) || (sgn.y != 0) || (sgn.z != 0);
+}
+
+bool test_aabb(vec3 bmin, vec3 bmax, Ray r, out float dist)
+{
+    float t1 = (bmin.x - r.pos[0]) * r.inv_dir[0];
+    float t2 = (bmax.y - r.pos[0]) * r.inv_dir[0];
+
+    float tmin = min(t1, t2);
+    float tmax = max(t1, t2);
+
+    for (int i = 1; i < 3; ++i)
+    {
+        t1 = (bmin[i] - r.pos[i]) * r.inv_dir[i];
+        t2 = (bmax[i] - r.pos[i]) * r.inv_dir[i];
+
+        tmin = max(tmin, min(t1, t2));
+        tmax = min(tmax, max(t1, t2));
+    }
+
+    dist = tmin;
+    return tmax > max(tmin, 0.0);
 }
 
 #endif
