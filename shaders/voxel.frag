@@ -24,11 +24,21 @@ vec3 get_color_for_ray(in Ray ray)
 
     float dist = 0.0f;
     // if (!test_aabb(vox.pos.xyz + vec3(0.0f, 0.0f, -voxel_size) * 2.0f, vox.pos.xyz + vec3(voxel_size, voxel_size, 0.0f) * 2.0f, ray, dist))
-    if (!test_aabb(vox.pos.xyz + vec3(0.0f, 0.0f, 0.0f) * 2.0f, vox.pos.xyz + vec3(voxel_size, voxel_size, voxel_size) * 2.0f, ray, dist))
+    // if (!test_aabb(vox.pos.xyz + vec3(0.0f, 0.0f, 0.0f) * 2.0f, vox.pos.xyz + vec3(voxel_size, voxel_size, voxel_size) * 2.0f, ray, dist))
+    /* if (!test_aabb(vox.pos.xyz, vox.pos.xyz + vec3(voxel_size) * 2.0f, ray, dist))
     {
         discard;
     }
-    ret = vox.color.rgb;
+    ret = vox.color.rgb; */
+    if (test_aabb(vox.pos.xyz, vox.pos.xyz + vec3(voxel_size) * 2.0f, ray, dist))
+    {
+        return vox.color.rgb;
+    }
+    else
+    {
+        discard;
+        // return vec3(1);
+    }
 
     /* float dist = 0;
     vec3 normal = vec3(0);
@@ -56,6 +66,9 @@ void main()
     return; */
 
     vec2 uv = vec2(gl_FragCoord.xy) / global.resolution;
+
+    // frag_color = vec4(uv, 0.0f, 1.0f);
+    // return;
 
     vec4 target = vec4(uv * 2.0f - 1.0f, 0.0f, 1.0f);
     target = global.inv_view * global.inv_proj * target;

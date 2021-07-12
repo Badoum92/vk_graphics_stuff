@@ -1,12 +1,13 @@
-#include "global.glsl"
+#include "test.glsl"
 
-layout(location = 0) in vec2 in_tex_coord;
+layout(set = 1, binding = 2) uniform sampler2D texSampler;
 
-layout(location = 0) out vec4 out_color;
+layout(location = 0) in vec3 fragColor;
+layout(location = 1) in vec2 position;
 
-layout(set = 1, binding = 1) uniform sampler2D image;
+layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    out_color = texture(image, in_tex_coord);
+    outColor = vec4(fragColor * texture(texSampler, position).rgb, 1.0);
 }

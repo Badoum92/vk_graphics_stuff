@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <fstream>
 
-namespace Tools
+namespace tools
 {
     template <typename T>
     T read_file(const std::filesystem::path& path)

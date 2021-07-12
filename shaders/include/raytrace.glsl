@@ -26,7 +26,6 @@ bool test_box(Box box, Ray ray, out float dist, out vec3 normal, const bool can_
     }
     float winding = can_start_in_box && (max(abs(ray.pos) * box.inv_radius) < 1.0) ? -1 : 1;
     vec3 sgn = -sign(ray.dir);
-    // Distance to plane
     vec3 d = box.radius * winding * sgn - ray.pos;
     if (oriented)
         d /= ray.dir;

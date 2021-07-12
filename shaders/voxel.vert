@@ -23,7 +23,7 @@ layout(set = 1, binding = 1) buffer VertexBuffer
 
 void main()
 {
-    vec3 world_pos = vertices[gl_VertexIndex].pos + voxels[gl_InstanceIndex].pos.xyz;
+    vec3 world_pos = ((vertices[gl_VertexIndex].pos - 0.5f) * 4.0f) + voxels[gl_InstanceIndex].pos.xyz;
     gl_Position = global.proj * global.view * vec4(world_pos, 1.0);
     voxel_index = gl_InstanceIndex;
 }

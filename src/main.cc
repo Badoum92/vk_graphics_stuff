@@ -1,39 +1,41 @@
 #include <iostream>
 
-#include <memory>
+#include "window.hh"
+#include "time.hh"
 
-#include "window/window.hh"
-#include "time/time.hh"
-#include "vk_context/vk_context.hh"
-
-#include "test_app/test_app.hh"
-#include "voxel_app/voxel_app.hh"
+#include "context.hh"
+#include "device.hh"
+#include "surface.hh"
+#include "renderer.hh"
 
 int main(int, char**)
 {
     try
     {
         Window::create(1280, 720, "Test Vulkan");
-        VkContext::create();
+        auto context = vk::Context::create();
+        auto device = vk::Device::create(context);
+        auto surface = vk::Surface::create(context, device);
+        auto renderer = Renderer::create(device, surface);
+        renderer.init();
 
+        while (!Window::should_close())
         {
-            // TestApp app;
-            VoxelApp app;
-            while (!Window::should_close())
-            {
-                Time::update();
-                Window::poll_events();
-                app.update();
-            }
-            VkContext::wait_idle();
+            Time::update();
+            Window::poll_events();
+            renderer.render();
         }
-        VkContext::destroy();
+
+        device.wait_idle();
+
+        renderer.destroy();
+        surface.destroy(context, device);
+        device.destroy();
+        context.destroy();
         Window::destroy();
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Exception: " << e.what() << "\n";
+        std::cerr << "Uncaught exception: " << e.what() << "\n";
     }
-
-    return 0;
 }

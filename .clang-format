@@ -56,7 +56,7 @@ IndentWidth: 4
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: false
 Language: Cpp
-NamespaceIndentation: All
+NamespaceIndentation: None
 PointerAlignment: Left
 ReflowComments: true
 SortIncludes: false

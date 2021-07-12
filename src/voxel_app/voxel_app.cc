@@ -136,9 +136,17 @@ VoxelApp::VoxelApp()
     // clang-format off
     const std::vector<Voxel> voxel_data = {
         {{ 0.0f,  0.0f, -2.0f, 1.0f}, {1.0f, 0.2f, 0.2f, 1.0f}},
+        {{ 0.0f,  0.0f,  2.0f, 1.0f}, {1.0f, 0.2f, 0.2f, 1.0f}},
         {{ 0.0f,  1.0f, -4.0f, 1.0f}, {0.2f, 0.2f, 1.0f, 1.0f}},
+        {{ 0.0f,  1.0f,  4.0f, 1.0f}, {0.2f, 0.2f, 1.0f, 1.0f}},
+        {{-2.0f, -1.0f, -3.0f, 1.0f}, {1.0f, 1.0f, 0.2f, 1.0f}},
+        {{-2.0f, -1.0f,  3.0f, 1.0f}, {1.0f, 1.0f, 0.2f, 1.0f}},
         {{ 2.0f, -1.0f, -3.0f, 1.0f}, {0.2f, 1.0f, 0.2f, 1.0f}},
-        {{-2.0f, -1.0f, -3.0f, 1.0f}, {1.0f, 1.0f, 0.2f, 1.0f}}
+        {{ 2.0f, -1.0f,  3.0f, 1.0f}, {0.2f, 1.0f, 0.2f, 1.0f}},
+        {{ 3.0f,  1.0f, -3.0f, 1.0f}, {0.8f, 0.2f, 0.8f, 1.0f}},
+        {{ 3.0f,  1.0f,  3.0f, 1.0f}, {0.8f, 0.2f, 0.8f, 1.0f}},
+        {{-5.0f,  1.0f, -2.0f, 1.0f}, {0.2f, 0.8f, 0.8f, 1.0f}},
+        {{-5.0f,  1.0f,  2.0f, 1.0f}, {0.2f, 0.8f, 0.8f, 1.0f}}
     };
     // clang-format on
     voxels.create_storage(voxel_data.data(), voxel_data.size() * sizeof(Voxel));
@@ -151,6 +159,7 @@ VoxelApp::VoxelApp()
     // pipeline_info.set_topology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     // pipeline.create(pipeline_info);
     PipelineInfo pipeline_info("shaders/voxel.vert.spv", "shaders/voxel.frag.spv");
+    // PipelineInfo pipeline_info("shaders/voxel.vert.spv", "shaders/basic_3d.frag.spv");
     pipeline.create(pipeline_info);
 
     pipeline.descriptor_set(0).bind_buffer(0, global_uniform_buffer, sizeof(GlobalUniform));
@@ -198,7 +207,7 @@ void VoxelApp::update()
         cmd.bind_descriptor_set(pipeline, 1);
 
         cmd.bind_index_buffer(cube_ebo);
-        cmd.draw_indexed(cube_indices.size(), 0, 4);
+        cmd.draw_indexed(cube_indices.size(), 0, 12);
 
         VkImgui::render_draw_data(cmd);
 
