@@ -175,7 +175,7 @@ bool Device::acquire_next_image(Surface& surface)
                                      VK_NULL_HANDLE, &fc.image_index);
 
     fc.command_context.reset();
-    fc.framebuffer = surface.frame_buffers[fc.image_index];
+    fc.framebuffer = surface.framebuffers[fc.image_index];
     fc.image = surface.images[fc.image_index];
 
     if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)

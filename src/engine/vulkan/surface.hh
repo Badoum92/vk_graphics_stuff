@@ -27,6 +27,6 @@ struct Surface
     VkPresentModeKHR present_mode;
     VkSurfaceFormatKHR format;
     std::vector<Handle<Image>> images;
-    std::vector<Handle<FrameBuffer>> frame_buffers;
+    std::vector<Handle<FrameBuffer>> framebuffers;
 };
 } // namespace vk

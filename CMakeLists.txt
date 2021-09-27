@@ -25,10 +25,6 @@ option(GLFW_INSTALL OFF)
 add_subdirectory(third_party/glfw)
 # ------------
 
-# --- SPIRV-Cross ---
-add_subdirectory(third_party/SPIRV-Cross)
-# ------------
-
 # --- IMGUI ---
 file(GLOB IMGUI_SOURCES
     third_party/imgui/*.cpp
@@ -95,8 +91,6 @@ target_link_libraries(main
     ${Vulkan_LIBRARIES}
     glfw
     imgui
-    spirv-cross-reflect
-    spirv-cross-core
 )
 
 add_definitions(

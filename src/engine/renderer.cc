@@ -87,7 +87,11 @@ void Renderer::resize()
     p_surface->create_swapchain(*p_device);
 
     {
-        const auto& fb_desc = p_device->framebuffers.get(p_surface->frame_buffers[0]).description;
+        p_device->destroy_image(rt_color);
+        p_device->destroy_image(rt_depth);
+        p_device->destroy_framebuffer(render_target);
+
+        const auto& fb_desc = p_device->framebuffers.get(p_surface->framebuffers[0]).description;
 
         rt_color =
             p_device->create_image({.width = fb_desc.width,

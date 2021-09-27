@@ -17,6 +17,7 @@ $ ninja
 
 - [X] Basic Vulkan backend
 - [X] glTF model loading
+- [ ] ImGUI support
 - [ ] Lights and shadows
 - [ ] PBR
 - [ ] Ray-tracing pipeline (RTX)
