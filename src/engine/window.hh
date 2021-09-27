@@ -23,7 +23,7 @@ public:
     static void close();
     static bool should_close();
 
-    static bool resized(bool set = false);
+    static void set_title(const std::string& title);
 
     static inline GLFWwindow* handle()
     {

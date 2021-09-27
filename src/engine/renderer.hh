@@ -6,6 +6,7 @@
 #include "surface.hh"
 #include "camera.hh"
 #include "event.hh"
+#include "gltf.hh"
 
 class Renderer
 {
@@ -24,15 +25,18 @@ private:
     vk::Device* p_device = nullptr;
     vk::Surface* p_surface = nullptr;
 
+    gltf::Model model{};
+
     Camera camera{};
 
     VkRect2D scissor;
     VkViewport viewport;
 
+    Handle<vk::FrameBuffer> render_target;
+    Handle<vk::Image> rt_color;
+    Handle<vk::Image> rt_depth;
+
     Handle<vk::GraphicsProgram> graphics_program;
-    Handle<vk::Buffer> vertex_buffer;
-    Handle<vk::Buffer> color_buffer;
-    Handle<vk::Image> image;
 
     vk::RingBuffer global_uniform_buffer;
 };

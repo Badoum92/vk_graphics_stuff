@@ -41,6 +41,32 @@ void Device::destroy_buffer(const Handle<Buffer>& handle)
     buffers.remove(handle);
 }
 
+RingBuffer RingBuffer::create(Device& device, const BufferDescription& description)
+{
+    RingBuffer ring_buffer{};
+    ring_buffer.alignment = device.physical_device.properties.limits.minUniformBufferOffsetAlignment;
+    ring_buffer.description = description;
+    ring_buffer.buffer_handle = device.create_buffer(ring_buffer.description);
+    ring_buffer.mapped_data = reinterpret_cast<uint8_t*>(device.map_buffer(ring_buffer.buffer_handle));
+    return ring_buffer;
+}
+
+uint32_t RingBuffer::push(const void* data, uint32_t size)
+{
+    uint32_t aligned_size = size + alignment - size % alignment;
+
+    if (offset + size > description.size)
+    {
+        offset = 0;
+    }
+
+    std::memcpy(mapped_data + offset, data, size);
+
+    uint32_t ret = offset;
+    offset += aligned_size;
+    return ret;
+}
+
 void* Device::map_buffer(const Handle<Buffer>& handle)
 {
     Buffer& buffer = buffers.get(handle);

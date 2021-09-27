@@ -31,7 +31,18 @@ struct Command
     VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 };
 
-struct GraphicsCommand : public Command
+struct TransferCommand : public Command
+{
+    void upload_buffer(const Handle<Buffer>& buffer_handle, void* data, uint32_t size);
+    void upload_image(const Handle<Image>& image_handle, void* data, uint32_t size);
+    void upload_image(const Handle<Image>& image_handle, const std::string& path);
+    void blit_image(const Handle<Image>& src, const Handle<Image>& dst);
+};
+
+struct ComputeCommand : public TransferCommand
+{};
+
+struct GraphicsCommand : public ComputeCommand
 {
     void set_scissor(const VkRect2D& rect);
     void set_viewport(const VkViewport& viewport);
@@ -48,17 +59,8 @@ struct GraphicsCommand : public Command
     void begin_renderpass(const Handle<FrameBuffer>& framebuffer_handle);
     void end_renderpass();
 
-    void draw(uint32_t vertex_count);
-};
-
-struct ComputeCommand : public Command
-{};
-
-struct TransferCommand : public Command
-{
-    void upload_buffer(const Handle<Buffer>& buffer_handle, void* data, uint32_t size);
-    void upload_image(const Handle<Image>& image_handle, void* data, uint32_t size);
-    void upload_image(const Handle<Image>& image_handle, const std::string& path);
+    void draw(uint32_t vertex_count, uint32_t first_vertex = 0);
+    void draw_indexed(uint32_t index_count, uint32_t first_index = 0, uint32_t vertex_offset = 0);
 };
 
 template <typename T>

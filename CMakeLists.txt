@@ -3,7 +3,6 @@ enable_language(C CXX)
 project(vk_graphics_stuff CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-#set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -pedantic -g3")
 
 if (UNIX)
@@ -13,12 +12,6 @@ endif ()
 if (${CMAKE_GENERATOR} STREQUAL "Ninja")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics -fansi-escape-codes")
 endif ()
-
-# if (WIN32)
-#     set(CMAKE_C_SIMULATE_ID "")
-#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-microsoft -Wno-language-extension-token -Wno-gnu-anonymous-struct -Wno-nested-anon-types")
-#     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-# endif ()
 
 # --- VULKAN ---
 find_package(Vulkan REQUIRED)
@@ -55,18 +48,18 @@ target_link_libraries(imgui PRIVATE
 set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
 # ------------
 
+# --- EXECUTABLE ---
 add_executable(main
     src/main.cc
 
-    src/implems.cc
-    # src/test_app/test_app.cc
-    # src/voxel_app/voxel_app.cc
+    src/util/implems.cc
 
     src/engine/window.cc
     src/engine/camera.cc
     src/engine/event.cc
     src/engine/input.cc
     src/engine/renderer.cc
+    src/engine/gltf.cc
 
     src/engine/vulkan/vk_tools.cc
     src/engine/vulkan/context.cc
@@ -80,13 +73,11 @@ add_executable(main
     src/engine/vulkan/descriptor_set.cc
     src/engine/vulkan/command.cc
     src/engine/vulkan/frame_context.cc
-
-    # src/engine/vulkan/vk_imgui/vk_imgui.cc
 )
 
 target_include_directories(main
     PRIVATE src
-    PRIVATE src/core
+    PRIVATE src/util
     PRIVATE src/engine
     PRIVATE src/engine/vulkan
 )
@@ -96,6 +87,7 @@ target_include_directories(main
     SYSTEM PRIVATE third_party/glfw/include
     SYSTEM PRIVATE third_party/glm
     SYSTEM PRIVATE third_party/imgui
+    SYSTEM PRIVATE third_party/nlohmann/include
     SYSTEM PRIVATE third_party
 )
 
@@ -113,6 +105,7 @@ add_definitions(
     -DGLM_FORCE_DEPTH_ZERO_TO_ONE
     -DGLM_FORCE_RIGHT_HANDED
 )
+# ------------------
 
 # --- SHADERS ---
 file(GLOB_RECURSE GLSL_SOURCE_FILES

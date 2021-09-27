@@ -224,10 +224,16 @@ void GraphicsCommand::end_renderpass()
     vkCmdEndRenderPass(vk_handle);
 }
 
-void GraphicsCommand::draw(uint32_t vertex_count)
+void GraphicsCommand::draw(uint32_t vertex_count, uint32_t first_vertex)
 {
-    vkCmdDraw(vk_handle, vertex_count, 1, 0, 0);
+    vkCmdDraw(vk_handle, vertex_count, 1, first_vertex, 0);
 }
+
+void GraphicsCommand::draw_indexed(uint32_t index_count, uint32_t first_index, uint32_t vertex_offset)
+{
+    vkCmdDrawIndexed(vk_handle, index_count, 1, first_index, vertex_offset, 0);
+}
+
 
 /* Compute */
 
@@ -296,5 +302,32 @@ void TransferCommand::upload_image(const Handle<Image>& image_handle, const std:
     }
     upload_image(image_handle, data, width * height * 4);
     stbi_image_free(data);
+}
+
+void TransferCommand::blit_image(const Handle<Image>& src, const Handle<Image>& dst)
+{
+    auto& src_image = p_device->images.get(src);
+    auto& dst_image = p_device->images.get(dst);
+
+    VkImageBlit blit{};
+    blit.srcSubresource.aspectMask = src_image.full_view.range.aspectMask;
+    blit.srcSubresource.mipLevel = src_image.full_view.range.baseMipLevel;
+    blit.srcSubresource.baseArrayLayer = src_image.full_view.range.baseArrayLayer;
+    blit.srcSubresource.layerCount = src_image.full_view.range.layerCount;
+    blit.srcOffsets[0] = {.x = 0, .y = 0, .z = 0};
+    blit.srcOffsets[1] = {.x = static_cast<int32_t>(src_image.description.width),
+                          .y = static_cast<int32_t>(src_image.description.height),
+                          .z = static_cast<int32_t>(src_image.description.depth)};
+    blit.dstSubresource.aspectMask = dst_image.full_view.range.aspectMask;
+    blit.dstSubresource.mipLevel = dst_image.full_view.range.baseMipLevel;
+    blit.dstSubresource.baseArrayLayer = dst_image.full_view.range.baseArrayLayer;
+    blit.dstSubresource.layerCount = dst_image.full_view.range.layerCount;
+    blit.dstOffsets[0] = {.x = 0, .y = 0, .z = 0};
+    blit.dstOffsets[1] = {.x = static_cast<int32_t>(dst_image.description.width),
+                          .y = static_cast<int32_t>(dst_image.description.height),
+                          .z = static_cast<int32_t>(dst_image.description.depth)};
+
+    vkCmdBlitImage(vk_handle, src_image.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst_image.vk_handle,
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_NEAREST);
 }
 } // namespace vk

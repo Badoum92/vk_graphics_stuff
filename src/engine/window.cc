@@ -98,19 +98,9 @@ bool Window::should_close()
     return glfwWindowShouldClose(handle_) != 0;
 }
 
-bool Window::resized(bool set)
+void Window::set_title(const std::string& title)
 {
-    if (set)
-    {
-        resized_ = true;
-        return true;
-    }
-    else
-    {
-        bool ret = resized_;
-        resized_ = false;
-        return ret;
-    }
+    glfwSetWindowTitle(handle_, title.c_str());
 }
 
 /* GLFW callbacks */
@@ -118,7 +108,6 @@ bool Window::resized(bool set)
 static void framebuffer_size_callback(GLFWwindow*, int width, int height)
 {
     Window::set_size(width, height);
-    Window::resized(true);
 }
 
 static void cursor_pos_callback(GLFWwindow*, double x_pos, double y_pos)
