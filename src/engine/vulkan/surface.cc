@@ -81,7 +81,7 @@ void Surface::create_swapchain(Device& device)
     format = formats[0];
     for (const auto& surface_format : formats)
     {
-        if (surface_format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (surface_format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
             format = surface_format;
             break;
@@ -137,7 +137,7 @@ void Surface::create_swapchain(Device& device)
     {
         images[i] = device.create_image(img_desc, vk_images[i]);
         framebuffers[i] =
-            device.create_framebuffer(fb_desc, {images[i]}, Handle<Image>::invalid(), {LoadOp::clear(0.0f, 0.0f, 0.0f, 1.0f)});
+            device.create_framebuffer(fb_desc, {images[i]}, Handle<Image>::invalid(), {LoadOp::load()});
     }
 }
 

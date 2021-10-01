@@ -6,6 +6,10 @@
 #include "window.hh"
 #include "input.hh"
 #include "time.hh"
+#include "context.hh"
+#include "device.hh"
+#include "surface.hh"
+#include "imgui.hh"
 
 struct GlobalUniformSet
 {
@@ -17,25 +21,33 @@ struct GlobalUniformSet
     glm::uvec2 resolution;
 };
 
-Renderer Renderer::create(vk::Device& device, vk::Surface& surface)
+Renderer Renderer::create(vk::Context& context, vk::Device& device, vk::Surface& surface)
 {
     Renderer renderer;
+    renderer.p_context = &context;
     renderer.p_device = &device;
     renderer.p_surface = &surface;
     return renderer;
 }
 
 void Renderer::destroy()
-{}
+{
+    vk::imgui_shutdown();
+}
 
 void Renderer::init()
 {
     resize();
 
+    vk::imgui_init(*p_context, *p_device, *p_surface, render_target);
+
     EventHandler::register_key_callback(this);
     EventHandler::register_cursor_pos_callback(this);
 
+    camera.set_speed(5.0f);
+
     model = gltf::load_model("../models/Sponza/glTF/Sponza.gltf", *p_device);
+    // model = gltf::load_model("../models/backpack/scene.gltf", *p_device);
     {
         auto& cmd = p_device->get_graphics_command();
         for (auto& img : model.images)
@@ -44,9 +56,6 @@ void Renderer::init()
         }
         p_device->submit_blocking(cmd);
     }
-
-    camera.set_speed(5.0f);
-
     {
         vk::GraphicsProgramDescription prog_desc{};
         prog_desc.attachment_formats = p_device->framebuffers.get(render_target).description;
@@ -62,6 +71,18 @@ void Renderer::init()
         render_state.depth.write_enable = VK_TRUE;
 
         p_device->compile(graphics_program, render_state);
+    }
+    {
+        vk::GraphicsProgramDescription prog_desc{};
+        prog_desc.attachment_formats = p_device->framebuffers.get(tonemap_fb).description;
+        prog_desc.descriptor_types = {vk::DescriptorType::create(vk::DescriptorType::Type::SampledImage)};
+        prog_desc.vertex_shader = p_device->create_shader("shaders/triangle.vert");
+        prog_desc.fragment_shader = p_device->create_shader("shaders/tonemap.frag");
+        tonemap_program = p_device->create_graphics_program(prog_desc);
+
+        vk::RenderState render_state{};
+
+        p_device->compile(tonemap_program, render_state);
     }
     {
         global_uniform_buffer = vk::RingBuffer::create(
@@ -86,17 +107,17 @@ void Renderer::resize()
     p_surface->destroy_swapchain(*p_device);
     p_surface->create_swapchain(*p_device);
 
+    const auto& fb_desc = p_device->framebuffers.get(p_surface->framebuffers[0]).description;
+
     {
         p_device->destroy_image(rt_color);
         p_device->destroy_image(rt_depth);
         p_device->destroy_framebuffer(render_target);
 
-        const auto& fb_desc = p_device->framebuffers.get(p_surface->framebuffers[0]).description;
-
         rt_color =
             p_device->create_image({.width = fb_desc.width,
                                     .height = fb_desc.height,
-                                    .format = VK_FORMAT_R8G8B8A8_SRGB,
+                                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                                     .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
 
         rt_depth = p_device->create_image({.width = fb_desc.width,
@@ -104,12 +125,24 @@ void Renderer::resize()
                                            .format = VK_FORMAT_D32_SFLOAT,
                                            .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT});
 
-        render_target = p_device->create_framebuffer({.width = fb_desc.width,
-                                                      .height = fb_desc.height,
-                                                      .color_formats = {VK_FORMAT_R8G8B8A8_SRGB},
-                                                      .depth_format = VK_FORMAT_D32_SFLOAT},
-                                                     {rt_color}, rt_depth,
-                                                     {vk::LoadOp::clear(0, 0, 0, 1), vk::LoadOp::clear(0, 0)});
+        render_target = p_device->create_framebuffer(
+            {.width = fb_desc.width,
+             .height = fb_desc.height,
+             .color_formats = {p_device->images.get(rt_color).description.format},
+             .depth_format = {p_device->images.get(rt_depth).description.format}},
+            {rt_color}, rt_depth, {vk::LoadOp::clear(0, 0, 0, 1), vk::LoadOp::clear(0, 0)});
+    }
+    {
+        p_device->destroy_image(tonemap_image);
+        p_device->destroy_framebuffer(tonemap_fb);
+
+        tonemap_image =
+            p_device->create_image({.width = fb_desc.width,
+                                    .height = fb_desc.height,
+                                    .format = VK_FORMAT_B8G8R8A8_UNORM,
+                                    .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
+        tonemap_fb =
+            p_device->create_framebuffer(fb_desc, {tonemap_image}, Handle<vk::Image>::invalid(), {vk::LoadOp::clear(0, 0, 0, 1)});
     }
 }
 
@@ -157,7 +190,7 @@ void Renderer::render()
         {
             const auto& primitive = model.primitives[primitive_idx];
             const auto& material = model.materials[primitive.material];
-            auto& image_handle = model.images[model.textures[material.base_color_tex].source].handle;
+            const auto& image_handle = model.images[model.textures[material.base_color_tex].source].handle;
 
             cmd.bind_storage_buffer(graphics_program, model.vertex_buffer, 0);
             cmd.bind_uniform_buffer(graphics_program, global_uniform_buffer.buffer_handle, 1, uniform_offset,
@@ -167,6 +200,13 @@ void Renderer::render()
 
             cmd.draw_indexed(primitive.index_count, primitive.index_start);
         }
+    }
+
+    {
+        vk::imgui_new_frame();
+        ImGui::ShowDemoWindow();
+        vk::imgui_render();
+        vk::imgui_render_draw_data(cmd);
     }
 
     cmd.end_renderpass();
@@ -183,6 +223,9 @@ void Renderer::render()
         resize();
     }
 }
+
+void Renderer::render_imgui()
+{}
 
 void Renderer::key_callback(const Event& event, void* object)
 {

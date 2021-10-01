@@ -14,6 +14,7 @@
 #include "framebuffer.hh"
 #include "shader.hh"
 #include "graphics_pipeline.hh"
+#include "compute_pipeline.hh"
 #include "descriptor_set.hh"
 #include "frame_context.hh"
 #include "command.hh"
@@ -41,6 +42,7 @@ struct Device
     Pool<FrameBuffer> framebuffers;
     Pool<Shader> shaders;
     Pool<GraphicsProgram> graphics_programs;
+    Pool<ComputeProgram> compute_programs;
     std::vector<VkSampler> samplers;
     std::vector<FrameContext> frame_contexts;
 
@@ -73,6 +75,9 @@ struct Device
     Handle<GraphicsProgram> create_graphics_program(const GraphicsProgramDescription& description);
     void destroy_graphics_program(const Handle<GraphicsProgram>& handle);
     VkPipeline compile(const Handle<GraphicsProgram>& handle, const RenderState& render_state);
+
+    Handle<ComputeProgram> create_compute_program(const ComputeProgramDescription& description);
+    void destroy_compute_program(const Handle<ComputeProgram>& handle);
 
     void create_frame_contexts();
     void destroy_frame_contexts();

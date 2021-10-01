@@ -66,9 +66,11 @@ add_executable(main
     src/engine/vulkan/framebuffer.cc
     src/engine/vulkan/shader.cc
     src/engine/vulkan/graphics_pipeline.cc
+    src/engine/vulkan/compute_pipeline.cc
     src/engine/vulkan/descriptor_set.cc
     src/engine/vulkan/command.cc
     src/engine/vulkan/frame_context.cc
+    src/engine/vulkan/imgui.cc
 )
 
 target_include_directories(main

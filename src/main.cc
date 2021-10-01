@@ -16,7 +16,7 @@ int main(int, char**)
         auto context = vk::Context::create();
         auto device = vk::Device::create(context);
         auto surface = vk::Surface::create(context, device);
-        auto renderer = Renderer::create(device, surface);
+        auto renderer = Renderer::create(context, device, surface);
         renderer.init();
 
         while (!Window::should_close())
