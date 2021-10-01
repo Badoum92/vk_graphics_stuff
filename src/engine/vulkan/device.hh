@@ -60,10 +60,11 @@ struct Device
     void* map_buffer(const Handle<Buffer>& handle);
     void unmap_buffer(const Handle<Buffer>& handle);
 
-    RenderPass create_renderpass(const FrameBufferDescription& description, const std::vector<LoadOp> load_ops);
+    RenderPass create_renderpass(const FrameBufferDescription& description, const std::vector<LoadOp>& load_ops);
+    const RenderPass& get_or_create_renderpass(const Handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops);
     Handle<FrameBuffer> create_framebuffer(const FrameBufferDescription& description,
                                            const std::vector<Handle<Image>>& color_attachments,
-                                           Handle<Image> depth_attachment, const std::vector<LoadOp> load_ops);
+                                           const Handle<Image>& depth_attachment);
     void destroy_framebuffer(const Handle<FrameBuffer>& handle);
 
     DescriptorSet create_descriptor_set(const std::vector<DescriptorType>& descriptor_types);

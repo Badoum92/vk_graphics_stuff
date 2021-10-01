@@ -39,7 +39,7 @@ void Renderer::init()
 {
     resize();
 
-    vk::imgui_init(*p_context, *p_device, *p_surface, render_target);
+    vk::imgui_init(*p_context, *p_device, *p_surface);
 
     EventHandler::register_key_callback(this);
     EventHandler::register_cursor_pos_callback(this);
@@ -71,18 +71,6 @@ void Renderer::init()
         render_state.depth.write_enable = VK_TRUE;
 
         p_device->compile(graphics_program, render_state);
-    }
-    {
-        vk::GraphicsProgramDescription prog_desc{};
-        prog_desc.attachment_formats = p_device->framebuffers.get(tonemap_fb).description;
-        prog_desc.descriptor_types = {vk::DescriptorType::create(vk::DescriptorType::Type::SampledImage)};
-        prog_desc.vertex_shader = p_device->create_shader("shaders/triangle.vert");
-        prog_desc.fragment_shader = p_device->create_shader("shaders/tonemap.frag");
-        tonemap_program = p_device->create_graphics_program(prog_desc);
-
-        vk::RenderState render_state{};
-
-        p_device->compile(tonemap_program, render_state);
     }
     {
         global_uniform_buffer = vk::RingBuffer::create(
@@ -125,24 +113,12 @@ void Renderer::resize()
                                            .format = VK_FORMAT_D32_SFLOAT,
                                            .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT});
 
-        render_target = p_device->create_framebuffer(
-            {.width = fb_desc.width,
-             .height = fb_desc.height,
-             .color_formats = {p_device->images.get(rt_color).description.format},
-             .depth_format = {p_device->images.get(rt_depth).description.format}},
-            {rt_color}, rt_depth, {vk::LoadOp::clear(0, 0, 0, 1), vk::LoadOp::clear(0, 0)});
-    }
-    {
-        p_device->destroy_image(tonemap_image);
-        p_device->destroy_framebuffer(tonemap_fb);
-
-        tonemap_image =
-            p_device->create_image({.width = fb_desc.width,
-                                    .height = fb_desc.height,
-                                    .format = VK_FORMAT_B8G8R8A8_UNORM,
-                                    .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
-        tonemap_fb =
-            p_device->create_framebuffer(fb_desc, {tonemap_image}, Handle<vk::Image>::invalid(), {vk::LoadOp::clear(0, 0, 0, 1)});
+        render_target =
+            p_device->create_framebuffer({.width = fb_desc.width,
+                                          .height = fb_desc.height,
+                                          .color_formats = {p_device->images.get(rt_color).description.format},
+                                          .depth_format = {p_device->images.get(rt_depth).description.format}},
+                                         {rt_color}, rt_depth);
     }
 }
 
@@ -175,7 +151,7 @@ void Renderer::render()
     cmd.bind_descriptor_set(graphics_program, p_device->global_uniform_set, 0);
 
     cmd.barrier(rt_color, vk::ImageUsage::ColorAttachment);
-    cmd.begin_renderpass(render_target);
+    cmd.begin_renderpass(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
 
     cmd.bind_index_buffer(model.index_buffer, VK_INDEX_TYPE_UINT32, 0);
     for (const auto& node : model.nodes)
@@ -202,18 +178,21 @@ void Renderer::render()
         }
     }
 
-    {
-        vk::imgui_new_frame();
-        ImGui::ShowDemoWindow();
-        vk::imgui_render();
-        vk::imgui_render_draw_data(cmd);
-    }
-
     cmd.end_renderpass();
 
     cmd.barrier(rt_color, vk::ImageUsage::TransferSrc);
     cmd.barrier(fc.image, vk::ImageUsage::TransferDst);
     cmd.blit_image(rt_color, fc.image);
+
+    cmd.barrier(fc.image, vk::ImageUsage::ColorAttachment);
+    {
+        cmd.begin_renderpass(fc.framebuffer, {vk::LoadOp::load()});
+        vk::imgui_new_frame();
+        ImGui::ShowDemoWindow();
+        vk::imgui_render();
+        vk::imgui_render_draw_data(cmd);
+        cmd.end_renderpass();
+    }
 
     cmd.barrier(fc.image, vk::ImageUsage::Present);
     p_device->submit(cmd, fc.image_acquired_semaphore, fc.rendering_finished_semaphore, fc.rendering_finished_fence);

@@ -43,9 +43,6 @@ private:
     Handle<vk::Image> rt_color;
     Handle<vk::Image> rt_depth;
 
-    Handle<vk::FrameBuffer> tonemap_fb;
-    Handle<vk::Image> tonemap_image;
-
     Handle<vk::GraphicsProgram> graphics_program;
     Handle<vk::GraphicsProgram> tonemap_program;
 

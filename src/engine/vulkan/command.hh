@@ -12,6 +12,7 @@
 namespace vk
 {
 struct Device;
+struct LoadOp;
 struct FrameBuffer;
 struct Buffer;
 struct Image;
@@ -56,7 +57,7 @@ struct GraphicsCommand : public ComputeCommand
     void bind_descriptor_set(const Handle<GraphicsProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
     void bind_pipeline(const Handle<GraphicsProgram>& program_handle, uint32_t pipeline_index = 0);
 
-    void begin_renderpass(const Handle<FrameBuffer>& framebuffer_handle);
+    void begin_renderpass(const Handle<FrameBuffer>& framebuffer_handle, const std::vector<LoadOp>& load_ops);
     void end_renderpass();
 
     void draw(uint32_t vertex_count, uint32_t first_vertex = 0);

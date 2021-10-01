@@ -46,6 +46,21 @@ struct LoadOp
         return op;
     }
 
+    static LoadOp clear_color()
+    {
+        return clear(0, 0, 0, 1);
+    }
+
+    static LoadOp clear_depth()
+    {
+        return clear(0, 0);
+    }
+
+    bool operator==(const LoadOp& other) const
+    {
+        return vk_loadop == other.vk_loadop;
+    }
+
     VkAttachmentLoadOp vk_loadop = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     VkClearValue clear_value;
 };
@@ -72,6 +87,6 @@ struct FrameBuffer
 
     std::vector<Handle<Image>> color_attachments;
     Handle<Image> depth_attachment;
-    RenderPass renderpass;
+    std::vector<RenderPass> renderpasses;
 };
 } // namespace vk

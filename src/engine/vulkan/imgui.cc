@@ -11,7 +11,7 @@
 
 namespace vk
 {
-void imgui_init(Context& context, Device& device, Surface& surface, const Handle<FrameBuffer>& fb_handle)
+void imgui_init(Context& context, Device& device, Surface& surface)
 {
     ImGui::CreateContext();
 
@@ -27,7 +27,8 @@ void imgui_init(Context& context, Device& device, Surface& surface, const Handle
     init_info.ImageCount = surface.images.size();
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-    ImGui_ImplVulkan_Init(&init_info, device.framebuffers.get(fb_handle).renderpass.vk_handle);
+    const auto& renderpass = device.get_or_create_renderpass(surface.framebuffers[0], {vk::LoadOp::load()});
+    ImGui_ImplVulkan_Init(&init_info, renderpass.vk_handle);
 
     auto& cmd = device.get_graphics_command();
     ImGui_ImplVulkan_CreateFontsTexture(cmd.vk_handle);

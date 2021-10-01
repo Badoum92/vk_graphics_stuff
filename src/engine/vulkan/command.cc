@@ -195,13 +195,15 @@ void GraphicsCommand::bind_pipeline(const Handle<GraphicsProgram>& program_handl
     vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, program.pipelines[pipeline_index]);
 }
 
-void GraphicsCommand::begin_renderpass(const Handle<FrameBuffer>& framebuffer_handle)
+void GraphicsCommand::begin_renderpass(const Handle<FrameBuffer>& framebuffer_handle,
+                                       const std::vector<LoadOp>& load_ops)
 {
     auto& framebuffer = p_device->framebuffers.get(framebuffer_handle);
+    const auto& renderpass = p_device->get_or_create_renderpass(framebuffer_handle, load_ops);
 
     std::vector<VkClearValue> clear_values;
     clear_values.resize(framebuffer.color_attachments.size() + framebuffer.depth_attachment.is_valid());
-    for (const auto& load_op : framebuffer.renderpass.load_ops)
+    for (const auto& load_op : renderpass.load_ops)
     {
         clear_values.push_back(load_op.clear_value);
     }
@@ -209,7 +211,7 @@ void GraphicsCommand::begin_renderpass(const Handle<FrameBuffer>& framebuffer_ha
     VkRenderPassBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     begin_info.pNext = nullptr;
-    begin_info.renderPass = framebuffer.renderpass.vk_handle;
+    begin_info.renderPass = renderpass.vk_handle;
     begin_info.framebuffer = framebuffer.vk_handle;
     begin_info.renderArea.offset = {0, 0};
     begin_info.renderArea.extent = {framebuffer.description.width, framebuffer.description.height};
@@ -233,7 +235,6 @@ void GraphicsCommand::draw_indexed(uint32_t index_count, uint32_t first_index, u
 {
     vkCmdDrawIndexed(vk_handle, index_count, 1, first_index, vertex_offset, 0);
 }
-
 
 /* Compute */
 

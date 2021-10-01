@@ -5,7 +5,7 @@
 
 namespace vk
 {
-RenderPass Device::create_renderpass(const FrameBufferDescription& description, const std::vector<LoadOp> load_ops)
+RenderPass Device::create_renderpass(const FrameBufferDescription& description, const std::vector<LoadOp>& load_ops)
 {
     assert(description.color_formats.size() + description.depth_format.has_value() == load_ops.size());
 
@@ -21,7 +21,9 @@ RenderPass Device::create_renderpass(const FrameBufferDescription& description, 
         attachment_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment_desc.initialLayout = load_ops[i].vk_loadop == VK_ATTACHMENT_LOAD_OP_LOAD
+            ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            : VK_IMAGE_LAYOUT_UNDEFINED;
         attachment_desc.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference attachment_ref{};
@@ -41,7 +43,9 @@ RenderPass Device::create_renderpass(const FrameBufferDescription& description, 
         attachment_desc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachment_desc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment_desc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment_desc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment_desc.initialLayout = load_ops.back().vk_loadop == VK_ATTACHMENT_LOAD_OP_LOAD
+            ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            : VK_IMAGE_LAYOUT_UNDEFINED;
         attachment_desc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference attachment_ref{};
@@ -80,9 +84,26 @@ RenderPass Device::create_renderpass(const FrameBufferDescription& description, 
     return {vk_renderpass, load_ops};
 }
 
+const RenderPass& Device::get_or_create_renderpass(const Handle<FrameBuffer>& handle,
+                                                   const std::vector<LoadOp>& load_ops)
+{
+    auto& fb = framebuffers.get(handle);
+
+    for (const auto& renderpass : fb.renderpasses)
+    {
+        if (renderpass.load_ops == load_ops)
+        {
+            return renderpass;
+        }
+    }
+
+    fb.renderpasses.push_back(create_renderpass(fb.description, load_ops));
+    return fb.renderpasses.back();
+}
+
 Handle<FrameBuffer> Device::create_framebuffer(const FrameBufferDescription& description,
                                                const std::vector<Handle<Image>>& color_attachments,
-                                               Handle<Image> depth_attachment, const std::vector<LoadOp> load_ops)
+                                               const Handle<Image>& depth_attachment)
 {
     assert(description.color_formats.size() == color_attachments.size());
     assert(description.depth_format.has_value() == depth_attachment.is_valid());
@@ -96,7 +117,7 @@ Handle<FrameBuffer> Device::create_framebuffer(const FrameBufferDescription& des
 
     std::vector<VkImageView> attachment_views;
     attachment_views.reserve(attachments_count);
-    for(size_t i = 0; i < color_attachments.size(); ++i)
+    for (size_t i = 0; i < color_attachments.size(); ++i)
     {
         auto& image = images.get(color_attachments[i]);
         attachment_views.push_back(image.full_view.vk_handle);
@@ -109,11 +130,12 @@ Handle<FrameBuffer> Device::create_framebuffer(const FrameBufferDescription& des
         assert(image.full_view.format == description.depth_format);
     }
 
-    framebuffer.renderpass = create_renderpass(description, load_ops);
+    framebuffer.renderpasses.push_back(
+        create_renderpass(description, std::vector<LoadOp>(attachments_count, LoadOp::dont_care())));
 
     VkFramebufferCreateInfo framebuffer_info{};
     framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebuffer_info.renderPass = framebuffer.renderpass.vk_handle;
+    framebuffer_info.renderPass = framebuffer.renderpasses[0].vk_handle;
     framebuffer_info.attachmentCount = attachments_count;
     framebuffer_info.pAttachments = attachment_views.data();
     framebuffer_info.width = framebuffer.description.width;
@@ -136,7 +158,11 @@ void Device::destroy_framebuffer(const Handle<FrameBuffer>& handle)
     FrameBuffer& framebuffer = framebuffers.get(handle);
     vkDestroyFramebuffer(vk_handle, framebuffer.vk_handle, nullptr);
     framebuffer.vk_handle = VK_NULL_HANDLE;
-    vkDestroyRenderPass(vk_handle, framebuffer.renderpass.vk_handle, nullptr);
+    for (const auto& renderpass : framebuffer.renderpasses)
+    {
+        vkDestroyRenderPass(vk_handle, renderpass.vk_handle, nullptr);
+    }
+    framebuffer.renderpasses.clear();
     framebuffer.color_attachments.clear();
     framebuffer.depth_attachment = Handle<Image>::invalid();
     framebuffers.remove(handle);

@@ -136,8 +136,7 @@ void Surface::create_swapchain(Device& device)
     for (uint32_t i = 0; i < image_count; ++i)
     {
         images[i] = device.create_image(img_desc, vk_images[i]);
-        framebuffers[i] =
-            device.create_framebuffer(fb_desc, {images[i]}, Handle<Image>::invalid(), {LoadOp::load()});
+        framebuffers[i] = device.create_framebuffer(fb_desc, {images[i]}, Handle<Image>::invalid());
     }
 }
 
