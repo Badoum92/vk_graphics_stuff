@@ -1,0 +1,23 @@
+layout(set = 1, binding = 0) uniform sampler2D input_image;
+layout(set = 1, binding = 1, rgba8) uniform image2D output_image;
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+void main()
+{
+    const ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
+    const ivec2 output_size = imageSize(output_image);
+
+    if (any(greaterThan(uv, output_size)))
+    {
+        return;
+    }
+
+    const float exposure = 1.0;
+    const float gamma = 2.2;
+
+    vec3 hdr = texelFetch(input_image, uv, 0).rgb;
+    vec3 ldr = vec3(1.0) - exp(-hdr * exposure);
+    ldr = pow(ldr, vec3(1.0 / gamma));
+
+    imageStore(output_image, uv, vec4(ldr, 1.0));
+}

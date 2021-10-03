@@ -8,7 +8,14 @@
 #include <nlohmann/json.hpp>
 #include <glm/glm.hpp>
 
-#include "device.hh"
+#include "handle.hh"
+
+namespace vk
+{
+struct Device;
+struct Buffer;
+struct Image;
+}
 
 namespace gltf
 {

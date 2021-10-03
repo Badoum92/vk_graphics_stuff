@@ -150,6 +150,10 @@ void Device::destroy()
     {
         destroy_graphics_program(handle);
     }
+    for (auto& handle : compute_programs.handles())
+    {
+        destroy_compute_program(handle);
+    }
     for (auto& sampler : samplers)
     {
         vkDestroySampler(vk_handle, sampler, nullptr);

@@ -131,6 +131,50 @@ void Command::barrier(const Handle<Image>& image_handle, ImageUsage dst_usage)
     image.usage = dst_usage;
 }
 
+void Command::bind_image(const Handle<GraphicsProgram>& program_handle, const Handle<Image>& image_handle,
+                                 uint32_t binding)
+{
+    auto& program = p_device->graphics_programs.get(program_handle);
+    program.descriptor_set.bind_image(binding, image_handle);
+}
+
+void Command::bind_uniform_buffer(const Handle<GraphicsProgram>& program_handle,
+                                          const Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+                                          uint32_t size)
+{
+    auto& program = p_device->graphics_programs.get(program_handle);
+    program.descriptor_set.bind_uniform_buffer(binding, buffer_handle, offset, size);
+}
+
+void Command::bind_storage_buffer(const Handle<GraphicsProgram>& program_handle,
+                                          const Handle<Buffer>& buffer_handle, uint32_t binding)
+{
+    auto& program = p_device->graphics_programs.get(program_handle);
+    program.descriptor_set.bind_storage_buffer(binding, buffer_handle);
+}
+
+void Command::bind_image(const Handle<ComputeProgram>& program_handle, const Handle<Image>& image_handle,
+                                 uint32_t binding)
+{
+    auto& program = p_device->compute_programs.get(program_handle);
+    program.descriptor_set.bind_image(binding, image_handle);
+}
+
+void Command::bind_uniform_buffer(const Handle<ComputeProgram>& program_handle,
+                                          const Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+                                          uint32_t size)
+{
+    auto& program = p_device->compute_programs.get(program_handle);
+    program.descriptor_set.bind_uniform_buffer(binding, buffer_handle, offset, size);
+}
+
+void Command::bind_storage_buffer(const Handle<ComputeProgram>& program_handle,
+                                          const Handle<Buffer>& buffer_handle, uint32_t binding)
+{
+    auto& program = p_device->compute_programs.get(program_handle);
+    program.descriptor_set.bind_storage_buffer(binding, buffer_handle);
+}
+
 /* Graphics */
 
 void GraphicsCommand::set_scissor(const VkRect2D& rect)
@@ -141,28 +185,6 @@ void GraphicsCommand::set_scissor(const VkRect2D& rect)
 void GraphicsCommand::set_viewport(const VkViewport& viewport)
 {
     vkCmdSetViewport(vk_handle, 0, 1, &viewport);
-}
-
-void GraphicsCommand::bind_image(const Handle<GraphicsProgram>& program_handle, const Handle<Image>& image_handle,
-                                 uint32_t binding)
-{
-    auto& program = p_device->graphics_programs.get(program_handle);
-    program.descriptor_set.bind_image(binding, image_handle);
-}
-
-void GraphicsCommand::bind_uniform_buffer(const Handle<GraphicsProgram>& program_handle,
-                                          const Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
-                                          uint32_t size)
-{
-    auto& program = p_device->graphics_programs.get(program_handle);
-    program.descriptor_set.bind_uniform_buffer(binding, buffer_handle, offset, size);
-}
-
-void GraphicsCommand::bind_storage_buffer(const Handle<GraphicsProgram>& program_handle,
-                                          const Handle<Buffer>& buffer_handle, uint32_t binding)
-{
-    auto& program = p_device->graphics_programs.get(program_handle);
-    program.descriptor_set.bind_storage_buffer(binding, buffer_handle);
 }
 
 void GraphicsCommand::bind_index_buffer(const Handle<Buffer>& buffer_handle, VkIndexType index_type, uint32_t offset)
@@ -237,6 +259,35 @@ void GraphicsCommand::draw_indexed(uint32_t index_count, uint32_t first_index, u
 }
 
 /* Compute */
+
+void ComputeCommand::bind_descriptor_set(const Handle<ComputeProgram>& program_handle, DescriptorSet& set,
+                                          uint32_t set_index)
+{
+    auto& program = p_device->compute_programs.get(program_handle);
+    auto vk_set = set.get_or_create_vk_set(*p_device);
+    std::vector<uint32_t> offsets;
+    for (uint32_t offset : set.dynamic_offsets)
+    {
+        offsets.push_back(offset);
+    }
+    vkCmdBindDescriptorSets(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, program.layout, set_index, 1, &vk_set,
+                            offsets.size(), offsets.data());
+}
+
+void ComputeCommand::bind_pipeline(const Handle<ComputeProgram>& program_handle)
+{
+    auto& program = p_device->compute_programs.get(program_handle);
+    if (program.description.descriptor_types.size() > 0)
+    {
+        bind_descriptor_set(program_handle, program.descriptor_set, 1);
+    }
+    vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, program.pipeline);
+}
+
+void ComputeCommand::dispatch(uint32_t x, uint32_t y, uint32_t z)
+{
+    vkCmdDispatch(vk_handle, x, y, z);
+}
 
 /* Transfer */
 

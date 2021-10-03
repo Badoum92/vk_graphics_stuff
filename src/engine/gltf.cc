@@ -8,6 +8,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "tools.hh"
+#include "device.hh"
 
 namespace gltf
 {

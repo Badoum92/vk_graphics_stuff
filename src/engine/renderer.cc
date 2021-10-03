@@ -73,6 +73,13 @@ void Renderer::init()
         p_device->compile(graphics_program, render_state);
     }
     {
+        vk::ComputeProgramDescription prog_desc{};
+        prog_desc.descriptor_types = {vk::DescriptorType::create(vk::DescriptorType::Type::SampledImage),
+                                      vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage)};
+        prog_desc.shader = p_device->create_shader("shaders/tonemap.comp");
+        tonemap_program = p_device->create_compute_program(prog_desc);
+    }
+    {
         global_uniform_buffer = vk::RingBuffer::create(
             *p_device,
             {.size = 4 * MB, .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, .memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU});
@@ -102,11 +109,11 @@ void Renderer::resize()
         p_device->destroy_image(rt_depth);
         p_device->destroy_framebuffer(render_target);
 
-        rt_color =
-            p_device->create_image({.width = fb_desc.width,
-                                    .height = fb_desc.height,
-                                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                                    .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
+        rt_color = p_device->create_image({.width = fb_desc.width,
+                                           .height = fb_desc.height,
+                                           .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                                           .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+                                               | VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
 
         rt_depth = p_device->create_image({.width = fb_desc.width,
                                            .height = fb_desc.height,
@@ -138,6 +145,8 @@ void Renderer::render()
     cmd.set_scissor(scissor);
     cmd.set_viewport(viewport);
 
+    // global set
+
     GlobalUniformSet global_uniform_set{};
     global_uniform_set.view = camera.get_view();
     global_uniform_set.inv_view = camera.get_inv_view();
@@ -150,9 +159,10 @@ void Renderer::render()
                                                      sizeof(GlobalUniformSet));
     cmd.bind_descriptor_set(graphics_program, p_device->global_uniform_set, 0);
 
+    // main renderpass
+
     cmd.barrier(rt_color, vk::ImageUsage::ColorAttachment);
     cmd.begin_renderpass(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
-
     cmd.bind_index_buffer(model.index_buffer, VK_INDEX_TYPE_UINT32, 0);
     for (const auto& node : model.nodes)
     {
@@ -177,12 +187,18 @@ void Renderer::render()
             cmd.draw_indexed(primitive.index_count, primitive.index_start);
         }
     }
-
     cmd.end_renderpass();
 
-    cmd.barrier(rt_color, vk::ImageUsage::TransferSrc);
-    cmd.barrier(fc.image, vk::ImageUsage::TransferDst);
-    cmd.blit_image(rt_color, fc.image);
+    // tonemap
+
+    cmd.barrier(rt_color, vk::ImageUsage::ComputeShaderRead);
+    cmd.barrier(fc.image, vk::ImageUsage::ComputeShaderReadWrite);
+    cmd.bind_image(tonemap_program, rt_color, 0);
+    cmd.bind_image(tonemap_program, fc.image, 1);
+    cmd.bind_pipeline(tonemap_program);
+    cmd.dispatch(Window::width(), Window::height());
+
+    // gui
 
     cmd.barrier(fc.image, vk::ImageUsage::ColorAttachment);
     {
@@ -193,6 +209,8 @@ void Renderer::render()
         vk::imgui_render_draw_data(cmd);
         cmd.end_renderpass();
     }
+
+    // present
 
     cmd.barrier(fc.image, vk::ImageUsage::Present);
     p_device->submit(cmd, fc.image_acquired_semaphore, fc.rendering_finished_semaphore, fc.rendering_finished_fence);

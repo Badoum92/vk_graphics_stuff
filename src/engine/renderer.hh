@@ -5,6 +5,7 @@
 #include "camera.hh"
 #include "event.hh"
 #include "gltf.hh"
+#include "device.hh"
 
 namespace vk
 {
@@ -44,7 +45,7 @@ private:
     Handle<vk::Image> rt_depth;
 
     Handle<vk::GraphicsProgram> graphics_program;
-    Handle<vk::GraphicsProgram> tonemap_program;
+    Handle<vk::ComputeProgram> tonemap_program;
 
     vk::RingBuffer global_uniform_buffer;
 };

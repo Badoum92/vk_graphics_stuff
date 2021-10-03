@@ -5,7 +5,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include "image.hh"
 #include "vk_tools.hh"
 #include "handle.hh"
 
@@ -16,8 +15,10 @@ struct LoadOp;
 struct FrameBuffer;
 struct Buffer;
 struct Image;
+enum class ImageUsage;
 struct DescriptorSet;
 struct GraphicsProgram;
+struct ComputeProgram;
 
 struct Command
 {
@@ -25,6 +26,17 @@ struct Command
     void end();
 
     void barrier(const Handle<Image>& image_handle, ImageUsage dst_usage);
+
+    void bind_image(const Handle<GraphicsProgram>& program_handle, const Handle<Image>& image_handle, uint32_t binding);
+    void bind_uniform_buffer(const Handle<GraphicsProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+                             uint32_t binding, uint32_t offset, uint32_t size);
+    void bind_storage_buffer(const Handle<GraphicsProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+                             uint32_t binding);
+    void bind_image(const Handle<ComputeProgram>& program_handle, const Handle<Image>& image_handle, uint32_t binding);
+    void bind_uniform_buffer(const Handle<ComputeProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+                             uint32_t binding, uint32_t offset, uint32_t size);
+    void bind_storage_buffer(const Handle<ComputeProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+                             uint32_t binding);
 
     Device* p_device = nullptr;
     VkCommandBuffer vk_handle = VK_NULL_HANDLE;
@@ -41,7 +53,11 @@ struct TransferCommand : public Command
 };
 
 struct ComputeCommand : public TransferCommand
-{};
+{
+    void bind_descriptor_set(const Handle<ComputeProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
+    void bind_pipeline(const Handle<ComputeProgram>& program_handle);
+    void dispatch(uint32_t x, uint32_t y, uint32_t z = 1);
+};
 
 struct GraphicsCommand : public ComputeCommand
 {
@@ -49,11 +65,6 @@ struct GraphicsCommand : public ComputeCommand
     void set_viewport(const VkViewport& viewport);
 
     void bind_index_buffer(const Handle<Buffer>& buffer_handle, VkIndexType index_type, uint32_t offset);
-    void bind_image(const Handle<GraphicsProgram>& program_handle, const Handle<Image>& image_handle, uint32_t binding);
-    void bind_uniform_buffer(const Handle<GraphicsProgram>& program_handle, const Handle<Buffer>& buffer_handle,
-                             uint32_t binding, uint32_t offset, uint32_t size);
-    void bind_storage_buffer(const Handle<GraphicsProgram>& program_handle, const Handle<Buffer>& buffer_handle,
-                             uint32_t binding);
     void bind_descriptor_set(const Handle<GraphicsProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
     void bind_pipeline(const Handle<GraphicsProgram>& program_handle, uint32_t pipeline_index = 0);
 
@@ -62,6 +73,9 @@ struct GraphicsCommand : public ComputeCommand
 
     void draw(uint32_t vertex_count, uint32_t first_vertex = 0);
     void draw_indexed(uint32_t index_count, uint32_t first_index = 0, uint32_t vertex_offset = 0);
+
+    using ComputeCommand::bind_descriptor_set;
+    using ComputeCommand::bind_pipeline;
 };
 
 template <typename T>
