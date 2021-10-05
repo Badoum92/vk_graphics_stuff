@@ -22,7 +22,6 @@ int main(int, char**)
         while (!Window::should_close())
         {
             Time::update();
-            Window::set_title(std::to_string(Time::fps()));
             Window::poll_events();
             renderer.render();
         }

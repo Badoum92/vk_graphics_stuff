@@ -164,6 +164,8 @@ void Renderer::render()
     cmd.barrier(rt_color, vk::ImageUsage::ColorAttachment);
     cmd.begin_renderpass(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
     cmd.bind_index_buffer(model.index_buffer, VK_INDEX_TYPE_UINT32, 0);
+    cmd.bind_storage_buffer(graphics_program, model.vertex_buffer, 0);
+
     for (const auto& node : model.nodes)
     {
         if (!node.mesh)
@@ -178,7 +180,6 @@ void Renderer::render()
             const auto& material = model.materials[primitive.material];
             const auto& image_handle = model.images[model.textures[material.base_color_tex].source].handle;
 
-            cmd.bind_storage_buffer(graphics_program, model.vertex_buffer, 0);
             cmd.bind_uniform_buffer(graphics_program, global_uniform_buffer.buffer_handle, 1, uniform_offset,
                                     sizeof(glm::mat4));
             cmd.bind_image(graphics_program, image_handle, 2);
@@ -201,14 +202,16 @@ void Renderer::render()
     // gui
 
     cmd.barrier(fc.image, vk::ImageUsage::ColorAttachment);
-    {
-        cmd.begin_renderpass(fc.framebuffer, {vk::LoadOp::load()});
-        vk::imgui_new_frame();
-        ImGui::ShowDemoWindow();
-        vk::imgui_render();
-        vk::imgui_render_draw_data(cmd);
-        cmd.end_renderpass();
-    }
+    cmd.begin_renderpass(fc.framebuffer, {vk::LoadOp::load()});
+    vk::imgui_new_frame();
+
+    ImGui::Begin("window");
+    ImGui::Text("FPS: %u", Time::fps());
+    ImGui::End();
+
+    vk::imgui_render();
+    vk::imgui_render_draw_data(cmd);
+    cmd.end_renderpass();
 
     // present
 

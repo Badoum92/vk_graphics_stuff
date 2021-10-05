@@ -5,7 +5,7 @@
 class Time
 {
 public:
-    static void update()
+    static inline void update()
     {
         double current_frame = glfwGetTime();
         delta_time_ = current_frame - last_frame_;

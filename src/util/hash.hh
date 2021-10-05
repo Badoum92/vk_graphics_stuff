@@ -28,9 +28,9 @@ struct hash<std::vector<T>>
     size_t operator()(const std::vector<T>& v) const noexcept
     {
         std::size_t hash = v.size();
-        for (const auto& i : v)
+        for (size_t i = 0; i < v.size(); ++i)
         {
-            hash_combine(hash, i);
+            hash_combine(hash, v[i]);
         }
         return hash;
     }
