@@ -33,6 +33,8 @@ private:
     vk::Device* p_device = nullptr;
     vk::Surface* p_surface = nullptr;
 
+    uint32_t frame_number = 0;
+
     gltf::Model model{};
 
     Camera camera{};
@@ -46,6 +48,11 @@ private:
 
     Handle<vk::GraphicsProgram> graphics_program;
     Handle<vk::ComputeProgram> tonemap_program;
+    Handle<vk::ComputeProgram> raytracing_program;
+
+    Handle<vk::Image> color_acc;
+    Handle<vk::Image> voxels;
+    Handle<vk::Buffer> voxel_materials;
 
     vk::RingBuffer global_uniform_buffer;
 };

@@ -10,7 +10,8 @@
 namespace vk
 {
 static const std::vector<const char*> device_ext = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-                                                    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME};
+                                                    VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+                                                    VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME};
 
 Device Device::create(const Context& context)
 {

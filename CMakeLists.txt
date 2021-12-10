@@ -56,6 +56,8 @@ add_executable(main
     src/engine/input.cc
     src/engine/renderer.cc
     src/engine/gltf.cc
+    src/engine/vox_loader.cc
+    # src/engine/ecs.cc
 
     src/engine/vulkan/vk_tools.cc
     src/engine/vulkan/context.cc

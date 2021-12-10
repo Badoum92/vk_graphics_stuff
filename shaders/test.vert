@@ -1,4 +1,4 @@
-#include "test.glsl"
+#include "global.glsl"
 
 layout(set = 1, binding = 0) buffer VertexBuffer
 {

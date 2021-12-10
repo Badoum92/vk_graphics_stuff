@@ -1,4 +1,4 @@
-#include "test.glsl"
+#include "global.glsl"
 
 layout(set = 1, binding = 2) uniform sampler2D base_color_tex;
 

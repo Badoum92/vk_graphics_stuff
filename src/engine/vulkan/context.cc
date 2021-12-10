@@ -59,8 +59,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
                                                      VkDebugUtilsMessageTypeFlagsEXT msg_type,
                                                      const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void*)
 {
-    if (msg_severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    // if (msg_severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+    if (msg_severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
         return VK_FALSE;
+
 
     auto const severity_str = [msg_severity]() {
         switch (msg_severity)
@@ -73,10 +75,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
             return "WARNING";
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
             return "ERROR";
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT:
-            return "MAX";
+        default:
+            return "UNKNOWN SEVERITY";
         }
-        return "";
     }();
 
     auto const type_str = [msg_type]() {
@@ -88,8 +89,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
             return "VALIDATION";
         case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
             return "PERFORMANCE";
+        default:
+            return "UNKNOWN TYPE";
         }
-        return "";
     }();
 
     std::cerr << "VK_DEBUG [" << severity_str << "][" << type_str << "]: " << callback_data->pMessage << "\n";

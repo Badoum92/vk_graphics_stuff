@@ -163,10 +163,6 @@ struct CommandContext
     void destroy();
     void reset();
 
-    GraphicsCommand& get_graphics_command();
-    ComputeCommand& get_compute_command();
-    TransferCommand& get_transfer_command();
-
     CommandPool<GraphicsCommand> graphics_pool;
     CommandPool<ComputeCommand> compute_pool;
     CommandPool<TransferCommand> transfer_pool;

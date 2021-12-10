@@ -13,19 +13,19 @@ namespace vk
 GraphicsCommand& Device::get_graphics_command()
 {
     auto& fc = frame_contexts[current_frame];
-    return fc.command_context.get_graphics_command();
+    return fc.command_context.graphics_pool.get_command();
 }
 
 ComputeCommand& Device::get_compute_command()
 {
     auto& fc = frame_contexts[current_frame];
-    return fc.command_context.get_compute_command();
+    return fc.command_context.compute_pool.get_command();
 }
 
 TransferCommand& Device::get_transfer_command()
 {
     auto& fc = frame_contexts[current_frame];
-    return fc.command_context.get_transfer_command();
+    return fc.command_context.transfer_pool.get_command();
 }
 
 void Device::submit(Command& command, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence)
@@ -89,21 +89,6 @@ void CommandContext::reset()
     graphics_pool.reset();
     compute_pool.reset();
     transfer_pool.reset();
-}
-
-GraphicsCommand& CommandContext::get_graphics_command()
-{
-    return graphics_pool.get_command();
-}
-
-ComputeCommand& CommandContext::get_compute_command()
-{
-    return compute_pool.get_command();
-}
-
-TransferCommand& CommandContext::get_transfer_command()
-{
-    return transfer_pool.get_command();
 }
 
 /* Commands */

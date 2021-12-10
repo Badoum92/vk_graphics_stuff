@@ -29,6 +29,9 @@ public:
     void set_perspective(float fov);
     void set_orthographic(float ortho_size);
 
+    float get_fov() const;
+    float get_ortho_size() const;
+
     void update();
     void on_key_event(int key, int action);
     void on_mouse_moved(float x, float y);
@@ -36,11 +39,16 @@ public:
     void set_last_x_y(float x, float y);
     void set_speed(float speed);
     void set_sensitivity(float sensitivity);
+    void set_position(const glm::vec3& position);
+
+    float get_speed() const;
 
     const glm::vec3& get_pos() const;
     const glm::vec3& get_front() const;
     const glm::vec3& get_up() const;
     const glm::vec3& get_right() const;
+
+    bool is_moving() const;
 
 protected:
     glm::vec3 pos_;
@@ -60,7 +68,7 @@ protected:
     float far_;
 
     float fov_ = 90.0f;
-    float ortho_size_ = 10.0f;
+    float ortho_size_ = 90.0f;
 
     glm::mat4 view_;
     glm::mat4 inv_view_;

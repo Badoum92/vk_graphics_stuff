@@ -132,6 +132,16 @@ void Camera::set_orthographic(float ortho_size)
     recompute_proj_ = true;
 }
 
+float Camera::get_fov() const
+{
+    return fov_;
+}
+
+float Camera::get_ortho_size() const
+{
+    return ortho_size_;
+}
+
 void Camera::update()
 {
     static constexpr glm::ivec3 ivec3_zero{0, 0, 0};
@@ -217,6 +227,16 @@ void Camera::set_sensitivity(float sensitivity)
     sensitivity_ = sensitivity;
 }
 
+void Camera::set_position(const glm::vec3& position)
+{
+    pos_ = position;
+}
+
+float Camera::get_speed() const
+{
+    return speed_;
+}
+
 const glm::vec3& Camera::get_pos() const
 {
     return pos_;
@@ -235,4 +255,9 @@ const glm::vec3& Camera::get_up() const
 const glm::vec3& Camera::get_right() const
 {
     return right_;
+}
+
+bool Camera::is_moving() const
+{
+    return dir_ != glm::ivec3(0);
 }

@@ -7,20 +7,28 @@ layout (set = 0, binding = 0) uniform GlobalUniform
     mat4 inv_view;
     mat4 proj;
     mat4 inv_proj;
-    vec3 camera_pos;
-    float pad0;
-    ivec2 resolution;
-    vec2 pad1;
+    vec4 camera_pos;
+    uvec2 resolution;
+    uint frame_number;
+    uint pad0;
 } global;
 
-float max(vec3 v)
+struct Vertex
 {
-    return max(max(v.x, v.y), v.z);
-}
+    vec4 position;
+    vec4 normal;
+    vec2 uv_0;
+    vec2 uv_1;
+};
 
-float min(vec3 v)
+const float FLT_P_INF = 1.0f / 0.0f;
+const float FLT_N_INF = -1.0f / 0.0f;
+const float EPSILON = 0.001f;
+const float TWO_PI = 6.2831853f;
+
+bool float_eq(float f1, float f2)
 {
-    return min(min(v.x, v.y), v.z);
+    return abs(f1 - f2) < EPSILON;
 }
 
 #endif

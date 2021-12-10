@@ -14,6 +14,11 @@ namespace vk
 void imgui_init(Context& context, Device& device, Surface& surface)
 {
     ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+    ImVec4* style_colors = ImGui::GetStyle().Colors;
+    style_colors[ImGuiCol_Header] = ImVec4(0, 0, 0, 0);
+    style_colors[ImGuiCol_HeaderHovered] = ImVec4(0, 0, 0, 0);
+    style_colors[ImGuiCol_HeaderActive] = ImVec4(0, 0, 0, 0);
 
     ImGui_ImplGlfw_InitForVulkan(Window::handle(), true);
 
