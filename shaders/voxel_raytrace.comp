@@ -5,9 +5,17 @@
 
 struct VoxelMaterial
 {
+    uint type;
+    float emit;
+    float flux;
+    float pad0;
     vec4 albedo;
-    vec4 emissive;
 };
+
+const uint DIFFUSE = 0;
+const uint METAL = 1;
+const uint GLASS = 2;
+const uint EMISSIVE = 3;
 
 struct HitInfo
 {
@@ -16,7 +24,7 @@ struct HitInfo
     uint voxel;
 };
 
-const uint MAX_BOUNCES = 5;
+const uint MAX_BOUNCES = 4;
 
 layout(set = 1, binding = 0, rgba8) uniform image2D output_image;
 layout(set = 1, binding = 1, rgba8) uniform image2D output_image_acc;
@@ -85,27 +93,32 @@ void voxel_traversal(Ray ray, vec3 bmin, vec3 bmax, vec3 voxel_size, inout HitIn
     hit_info.voxel = 0;
     float tmin_ray = 0;
     float tmax_ray = 0;
-    const bool ray_intersects_grid = ray_box_intersection(ray, bmin, bmax, tmin_ray, tmax_ray);
-    if (!ray_intersects_grid)
+    if (!ray_box_intersection(ray, bmin, bmax, tmin_ray, tmax_ray))
     {
         return;
     }
 
-    vec3 ray_start = clamp(ray.origin + ray.dir * tmin_ray, bmin, bmax);
-    vec3 ray_end = clamp(ray.origin + ray.dir * tmax_ray, bmin, bmax);
+    const vec3 ray_start = clamp(ray.origin + ray.dir * tmin_ray, bmin, bmax);
+    const vec3 ray_end = clamp(ray.origin + ray.dir * tmax_ray, bmin, bmax);
+    ivec3 cur_index = max(ivec3(0), ivec3(ray_start - bmin / voxel_size));
+    const ivec3 end_index = max(ivec3(0), ivec3(ray_end - bmin / voxel_size));
 
-    ivec3 cur_index = ivec3(max(vec3(0), floor(ray_start - bmin / voxel_size)));
-    const ivec3 end_index = ivec3(max(vec3(0), floor(ray_end - bmin / voxel_size)));
+    vec3 tdelta = abs(voxel_size * ray.inv_dir);
     ivec3 dir_step = ivec3(0);
-    vec3 tmax = vec3(tmax_ray);
-    vec3 tdelta;
+    vec3 tmax = vec3(0);
+
     for (uint i = 0; i < 3; ++i)
     {
-        bool positive_dir = ray.dir[i] > 0.0f;
-        int add_index = positive_dir ? 1 : 0;
-        tmax[i] = ((cur_index[i] + add_index) * voxel_size[i] - ray_start[i]) * ray.inv_dir[i];
-        dir_step[i] = positive_dir ? 1 : -1;
-        tdelta[i] = voxel_size[i] * ray.inv_dir[i] * dir_step[i];
+        if (ray.dir[i] < 0)
+        {
+            dir_step[i] = -1;
+            tmax[i] = (bmin[i] + cur_index[i] * voxel_size[i] - ray_start[i]) * ray.inv_dir[i];
+        }
+        else if (ray.dir[i] > 0)
+        {
+            dir_step[i] = 1;
+            tmax[i] = (bmin[i] + (cur_index[i] + 1) * voxel_size[i] - ray_start[i]) * ray.inv_dir[i];
+        }
     }
 
     int last_step = -1;
@@ -115,37 +128,32 @@ void voxel_traversal(Ray ray, vec3 bmin, vec3 bmax, vec3 voxel_size, inout HitIn
         hit_info.voxel = imageLoad(voxels, cur_index).r;
         if (hit_info.voxel != 0)
         {
-            hit_info.pos = ray_start + ray.dir * last_tmax;
-            compute_normal(hit_info, last_step, dir_step, bmin, bmax);
-            return;
+            break;
         }
 
         if (tmax.x < tmax.y && tmax.x < tmax.z && cur_index.x != end_index.x)
         {
             last_step = 0;
-            last_tmax = tmax.x;
-            cur_index.x += dir_step.x;
-            tmax.x += tdelta.x;
         }
         else if (tmax.y < tmax.z && cur_index.y != end_index.y)
         {
             last_step = 1;
-            last_tmax = tmax.y;
-            cur_index.y += dir_step.y;
-            tmax.y += tdelta.y;
         }
         else if (cur_index.z != end_index.z)
         {
             last_step = 2;
-            last_tmax = tmax.z;
-            cur_index.z += dir_step.z;
-            tmax.z += tdelta.z;
         }
         else
         {
-            break;
+            return;
         }
-    } while (true);
+        last_tmax = tmax[last_step];
+        cur_index[last_step] += dir_step[last_step];
+        tmax[last_step] += tdelta[last_step];
+    } while (hit_info.voxel == 0);
+
+    hit_info.pos = ray_start + ray.dir * last_tmax;
+    compute_normal(hit_info, last_step, dir_step, bmin, bmax);
 }
 
 vec4 get_ray_color(Ray ray, inout uint seed)
@@ -153,14 +161,15 @@ vec4 get_ray_color(Ray ray, inout uint seed)
     vec4 ret = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     vec4 throughput = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
+    vec3 offset = imageSize(voxels) / 2;
     for (uint bounce = 0; bounce <= MAX_BOUNCES; ++bounce)
     {
         HitInfo hit_info;
-        voxel_traversal(ray, vec3(0), imageSize(voxels), vec3(1), hit_info);
+        voxel_traversal(ray, -offset, imageSize(voxels) - offset, vec3(1), hit_info);
 
         if (hit_info.voxel == 0)
         {
-            // float t = 0.5f * (ray.dir.y + 1.0f);
+            float t = 0.5f * (ray.dir.y + 1.0f);
             // vec4 miss_color = (1.0f - t) * vec4(1) + t * vec4(0.4f, 0.6f, 0.9f, 1.0f);
             // ret += miss_color * throughput;
             ret += vec4(0.0, 0.0, 0.002, 1.0) * throughput;
@@ -172,7 +181,10 @@ vec4 get_ray_color(Ray ray, inout uint seed)
         ray.inv_dir = 1.0f / ray.dir;
 
         VoxelMaterial material = materials[hit_info.voxel];
-        ret += material.emissive * throughput;
+        if (material.type == EMISSIVE)
+        {
+            ret += material.albedo * material.emit * throughput * pow(10, material.flux);
+        }
         throughput *= material.albedo;
 
         /* ret = material.albedo;

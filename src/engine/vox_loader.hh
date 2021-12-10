@@ -4,9 +4,6 @@
 #include <vector>
 #include <array>
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wc99-extensions"
-
 namespace Vox
 {
 struct Header
@@ -45,7 +42,7 @@ struct RGBA
     uint8_t a = 255;
 };
 
-enum MatType : int
+enum MatType : int32_t
 {
     DIFFUSE = 0,
     METAL = 1,
@@ -53,35 +50,20 @@ enum MatType : int
     EMISSIVE = 3
 };
 
-enum MatPropBit : int
+struct MATL
 {
-    PLASTIC = 1 << 0,
-    ROUGHNESS = 1 << 1,
-    SPECULAR = 1 << 2,
-    IOR = 1 << 3,
-    ATTENUATION = 1 << 4,
-    POWER = 1 << 5,
-    GLOW = 1 << 6,
-    IS_TOTAL_POWER = 1 << 7,
-};
+    MatType type = DIFFUSE;
 
-struct MATT
-{
-    int id;
-    MatType type;
-    float weight;
-    MatPropBit prop_bits;
-    float prop_value[];
+    // emissive
+    float emit = 1;
+    float flux = 0;
 };
-
-#pragma clang diagnostic pop
 
 struct Chunk
 {
     SIZE* size = nullptr;
     uint32_t n_voxels = 0;
     XYZI* xyzi = nullptr;
-    MATT* material = nullptr;
 };
 
 class Model
@@ -94,8 +76,22 @@ public:
 
     std::vector<Chunk> chunks;
     std::array<RGBA, 256> palette;
+    std::array<MATL, 256> materials;
 
 private:
     std::vector<uint8_t> bytes_;
+
+    void parse_pack(const ChunkId* chunk);
+    void parse_size(const ChunkId* chunk);
+    void parse_xyzi(const ChunkId* chunk);
+    void parse_ntrn(const ChunkId* chunk);
+    void parse_ngrp(const ChunkId* chunk);
+    void parse_nshp(const ChunkId* chunk);
+    void parse_layr(const ChunkId* chunk);
+    void parse_rgba(const ChunkId* chunk);
+    void parse_matl(const ChunkId* chunk);
+    void parse_robj(const ChunkId* chunk);
+    void parse_rcam(const ChunkId* chunk);
+    void parse_note(const ChunkId* chunk);
 };
 } // namespace Vox

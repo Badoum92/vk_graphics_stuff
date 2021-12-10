@@ -2,6 +2,8 @@
 
 #include <cstring>
 #include <iostream>
+#include <string>
+#include <unordered_map>
 
 #include "tools.hh"
 
@@ -28,14 +30,14 @@ namespace Vox
     };
 // clang-format on
 
-static bool chunk_id_is(const ChunkId* chunk, const char id[4])
+static bool chunk_id_eq(const ChunkId* chunk, const char id[4])
 {
     return strncmp(chunk->id, id, 4) == 0;
 }
 
 static size_t chunk_size(const ChunkId* chunk)
 {
-    return sizeof(ChunkId) + chunk->n_bytes;
+    return sizeof(ChunkId) + chunk->n_bytes + chunk->n_children_bytes;
 }
 
 static ChunkId* next_chunk(const ChunkId* chunk)
@@ -51,6 +53,28 @@ static void* chunk_data(const ChunkId* chunk)
 static bool end_of_data(const ChunkId* chunk, const std::vector<uint8_t>& bytes)
 {
     return chunk == (void*)(bytes.data() + bytes.size());
+}
+
+static std::string parse_string(const void* data)
+{
+    uint32_t size = *(uint32_t*)data;
+    return std::string((const char*)tools::offset(data, sizeof(uint32_t)), size);
+}
+
+static std::unordered_map<std::string, std::string> parse_dict(const void* data)
+{
+    uint32_t n_pairs = *(uint32_t*)data;
+    std::unordered_map<std::string, std::string> dict(n_pairs);
+    data = tools::offset(data, sizeof(uint32_t));
+    for (size_t i = 0; i < n_pairs; ++i)
+    {
+        std::string key = parse_string(data);
+        data = tools::offset(data, sizeof(uint32_t) + key.size());
+        std::string val = parse_string(data);
+        data = tools::offset(data, sizeof(uint32_t) + val.size());
+        dict.emplace(key, val);
+    }
+    return dict;
 }
 
 Model::Model(const std::filesystem::path& path)
@@ -71,54 +95,115 @@ void Model::load(const std::filesystem::path& path)
         return;
     }
 
+    std::memcpy(palette.data(), default_palette, 256 * sizeof(uint32_t));
+
     auto main_chunk = (ChunkId*)tools::offset(vox_header, sizeof(Header));
     auto chunk = (ChunkId*)tools::offset(main_chunk, sizeof(ChunkId));
 
-    int n_chunks = 1;
-    if (chunk_id_is(chunk, "PACK"))
+    for (; !end_of_data(chunk, bytes_); chunk = next_chunk(chunk))
     {
-        n_chunks = *(int*)chunk_data(chunk);
-        chunk = next_chunk(chunk);
-    }
-
-    chunks.resize(n_chunks);
-
-    for (int i = 0; i < n_chunks; ++i)
-    {
-        SIZE* size = (SIZE*)chunk_data(chunk);
-        chunk = next_chunk(chunk);
-        uint32_t n_voxels = *(uint32_t*)chunk_data(chunk);
-        XYZI* xyzi = (XYZI*)tools::offset(chunk_data(chunk), sizeof(uint32_t));
-        chunk = next_chunk(chunk);
-
-        chunks[i].size = size;
-        chunks[i].n_voxels = n_voxels;
-        chunks[i].xyzi = xyzi;
-    }
-
-    if (end_of_data(chunk, bytes_))
-    {
-        std::memcpy(palette.data(), default_palette, 256 * sizeof(uint32_t));
-    }
-    else if (chunk_id_is(chunk, "RGBA"))
-    {
-        std::memcpy(palette.data() + 1, chunk_data(chunk), 255 * sizeof(uint32_t));
-        palette[0] = {0, 0, 0, 0};
-        chunk = next_chunk(chunk);
-    }
-
-    if (end_of_data(chunk, bytes_))
-    {
-        return;
-    }
-
-    for (int i = 0; i < n_chunks; ++i)
-    {
-        MATT* material = (MATT*)chunk_data(chunk);
-        chunk = next_chunk(chunk);
-
-        chunks[i].material = material;
+        if (chunk_id_eq(chunk, "PACK"))
+        {
+            parse_pack(chunk);
+        }
+        else if (chunk_id_eq(chunk, "SIZE"))
+        {
+            parse_size(chunk);
+        }
+        else if (chunk_id_eq(chunk, "XYZI"))
+        {
+            parse_xyzi(chunk);
+        }
+        else if (chunk_id_eq(chunk, "RGBA"))
+        {
+            parse_rgba(chunk);
+        }
+        else if (chunk_id_eq(chunk, "MATL"))
+        {
+            parse_matl(chunk);
+        }
     }
 }
 
+void Model::parse_pack(const ChunkId* chunk)
+{
+    chunks.reserve(*(uint32_t*)chunk_data(chunk));
+}
+
+void Model::parse_size(const ChunkId* chunk)
+{
+    auto& c = chunks.emplace_back();
+    c.size = (SIZE*)chunk_data(chunk);
+}
+
+void Model::parse_xyzi(const ChunkId* chunk)
+{
+    uint32_t n_voxels = *(uint32_t*)chunk_data(chunk);
+    XYZI* xyzi = (XYZI*)tools::offset(chunk_data(chunk), sizeof(uint32_t));
+    auto& c = chunks.back();
+    c.n_voxels = n_voxels;
+    c.xyzi = xyzi;
+}
+
+void Model::parse_ntrn(const ChunkId*)
+{}
+
+void Model::parse_ngrp(const ChunkId*)
+{}
+
+void Model::parse_nshp(const ChunkId*)
+{}
+
+void Model::parse_layr(const ChunkId*)
+{}
+
+void Model::parse_rgba(const ChunkId* chunk)
+{
+    std::memcpy(palette.data() + 1, chunk_data(chunk), 255 * sizeof(uint32_t));
+    palette[0] = {0, 0, 0, 0};
+}
+
+void Model::parse_matl(const ChunkId* chunk)
+{
+    uint32_t id = *(uint32_t*)chunk_data(chunk);
+    if (id > 255)
+    {
+        return;
+    }
+    const auto& dict = parse_dict(tools::offset(chunk_data(chunk), sizeof(uint32_t)));
+
+    MATL& matl = materials[id];
+    if (dict.contains("_type"))
+    {
+        const auto& type = dict.at("_type");
+        if (type == "_emit")
+        {
+            matl.type = EMISSIVE;
+            if (dict.contains("_emit"))
+            {
+                matl.emit = std::stof(dict.at("_emit"));
+            }
+            if (dict.contains("_flux"))
+            {
+                matl.flux = std::stof(dict.at("_flux"));
+            }
+        }
+    }
+
+    /* std::cout << "MATL: " << id << "\n";
+    for (const auto& [key, val] : dict)
+    {
+        std::cout << key << ": " << val << "\n";
+    }
+    std::cout << "\n"; */
+}
+
+void Model::parse_robj(const ChunkId*)
+{}
+
+void Model::parse_rcam(const ChunkId*)
+{}
+
+void Model::parse_note(const ChunkId*)
+{}
 } // namespace Vox

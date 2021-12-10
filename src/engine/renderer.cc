@@ -27,8 +27,11 @@ struct GlobalUniformSet
 
 struct VoxelMaterial
 {
+    uint32_t type = 0;
+    float emit = 0;
+    float flux = 0;
+    float pad0;
     glm::vec4 albedo = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
-    glm::vec4 emissive = glm::vec4(0.0f);
 };
 
 Renderer Renderer::create(vk::Context& context, vk::Device& device, vk::Surface& surface)
@@ -66,7 +69,12 @@ void Renderer::init()
         }
     }
     {
-        Vox::Model model("../models/vox/monu7.vox");
+        Vox::Model model;
+        // model.load("../models/voxel-model/vox/scan/dragon.vox");
+        // model.load("../models/voxel-model/vox/scan/teapot.vox");
+        // model.load("../models/voxel-model/vox/monument/monu7.vox");
+        // model.load("../models/voxel-model/vox/monument/monu5.vox");
+        model.load("../models/emissive.vox");
         const auto size = model.chunks[0].size;
 
         vk::ImageDescription image_desc{};
@@ -91,14 +99,21 @@ void Renderer::init()
         std::vector<VoxelMaterial> voxel_materials_data(model.palette.size());
         for (size_t i = 0; i < model.palette.size(); ++i)
         {
-            voxel_materials_data[i].albedo.r = model.palette[i].r / 255.0f;
-            voxel_materials_data[i].albedo.g = model.palette[i].g / 255.0f;
-            voxel_materials_data[i].albedo.b = model.palette[i].b / 255.0f;
-            voxel_materials_data[i].albedo.a = model.palette[i].a / 255.0f;
-            if (voxel_materials_data[i].albedo.r > 0.9f || voxel_materials_data[i].albedo.b > 0.7f)
+            auto& material = voxel_materials_data[i];
+            material.type = model.materials[i].type;
+            material.albedo.r = model.palette[i].r / 255.0f;
+            material.albedo.g = model.palette[i].g / 255.0f;
+            material.albedo.b = model.palette[i].b / 255.0f;
+            material.albedo.a = model.palette[i].a / 255.0f;
+            if (material.type == Vox::EMISSIVE)
             {
-                voxel_materials_data[i].emissive = voxel_materials_data[i].albedo;
+                material.emit = model.materials[i].emit;
+                material.flux = model.materials[i].flux;
             }
+            /* if (material.albedo.r > 0.9f || material.albedo.b > 0.7f)
+            {
+                material.emissive = material.albedo;
+            } */
         }
 
         voxel_materials = p_device->create_buffer(
