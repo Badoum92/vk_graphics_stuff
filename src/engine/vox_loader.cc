@@ -172,6 +172,13 @@ void Model::parse_matl(const ChunkId* chunk)
     }
     const auto& dict = parse_dict(tools::offset(chunk_data(chunk), sizeof(uint32_t)));
 
+    /* std::cout << "MATL: " << id << "\n";
+    for (const auto& [key, val] : dict)
+    {
+        std::cout << key << ": " << val << "\n";
+    }
+    std::cout << "\n"; */
+
     MATL& matl = materials[id];
     if (dict.contains("_type"))
     {
@@ -188,14 +195,19 @@ void Model::parse_matl(const ChunkId* chunk)
                 matl.flux = std::stof(dict.at("_flux"));
             }
         }
+        else if (type == "_metal")
+        {
+            matl.type = METAL;
+            if (dict.contains("_metal"))
+            {
+                matl.metal = std::stof(dict.at("_metal"));
+            }
+            if (dict.contains("_rough"))
+            {
+                matl.rough = std::stof(dict.at("_rough"));
+            }
+        }
     }
-
-    /* std::cout << "MATL: " << id << "\n";
-    for (const auto& [key, val] : dict)
-    {
-        std::cout << key << ": " << val << "\n";
-    }
-    std::cout << "\n"; */
 }
 
 void Model::parse_robj(const ChunkId*)

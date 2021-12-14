@@ -4,7 +4,6 @@
 
 #include "camera.hh"
 #include "event.hh"
-#include "gltf.hh"
 #include "device.hh"
 
 namespace vk
@@ -14,14 +13,17 @@ struct Device;
 struct Surface;
 } // namespace vk
 
-class Renderer
+struct GlobalUniformSet;
+
+class PathTracingRenderer
 {
 public:
-    static Renderer create(vk::Context& context, vk::Device& device, vk::Surface& surface);
+    static PathTracingRenderer create(vk::Context& context, vk::Device& device, vk::Surface& surface);
     void destroy();
 
     void init();
     void resize();
+    void reload_shaders();
     void render();
     void render_gui();
 
@@ -33,21 +35,23 @@ private:
     vk::Device* p_device = nullptr;
     vk::Surface* p_surface = nullptr;
 
-    uint32_t frame_number = 0;
+    bool shaders_need_reload = true;
 
-    gltf::Model model{};
+    uint32_t frame_number = 0;
+    float exposure = 1;
 
     Camera camera{};
 
     VkRect2D scissor;
     VkViewport viewport;
 
-    Handle<vk::FrameBuffer> render_target;
-    Handle<vk::Image> rt_color;
-    Handle<vk::Image> rt_depth;
+    Handle<vk::Image> color;
+    Handle<vk::Image> color_acc;
 
-    Handle<vk::GraphicsProgram> graphics_program;
-    Handle<vk::ComputeProgram> tonemap_program;
+    Handle<vk::ComputeProgram> raytracing_program;
+
+    Handle<vk::Image> voxels;
+    Handle<vk::Buffer> voxel_materials;
 
     vk::RingBuffer global_uniform_buffer;
 };

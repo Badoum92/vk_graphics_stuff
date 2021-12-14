@@ -6,7 +6,9 @@
 #include "context.hh"
 #include "device.hh"
 #include "surface.hh"
+
 #include "renderer.hh"
+#include "path_tracing_renderer.hh"
 
 int main(int, char**)
 {
@@ -16,7 +18,8 @@ int main(int, char**)
         auto context = vk::Context::create();
         auto device = vk::Device::create(context);
         auto surface = vk::Surface::create(context, device);
-        auto renderer = Renderer::create(context, device, surface);
+        // auto renderer = Renderer::create(context, device, surface);
+        auto renderer = PathTracingRenderer::create(context, device, surface);
         renderer.init();
 
         while (!Window::should_close())

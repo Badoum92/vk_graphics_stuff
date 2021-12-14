@@ -54,9 +54,11 @@ struct MATL
 {
     MatType type = DIFFUSE;
 
-    // emissive
-    float emit = 1;
+    float emit = 0;
     float flux = 0;
+
+    float metal = 0;
+    float rough = 0;
 };
 
 struct Chunk

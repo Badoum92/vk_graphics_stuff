@@ -1,15 +1,14 @@
 #include "global.glsl"
 #include "raytrace.glsl"
 
-#extension GL_EXT_debug_printf : enable
+// #extension GL_EXT_debug_printf : enable
 
 struct VoxelMaterial
 {
-    uint type;
-    float emit;
-    float flux;
-    float pad0;
-    vec4 albedo;
+    vec3 base_color;
+    float metalness;
+    vec3 emissive;
+    float roughness;
 };
 
 const uint DIFFUSE = 0;
@@ -34,36 +33,6 @@ layout(set = 1, binding = 3) buffer VoxelMaterials
     VoxelMaterial materials[];
 };
 
-uint init_rng(int x, int y, uint frame_nb)
-{
-    return uint(uint(x) * uint(1973) + uint(y) * uint(9277) + uint(frame_nb) * uint(26699)) | uint(1);
-}
-
-uint wang_hash(inout uint seed)
-{
-    seed = uint(seed ^ uint(61)) ^ uint(seed >> uint(16));
-    seed *= uint(9);
-    seed = seed ^ (seed >> 4);
-    seed *= uint(0x27d4eb2d);
-    seed = seed ^ (seed >> 15);
-    return seed;
-}
-
-float random_float_01(inout uint seed)
-{
-    return float(wang_hash(seed)) / 4294967296.0;
-}
-
-vec3 random_unit_vector(inout uint seed)
-{
-    float z = random_float_01(seed) * 2.0f - 1.0f;
-    float a = random_float_01(seed) * TWO_PI;
-    float r = sqrt(1.0f - z * z);
-    float x = r * cos(a);
-    float y = r * sin(a);
-    return vec3(x, y, z);
-}
-
 void compute_normal(inout HitInfo hit_info, int last_step, ivec3 dir_step, vec3 bmin, vec3 bmax)
 {
     hit_info.normal = vec3(0);
@@ -72,7 +41,6 @@ void compute_normal(inout HitInfo hit_info, int last_step, ivec3 dir_step, vec3 
         hit_info.normal[last_step] = -dir_step[last_step];
         return;
     }
-
     for (uint i = 0; i < 3; ++i)
     {
         if (float_eq(hit_info.pos[i], bmin[i]))
@@ -156,10 +124,10 @@ void voxel_traversal(Ray ray, vec3 bmin, vec3 bmax, vec3 voxel_size, inout HitIn
     compute_normal(hit_info, last_step, dir_step, bmin, bmax);
 }
 
-vec4 get_ray_color(Ray ray, inout uint seed)
+vec3 get_ray_color(Ray ray, inout uint rng_state)
 {
-    vec4 ret = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    vec4 throughput = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    vec3 radiance = vec3(0.0f, 0.0f, 0.0f);
+    vec3 throughput = vec3(1.0f, 1.0f, 1.0f);
 
     vec3 offset = imageSize(voxels) / 2;
     for (uint bounce = 0; bounce <= MAX_BOUNCES; ++bounce)
@@ -169,71 +137,82 @@ vec4 get_ray_color(Ray ray, inout uint seed)
 
         if (hit_info.voxel == 0)
         {
-            float t = 0.5f * (ray.dir.y + 1.0f);
-            // vec4 miss_color = (1.0f - t) * vec4(1) + t * vec4(0.4f, 0.6f, 0.9f, 1.0f);
-            // ret += miss_color * throughput;
-            ret += vec4(0.0, 0.0, 0.002, 1.0) * throughput;
+            float y = 0.5f * (ray.dir.y + 1.0f);
+            vec3 miss_color = (1.0f - y) * vec3(1) + y * vec3(0.4f, 0.6f, 0.9f);
+            // vec3 miss_color = vec3(0.0f, 0.0f, 0.004f);
+            // vec3 miss_color = vec3(0);
+            radiance += miss_color * throughput;
             break;
         }
 
+        VoxelMaterial material = materials[hit_info.voxel];
+
+        float do_specular = (random_float_01(rng_state) < material.metalness) ? 1.0f : 0.0f;
+        vec3 diffuse_ray_dir = normalize(hit_info.normal + random_unit_vector(rng_state));
+        vec3 specular_ray_dir = reflect(ray.dir, hit_info.normal);
+        specular_ray_dir =
+            normalize(mix(specular_ray_dir, diffuse_ray_dir, material.roughness * material.roughness));
+        radiance += material.emissive * throughput;
+        throughput *= material.base_color;
+
+        radiance += material.emissive * throughput;
+        throughput *= material.base_color;
+
+        float p = min(0.95f, luminance(throughput.rgb));
+        if (p < random_float_01(rng_state))
+        {
+            break;
+        }
+        throughput /= p;
+
         ray.origin = hit_info.pos + hit_info.normal * EPSILON;
-        ray.dir = normalize(hit_info.normal + random_unit_vector(seed));
+        ray.dir = mix(diffuse_ray_dir, specular_ray_dir, do_specular);
         ray.inv_dir = 1.0f / ray.dir;
 
-        VoxelMaterial material = materials[hit_info.voxel];
-        if (material.type == EMISSIVE)
-        {
-            ret += material.albedo * material.emit * throughput * pow(10, material.flux);
-        }
-        throughput *= material.albedo;
-
-        /* ret = material.albedo;
+        /* radiance = material.base_color;
         break; */
-        /* ret = vec4(hit_info.normal, 1);
+        /* radiance = vec4(hit_info.normal, 1);
         for (uint i = 0; i < 3; ++i)
         {
-            if (ret[i] < 0)
+            if (radiance[i] < 0)
             {
-                ret[i] = 0.01f;
+                radiance[i] = 0.01f;
             }
         }
         break; */
-        /* ret = vec4(hit_info.pos / imageSize(voxels), 1);
+        /* radiance = vec4(hit_info.pos / imageSize(voxels), 1);
         break; */
     }
-    return ret;
+    return radiance;
 }
 
 layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main()
 {
     const ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-    const ivec2 output_size = imageSize(output_image);
 
-    if (any(greaterThan(pixel, output_size)))
+    if (any(greaterThan(pixel, global.resolution)))
     {
         return;
     }
 
-    uint seed = init_rng(pixel.x, pixel.y, global.frame_number);
-    const vec2 jitter = vec2(random_float_01(seed), random_float_01(seed)) - 0.5f;
-    const vec2 uv = (vec2(pixel) + jitter) / vec2(output_size);
+    uint rng_state = init_rng(pixel, global.frame_number);
+    Ray ray = ray_gen(pixel, true, rng_state);
 
-    vec4 target = vec4(uv * 2.0f - 1.0f, 0.1f, 1.0f);
-    target = global.inv_view * global.inv_proj * target;
-    target /= target.w;
+    vec3 color = get_ray_color(ray, rng_state);
+    color = clamp(color, vec3(0), vec3(1));
 
-    Ray ray;
-    ray.origin = global.camera_pos.xyz;
-    ray.dir = normalize(target.xyz - ray.origin);
-    ray.inv_dir = 1.0f / ray.dir;
+    vec3 color_acc = color;
+    if (global.frame_number != 0)
+    {
+        color_acc += imageLoad(output_image_acc, pixel).rgb;
+    }
 
-    vec4 color = get_ray_color(ray, seed);
-    vec4 color_acc = imageLoad(output_image_acc, pixel);
+    color = color_acc / (global.frame_number + 1);
+    color *= global.exposure;
+    color = ACES_tone_mapping(color);
+    color = linear_to_srgb(color);
 
-    color = mix(color_acc, color, 1.0f / float(global.frame_number + 1));
-    color = clamp(color, vec4(0, 0, 0, 1), vec4(1, 1, 1, 1));
-
-    imageStore(output_image, pixel, color);
-    imageStore(output_image_acc, pixel, color);
+    imageStore(output_image_acc, pixel, vec4(color_acc, 1));
+    imageStore(output_image, pixel, vec4(color, 1));
 }

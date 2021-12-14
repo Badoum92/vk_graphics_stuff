@@ -11,8 +11,6 @@
 #include "surface.hh"
 #include "imgui.hh"
 
-#include "vox_loader.hh"
-
 struct GlobalUniformSet
 {
     glm::mat4 view;
@@ -21,17 +19,8 @@ struct GlobalUniformSet
     glm::mat4 inv_proj;
     glm::vec4 camera_pos;
     glm::uvec2 resolution;
+    float exposure;
     uint32_t frame_number;
-    uint32_t pad0;
-};
-
-struct VoxelMaterial
-{
-    uint32_t type = 0;
-    float emit = 0;
-    float flux = 0;
-    float pad0;
-    glm::vec4 albedo = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
 };
 
 Renderer Renderer::create(vk::Context& context, vk::Device& device, vk::Surface& surface)
@@ -61,65 +50,12 @@ void Renderer::init()
 
     auto& cmd = p_device->get_graphics_command();
     {
-        // model = gltf::load_model("../models/Sponza/glTF/Sponza.gltf", *p_device);
+        model = gltf::load_model("../models/Sponza/glTF/Sponza.gltf", *p_device);
         // model = gltf::load_model("../models/backpack/scene.gltf", *p_device);
         for (auto& img : model.images)
         {
             cmd.barrier(img.handle, vk::ImageUsage::GraphicsShaderRead);
         }
-    }
-    {
-        Vox::Model model;
-        // model.load("../models/voxel-model/vox/scan/dragon.vox");
-        // model.load("../models/voxel-model/vox/scan/teapot.vox");
-        // model.load("../models/voxel-model/vox/monument/monu7.vox");
-        // model.load("../models/voxel-model/vox/monument/monu5.vox");
-        model.load("../models/emissive.vox");
-        const auto size = model.chunks[0].size;
-
-        vk::ImageDescription image_desc{};
-        image_desc.width = size->x;
-        image_desc.height = size->y;
-        image_desc.depth = size->z;
-        image_desc.format = VK_FORMAT_R8_UINT;
-        image_desc.type = VK_IMAGE_TYPE_3D;
-        image_desc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        voxels = p_device->create_image(image_desc);
-
-        std::vector<uint8_t> voxels_data(size->x * size->y * size->z);
-        for (size_t i = 0; i < model.chunks[0].n_voxels; ++i)
-        {
-            auto voxel = model.chunks[0].xyzi[i];
-            voxels_data[voxel.z * size->x * size->y + voxel.y * size->x + voxel.x] = voxel.color_index;
-        }
-
-        cmd.upload_image(voxels, voxels_data.data(), voxels_data.size());
-        cmd.barrier(voxels, vk::ImageUsage::ComputeShaderReadWrite);
-
-        std::vector<VoxelMaterial> voxel_materials_data(model.palette.size());
-        for (size_t i = 0; i < model.palette.size(); ++i)
-        {
-            auto& material = voxel_materials_data[i];
-            material.type = model.materials[i].type;
-            material.albedo.r = model.palette[i].r / 255.0f;
-            material.albedo.g = model.palette[i].g / 255.0f;
-            material.albedo.b = model.palette[i].b / 255.0f;
-            material.albedo.a = model.palette[i].a / 255.0f;
-            if (material.type == Vox::EMISSIVE)
-            {
-                material.emit = model.materials[i].emit;
-                material.flux = model.materials[i].flux;
-            }
-            /* if (material.albedo.r > 0.9f || material.albedo.b > 0.7f)
-            {
-                material.emissive = material.albedo;
-            } */
-        }
-
-        voxel_materials = p_device->create_buffer(
-            {.size = static_cast<uint32_t>(voxel_materials_data.size() * sizeof(VoxelMaterial))});
-        cmd.upload_buffer(voxel_materials, voxel_materials_data.data(),
-                          static_cast<uint32_t>(voxel_materials_data.size() * sizeof(VoxelMaterial)));
     }
     {
         vk::GraphicsProgramDescription prog_desc{};
@@ -143,15 +79,6 @@ void Renderer::init()
                                       vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage)};
         prog_desc.shader = p_device->create_shader("shaders/tonemap.comp");
         tonemap_program = p_device->create_compute_program(prog_desc);
-    }
-    {
-        vk::ComputeProgramDescription prog_desc{};
-        prog_desc.descriptor_types = {vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage),
-                                      vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage),
-                                      vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage),
-                                      vk::DescriptorType::create(vk::DescriptorType::Type::StorageBuffer)};
-        prog_desc.shader = p_device->create_shader("shaders/voxel_raytrace.comp");
-        raytracing_program = p_device->create_compute_program(prog_desc);
     }
     {
         global_uniform_buffer = vk::RingBuffer::create(
@@ -183,7 +110,6 @@ void Renderer::resize()
     {
         p_device->destroy_image(rt_color);
         p_device->destroy_image(rt_depth);
-        p_device->destroy_image(color_acc);
         p_device->destroy_framebuffer(render_target);
 
         rt_color = p_device->create_image({.width = fb_desc.width,
@@ -196,12 +122,6 @@ void Renderer::resize()
                                            .height = fb_desc.height,
                                            .format = VK_FORMAT_D32_SFLOAT,
                                            .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT});
-
-        color_acc = p_device->create_image({.width = fb_desc.width,
-                                            .height = fb_desc.height,
-                                            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                                            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-                                                | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT});
 
         render_target =
             p_device->create_framebuffer({.width = fb_desc.width,
@@ -249,7 +169,7 @@ void Renderer::render()
 
     // main renderpass
 
-    /* cmd.barrier(rt_color, vk::ImageUsage::ColorAttachment);
+    cmd.barrier(rt_color, vk::ImageUsage::ColorAttachment);
     cmd.begin_renderpass(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
     cmd.bind_index_buffer(model.index_buffer, VK_INDEX_TYPE_UINT32, 0);
     cmd.bind_storage_buffer(graphics_program, model.vertex_buffer, 0);
@@ -276,17 +196,7 @@ void Renderer::render()
             cmd.draw_indexed(primitive.index_count, primitive.index_start);
         }
     }
-    cmd.end_renderpass(); */
-
-    cmd.barrier(rt_color, vk::ImageUsage::ComputeShaderReadWrite);
-    cmd.barrier(color_acc, vk::ImageUsage::ComputeShaderReadWrite);
-    cmd.bind_descriptor_set(raytracing_program, p_device->global_uniform_set, 0);
-    cmd.bind_image(raytracing_program, rt_color, 0);
-    cmd.bind_image(raytracing_program, color_acc, 1);
-    cmd.bind_image(raytracing_program, voxels, 2);
-    cmd.bind_storage_buffer(raytracing_program, voxel_materials, 3);
-    cmd.bind_pipeline(raytracing_program);
-    cmd.dispatch(Window::width(), Window::height());
+    cmd.end_renderpass();
 
     // tonemap
 
@@ -302,7 +212,7 @@ void Renderer::render()
     cmd.barrier(fc.image, vk::ImageUsage::ColorAttachment);
     cmd.begin_renderpass(fc.framebuffer, {vk::LoadOp::load()});
     vk::imgui_new_frame();
-    render_imgui();
+    render_gui();
     vk::imgui_render();
     vk::imgui_render_draw_data(cmd);
     cmd.end_renderpass();
@@ -320,7 +230,7 @@ void Renderer::render()
     ++frame_number;
 }
 
-void Renderer::render_imgui()
+void Renderer::render_gui()
 {
     ImGui::Begin("ImGui");
     ImGui::Text("FPS: %u", Time::fps());

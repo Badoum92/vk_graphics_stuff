@@ -55,6 +55,7 @@ add_executable(main
     src/engine/event.cc
     src/engine/input.cc
     src/engine/renderer.cc
+    src/engine/path_tracing_renderer.cc
     src/engine/gltf.cc
     src/engine/vox_loader.cc
     # src/engine/ecs.cc

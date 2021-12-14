@@ -12,12 +12,12 @@ void main()
         return;
     }
 
-    const float exposure = 1.0;
-    const float gamma = 2.2;
+    const float exposure = 1.0f;
+    const float gamma = 2.2f;
 
     vec3 hdr = texelFetch(input_image, uv, 0).rgb;
-    vec3 ldr = vec3(1.0) - exp(-hdr * exposure);
-    ldr = pow(ldr, vec3(1.0 / gamma));
+    vec3 ldr = vec3(1.0f) - exp(-hdr * exposure);
+    ldr = pow(ldr, vec3(1.0f / gamma));
 
-    imageStore(output_image, uv, vec4(ldr, 1.0));
+    imageStore(output_image, uv, vec4(ldr, 1.0f));
 }
