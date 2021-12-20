@@ -206,6 +206,22 @@ void Model::parse_matl(const ChunkId* chunk)
             {
                 matl.rough = std::stof(dict.at("_rough"));
             }
+            /* if (dict.contains("_ior"))
+            {
+                matl.ior = std::stof(dict.at("_ior"));
+            } */
+        }
+        else if (type == "_glass")
+        {
+            matl.type = GLASS;
+            if (dict.contains("_trans"))
+            {
+                matl.trans = std::stof(dict.at("_trans"));
+            }
+            if (dict.contains("_ior"))
+            {
+                matl.ior = std::stof(dict.at("_ior"));
+            }
         }
     }
 }

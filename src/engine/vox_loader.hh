@@ -53,12 +53,12 @@ enum MatType : int32_t
 struct MATL
 {
     MatType type = DIFFUSE;
-
     float emit = 0;
     float flux = 0;
-
     float metal = 0;
     float rough = 0;
+    float ior = 0;
+    float trans = 0;
 };
 
 struct Chunk

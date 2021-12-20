@@ -24,7 +24,7 @@ struct Vertex
 
 const float FLT_P_INF = 1.0f / 0.0f;
 const float FLT_N_INF = -1.0f / 0.0f;
-const float EPSILON = 0.001f;
+const float EPSILON = 0.01f;
 const float TWO_PI = 6.2831853f;
 
 uint init_rng(ivec2 pixel, uint frame_nb)

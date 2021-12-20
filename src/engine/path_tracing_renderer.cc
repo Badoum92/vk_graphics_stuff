@@ -29,9 +29,12 @@ struct GlobalUniformSet
 struct VoxelMaterial
 {
     glm::vec3 base_color = glm::vec3(1.0f, 0.0f, 1.0f);
-    float metalness;
+    float metalness = 0.0f;
     glm::vec3 emissive = glm::vec3(1.0f, 0.0f, 1.0f);
-    float roughness;
+    float roughness = 0.0f;
+    float ior = 1.0f;
+    float transparency = 0.0f;
+    glm::vec2 padding;
 };
 
 PathTracingRenderer PathTracingRenderer::create(vk::Context& context, vk::Device& device, vk::Surface& surface)
@@ -63,11 +66,12 @@ void PathTracingRenderer::init()
     auto& cmd = p_device->get_graphics_command();
     {
         Vox::Model model;
-        model.load("../models/voxel-model/vox/scan/dragon.vox");
+        // model.load("../models/voxel-model/vox/scan/dragon.vox");
         // model.load("../models/voxel-model/vox/scan/teapot.vox");
         // model.load("../models/voxel-model/vox/monument/monu7.vox");
         // model.load("../models/voxel-model/vox/monument/monu5.vox");
         // model.load("../models/materials.vox");
+        model.load("../models/testscene.vox");
         const auto size = model.chunks[0].size;
 
         vk::ImageDescription image_desc{};
@@ -93,12 +97,16 @@ void PathTracingRenderer::init()
         for (size_t i = 0; i < model.palette.size(); ++i)
         {
             auto& material = voxel_materials_data[i];
-            material.base_color.r = model.palette[i].r / 255.0f;
-            material.base_color.g = model.palette[i].g / 255.0f;
-            material.base_color.b = model.palette[i].b / 255.0f;
-            material.emissive = material.base_color * model.materials[i].emit * (model.materials[i].flux + 1);
-            material.metalness = model.materials[i].metal;
-            material.roughness = model.materials[i].rough;
+            const auto& matl = model.materials[i];
+            const auto& color = model.palette[i];
+            material.base_color.r = color.r / 255.0f;
+            material.base_color.g = color.g / 255.0f;
+            material.base_color.b = color.b / 255.0f;
+            material.emissive = material.base_color * matl.emit * std::powf(2, matl.flux);
+            material.metalness = matl.metal;
+            material.roughness = matl.rough;
+            material.ior = matl.ior + 1;
+            material.transparency = matl.trans;
         }
 
         voxel_materials = p_device->create_buffer(

@@ -3,27 +3,36 @@
 
 // #extension GL_EXT_debug_printf : enable
 
+const uint MAX_BOUNCES = 8;
+
 struct VoxelMaterial
 {
     vec3 base_color;
     float metalness;
     vec3 emissive;
     float roughness;
+    float ior;
+    float transparency;
+    vec2 padding;
 };
-
-const uint DIFFUSE = 0;
-const uint METAL = 1;
-const uint GLASS = 2;
-const uint EMISSIVE = 3;
 
 struct HitInfo
 {
-    vec3 pos;
     vec3 normal;
+    float dist;
     uint voxel;
+    bool from_inside;
 };
 
-const uint MAX_BOUNCES = 4;
+HitInfo default_hit_info()
+{
+    HitInfo ret;
+    ret.dist = 0;
+    ret.from_inside = false;
+    ret.normal = vec3(0);
+    ret.voxel = 0;
+    return ret;
+}
 
 layout(set = 1, binding = 0, rgba8) uniform image2D output_image;
 layout(set = 1, binding = 1, rgba8) uniform image2D output_image_acc;
@@ -33,7 +42,7 @@ layout(set = 1, binding = 3) buffer VoxelMaterials
     VoxelMaterial materials[];
 };
 
-void compute_normal(inout HitInfo hit_info, int last_step, ivec3 dir_step, vec3 bmin, vec3 bmax)
+void compute_normal(inout HitInfo hit_info, vec3 hit_pos, int last_step, ivec3 dir_step, vec3 bmin, vec3 bmax)
 {
     hit_info.normal = vec3(0);
     if (last_step != -1)
@@ -43,12 +52,12 @@ void compute_normal(inout HitInfo hit_info, int last_step, ivec3 dir_step, vec3 
     }
     for (uint i = 0; i < 3; ++i)
     {
-        if (float_eq(hit_info.pos[i], bmin[i]))
+        if (float_eq(hit_pos[i], bmin[i]))
         {
             hit_info.normal[i] = -1;
             break;
         }
-        else if (float_eq(hit_info.pos[i], bmax[i]))
+        else if (float_eq(hit_pos[i], bmax[i]))
         {
             hit_info.normal[i] = 1;
             break;
@@ -91,10 +100,11 @@ void voxel_traversal(Ray ray, vec3 bmin, vec3 bmax, vec3 voxel_size, inout HitIn
 
     int last_step = -1;
     float last_tmax = 0;
+    uint mat_id = imageLoad(voxels, cur_index).r;
     do
     {
         hit_info.voxel = imageLoad(voxels, cur_index).r;
-        if (hit_info.voxel != 0)
+        if (hit_info.voxel != mat_id)
         {
             break;
         }
@@ -113,15 +123,21 @@ void voxel_traversal(Ray ray, vec3 bmin, vec3 bmax, vec3 voxel_size, inout HitIn
         }
         else
         {
-            return;
+            break;
         }
-        last_tmax = tmax[last_step];
         cur_index[last_step] += dir_step[last_step];
+        last_tmax = tmax[last_step];
         tmax[last_step] += tdelta[last_step];
-    } while (hit_info.voxel == 0);
+    } while (true);
 
-    hit_info.pos = ray_start + ray.dir * last_tmax;
-    compute_normal(hit_info, last_step, dir_step, bmin, bmax);
+    hit_info.dist = tmin_ray + last_tmax;
+    vec3 hit_pos = ray.origin + ray.dir * hit_info.dist;
+    compute_normal(hit_info, hit_pos, last_step, dir_step, bmin, bmax);
+    hit_info.from_inside = ray_start == ray.origin && mat_id != 0;
+    if (hit_info.voxel == 0)
+    {
+        hit_info.voxel = mat_id;
+    }
 }
 
 vec3 get_ray_color(Ray ray, inout uint rng_state)
@@ -132,31 +148,83 @@ vec3 get_ray_color(Ray ray, inout uint rng_state)
     vec3 offset = imageSize(voxels) / 2;
     for (uint bounce = 0; bounce <= MAX_BOUNCES; ++bounce)
     {
-        HitInfo hit_info;
+        HitInfo hit_info = default_hit_info();
         voxel_traversal(ray, -offset, imageSize(voxels) - offset, vec3(1), hit_info);
+        VoxelMaterial material = materials[hit_info.voxel];
+
+        // radiance = material.base_color;
+        // break;
+        // radiance = hit_info.normal;
+        // for (uint i = 0; i < 3; ++i)
+        // {
+        //     if (radiance[i] < 0)
+        //     {
+        //         radiance[i] = 0.01f;
+        //     }
+        // }
+        // break;
+        // radiance = hit_info.pos / imageSize(voxels);
+        // break;
 
         if (hit_info.voxel == 0)
         {
             float y = 0.5f * (ray.dir.y + 1.0f);
-            vec3 miss_color = (1.0f - y) * vec3(1) + y * vec3(0.4f, 0.6f, 0.9f);
-            // vec3 miss_color = vec3(0.0f, 0.0f, 0.004f);
-            // vec3 miss_color = vec3(0);
+            y = clamp(y, 0.5f, 1.0f);
+
+            // vec3 miss_color = vec3(0.25f, 0.25f, 0.6f) * y;
+            // vec3 miss_color = vec3(0.0f, 0.0f, 0.004f) * y;
+            // vec3 miss_color = vec3(0.02f, 0.02f, 0.04f) * y;
+            vec3 miss_color = vec3(0) * y;
             radiance += miss_color * throughput;
             break;
         }
 
-        VoxelMaterial material = materials[hit_info.voxel];
+        if (hit_info.from_inside)
+        {
+            throughput *= exp(-hit_info.dist * 0.05f * material.base_color);
+        }
 
-        float do_specular = (random_float_01(rng_state) < material.metalness) ? 1.0f : 0.0f;
+        float specular_chance = material.metalness;
+        float refraction_chance = material.transparency;
+        float ray_proba = 1.0f;
+
+        float do_specular = 0.0f;
+        float do_refraction = 0.0f;
+        float ray_select_roll = random_float_01(rng_state);
+
+        if (specular_chance > 0.0f && ray_select_roll < specular_chance)
+        {
+            do_specular = 1.0f;
+            ray_proba = specular_chance;
+        }
+        else if (refraction_chance > 0.0f && ray_select_roll < specular_chance + refraction_chance)
+        {
+            do_refraction = 1.0f;
+            ray_proba = refraction_chance;
+        }
+        else
+        {
+            ray_proba = 1.0f - (specular_chance + refraction_chance);
+        }
+        ray_proba = max(ray_proba, 0.001f);
+
         vec3 diffuse_ray_dir = normalize(hit_info.normal + random_unit_vector(rng_state));
+
         vec3 specular_ray_dir = reflect(ray.dir, hit_info.normal);
-        specular_ray_dir =
-            normalize(mix(specular_ray_dir, diffuse_ray_dir, material.roughness * material.roughness));
-        radiance += material.emissive * throughput;
-        throughput *= material.base_color;
+        specular_ray_dir = normalize(mix(specular_ray_dir, diffuse_ray_dir, material.roughness * material.roughness));
+
+        vec3 refraction_dir =
+            refract(ray.dir, hit_info.normal, hit_info.from_inside ? material.ior : 1.0f / material.ior);
+        refraction_dir = normalize(mix(refraction_dir, normalize(-hit_info.normal + random_unit_vector(rng_state)),
+                                       material.roughness * material.roughness));
 
         radiance += material.emissive * throughput;
-        throughput *= material.base_color;
+
+        if (do_refraction == 0.0f)
+        {
+            throughput *= material.base_color;
+        }
+        throughput /= ray_proba;
 
         float p = min(0.95f, luminance(throughput.rgb));
         if (p < random_float_01(rng_state))
@@ -165,23 +233,17 @@ vec3 get_ray_color(Ray ray, inout uint rng_state)
         }
         throughput /= p;
 
-        ray.origin = hit_info.pos + hit_info.normal * EPSILON;
-        ray.dir = mix(diffuse_ray_dir, specular_ray_dir, do_specular);
-        ray.inv_dir = 1.0f / ray.dir;
-
-        /* radiance = material.base_color;
-        break; */
-        /* radiance = vec4(hit_info.normal, 1);
-        for (uint i = 0; i < 3; ++i)
+        if (do_refraction == 1.0f)
         {
-            if (radiance[i] < 0)
-            {
-                radiance[i] = 0.01f;
-            }
+            ray.origin = ray.origin + ray.dir * hit_info.dist - hit_info.normal * EPSILON;
         }
-        break; */
-        /* radiance = vec4(hit_info.pos / imageSize(voxels), 1);
-        break; */
+        else
+        {
+            ray.origin = ray.origin + ray.dir * hit_info.dist + hit_info.normal * EPSILON;
+        }
+        ray.dir = mix(diffuse_ray_dir, specular_ray_dir, do_specular);
+        ray.dir = mix(ray.dir, refraction_dir, do_refraction);
+        ray.inv_dir = 1.0f / ray.dir;
     }
     return radiance;
 }
