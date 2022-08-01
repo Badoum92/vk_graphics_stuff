@@ -67,6 +67,7 @@ Device Device::create(const Context& context)
     create_info.enabledLayerCount = 0;
 
     VK_CHECK(vkCreateDevice(context.physical_device.vk_handle, &create_info, nullptr, &device.vk_handle));
+    volkLoadDevice(device.vk_handle);
 
     const uint32_t descriptor_count = 256;
     std::array pool_sizes{
@@ -83,11 +84,16 @@ Device Device::create(const Context& context)
 
     vkCreateDescriptorPool(device.vk_handle, &pool_info, nullptr, &device.descriptor_pool);
 
+    VmaVulkanFunctions vma_functions = {};
+    vma_functions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+    vma_functions.vkGetDeviceProcAddr   = vkGetDeviceProcAddr;
+
     VmaAllocatorCreateInfo allocator_info{};
     allocator_info.vulkanApiVersion = VK_API_VERSION_1_2;
     allocator_info.instance = context.instance;
     allocator_info.physicalDevice = device.physical_device.vk_handle;
     allocator_info.device = device.vk_handle;
+    allocator_info.pVulkanFunctions = &vma_functions;
     VK_CHECK(vmaCreateAllocator(&allocator_info, &device.allocator));
 
     vkGetDeviceQueue(device.vk_handle, device.graphics_family_index, 0, &device.graphics_queue);

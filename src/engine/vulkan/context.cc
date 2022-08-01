@@ -41,17 +41,11 @@ static void check_validation_layer_support()
 
 static std::vector<const char*> get_required_ext()
 {
-    uint32_t glfw_ext_count = 0;
-    const char** glfw_ext;
-    glfw_ext = glfwGetRequiredInstanceExtensions(&glfw_ext_count);
-
-    std::vector<const char*> ext(glfw_ext, glfw_ext + glfw_ext_count);
-
+    std::vector<const char*> ext = {VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME};
     if (enable_validation_layers)
     {
         ext.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
-
     return ext;
 }
 
@@ -61,8 +55,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
 {
     // if (msg_severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     if (msg_severity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+    {
         return VK_FALSE;
-
+    }
 
     auto const severity_str = [msg_severity]() {
         switch (msg_severity)
@@ -154,6 +149,8 @@ static std::vector<VkPhysicalDevice> get_physical_devices(const Context& context
 
 Context Context::create()
 {
+    VK_CHECK(volkInitialize());
+
     Context context;
 
     if (enable_validation_layers)
@@ -189,6 +186,7 @@ Context Context::create()
     }
 
     VK_CHECK(vkCreateInstance(&create_info, nullptr, &context.instance));
+    volkLoadInstance(context.instance);
 
     if (enable_validation_layers)
     {

@@ -10,8 +10,57 @@
 #include "renderer.hh"
 #include "path_tracing_renderer.hh"
 
+#include "bul/window.h"
+#include "bul/containers/pool.h"
+#include "bul/math/vector.h"
+#include "bul/util.h"
+
+std::string to_string(bul::Event e)
+{
+    std::string s = bul::event_types_str[e.type];
+    s += " ";
+    switch (e.type)
+    {
+        case bul::EventType::MouseClick:
+            s += bul::mouse_button_str[e.mouse_click.button];
+            s += " ";
+            s += bul::button_states_str[e.mouse_click.state];
+            break;
+        case bul::EventType::Key:
+            s += bul::keys_str[e.key.key];
+            s += " ";
+            s += bul::button_states_str[e.key.state];
+            break;
+        case bul::EventType::MouseMove:
+            s += "{";
+            s += std::to_string(e.mouse_move.x);
+            s += ", ";
+            s += std::to_string(e.mouse_move.y);
+            s += "}";
+        default:
+            return s;
+    }
+    return s;
+}
+
 int main(int, char**)
 {
+    bul::window::create("Window");
+    while (!bul::window::should_close())
+    {
+        const auto& events = bul::window::poll_events();
+        for (const auto& e : events)
+        {
+            std::cout << to_string(e) << "\n";
+        }
+
+        if (bul::key_pressed(bul::Key::Escape))
+        {
+            bul::window::close();
+        }
+    }
+    bul::window::destroy();
+
     try
     {
         Window::create(1280, 720, "Test Vulkan");

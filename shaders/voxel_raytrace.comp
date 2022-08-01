@@ -173,8 +173,8 @@ vec3 get_ray_color(Ray ray, inout uint rng_state)
 
             // vec3 miss_color = vec3(0.25f, 0.25f, 0.6f) * y;
             // vec3 miss_color = vec3(0.0f, 0.0f, 0.004f) * y;
-            // vec3 miss_color = vec3(0.02f, 0.02f, 0.04f) * y;
-            vec3 miss_color = vec3(0) * y;
+            vec3 miss_color = vec3(0.02f, 0.02f, 0.04f) * y;
+            // vec3 miss_color = vec3(0) * y;
             radiance += miss_color * throughput;
             break;
         }

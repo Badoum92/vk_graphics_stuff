@@ -7,6 +7,9 @@
 #include "window.hh"
 #include "time.hh"
 
+#undef near
+#undef far
+
 Camera::Camera(const glm::vec3& pos, const glm::vec3& world_up, float yaw, float pitch, float near, float far)
 {
     pos_ = pos;

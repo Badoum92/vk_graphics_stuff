@@ -1,50 +1,31 @@
-cmake_minimum_required(VERSION 3.14)
-enable_language(C CXX)
-project(vk_graphics_stuff CXX)
+cmake_minimum_required(VERSION 3.19)
+project(vk_graphics_stuff LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -Wall -Wextra -pedantic -g3")
 
-if (UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-endif ()
+add_compile_options(
+    $<$<CXX_COMPILER_ID:Clang>:-fcolor-diagnostics>
+    $<$<CXX_COMPILER_ID:Clang>:-fansi-escape-codes>
+)
 
-if (${CMAKE_GENERATOR} STREQUAL "Ninja")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics -fansi-escape-codes")
-endif ()
+add_library(default_interface INTERFACE)
+target_compile_options(default_interface INTERFACE
+    $<$<CXX_COMPILER_ID:Clang>:-Wall>
+    $<$<CXX_COMPILER_ID:Clang>:-Wextra>
+    $<$<CXX_COMPILER_ID:Clang>:-pedantic>
+)
 
-# --- VULKAN ---
+# --- Vulkan ---
+
 find_package(Vulkan REQUIRED)
-# --------------
 
-# --- GLFW ---
-option(GLFW_BUILD_DOCS OFF)
-option(GLFW_BUILD_EXAMPLES OFF)
-option(GLFW_BUILD_TESTS OFF)
-option(GLFW_INSTALL OFF)
-add_subdirectory(third_party/glfw)
-# ------------
+# --- Subdirectories ---
 
-# --- IMGUI ---
-file(GLOB IMGUI_SOURCES
-    third_party/imgui/*.cpp
-    third_party/imgui/backends/imgui_impl_glfw.cpp
-    third_party/imgui/backends/imgui_impl_vulkan.cpp
-)
-add_library(imgui STATIC ${IMGUI_SOURCES})
-target_include_directories(imgui PRIVATE
-    third_party/imgui/
-    third_party/imgui/backends
-    third_party/glfw/include
-    ${Vulkan_INCLUDE_DIRS}
-)
-target_link_libraries(imgui PRIVATE
-    glfw
-)
-set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
-# ------------
+add_subdirectory(bul)
+add_subdirectory(third_party)
 
-# --- EXECUTABLE ---
+# --- Executable ---
+
 add_executable(main
     src/main.cc
 
@@ -58,7 +39,6 @@ add_executable(main
     src/engine/path_tracing_renderer.cc
     src/engine/gltf.cc
     src/engine/vox_loader.cc
-    # src/engine/ecs.cc
 
     src/engine/vulkan/vk_tools.cc
     src/engine/vulkan/context.cc
@@ -81,6 +61,8 @@ target_include_directories(main
     PRIVATE src/util
     PRIVATE src/engine
     PRIVATE src/engine/vulkan
+
+    PRIVATE .
 )
 
 target_include_directories(main
@@ -93,9 +75,12 @@ target_include_directories(main
 )
 
 target_link_libraries(main
-    ${Vulkan_LIBRARIES}
+    default_interface
+    # ${Vulkan_LIBRARIES}
     glfw
     imgui
+    bul
+    volk
 )
 
 add_definitions(
@@ -104,9 +89,21 @@ add_definitions(
     -DGLM_FORCE_DEPTH_ZERO_TO_ONE
     -DGLM_FORCE_RIGHT_HANDED
 )
-# ------------------
 
-# --- SHADERS ---
+target_compile_definitions(main PRIVATE
+    $<$<BOOL:${WIN32}>:NOMINMAX>
+    $<$<BOOL:${WIN32}>:NOCOMM>
+    $<$<BOOL:${WIN32}>:WIN32_LEAN_AND_MEAN>
+    $<$<BOOL:${WIN32}>:VC_EXTRALEAN>
+)
+
+set_target_properties(main bul volk PROPERTIES
+    CXX_STANDARD 20
+    CXX_EXTENSIONS OFF
+)
+
+# --- Shaders ---
+
 file(GLOB_RECURSE GLSL_SOURCE_FILES
     "shaders/*.vert"
     "shaders/*.frag"
@@ -114,9 +111,7 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
     "shaders/*.geom"
 )
 
-file(GLOB_RECURSE GLSL_INCLUDE_FILES
-    "shaders/include/*"
-)
+file(GLOB_RECURSE GLSL_INCLUDE_FILES "shaders/include/*")
 
 foreach(GLSL ${GLSL_SOURCE_FILES})
     message("FILE: ${GLSL}")
@@ -140,4 +135,3 @@ add_custom_command(TARGET main POST_BUILD
         "${PROJECT_BINARY_DIR}/shaders"
         "$<TARGET_FILE_DIR:main>/shaders"
 )
-# ---------------

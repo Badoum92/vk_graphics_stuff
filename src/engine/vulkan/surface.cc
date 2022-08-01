@@ -3,6 +3,8 @@
 #include <vector>
 #include <GLFW/glfw3.h>
 
+#include "bul/bul.h"
+
 #include "vk_tools.hh"
 #include "context.hh"
 #include "device.hh"
@@ -29,7 +31,8 @@ static VkQueue get_present_queue(Device& device, const Surface& surface)
         vkGetDeviceQueue(device.vk_handle, device.compute_family_index, 0, &queue);
         return queue;
     }
-    throw std::runtime_error("Could not find a present queue");
+    ASSERT_MSG(false, "Could not find a present queue");
+    return queue;
 }
 
 Surface Surface::create(Context& context, Device& device)

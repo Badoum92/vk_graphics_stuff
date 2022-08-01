@@ -3,7 +3,7 @@
 #include <vector>
 #include <type_traits>
 
-#include <vulkan/vulkan.h>
+#include <volk.h>
 
 #include "vk_tools.hh"
 #include "handle.hh"

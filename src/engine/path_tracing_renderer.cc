@@ -48,7 +48,7 @@ PathTracingRenderer PathTracingRenderer::create(vk::Context& context, vk::Device
 
 void PathTracingRenderer::destroy()
 {
-    vk::imgui_shutdown();
+    // vk::imgui_shutdown();
 }
 
 void PathTracingRenderer::init()
@@ -56,7 +56,7 @@ void PathTracingRenderer::init()
     resize();
     reload_shaders();
 
-    vk::imgui_init(*p_context, *p_device, *p_surface);
+    // vk::imgui_init(*p_context, *p_device, *p_surface);
 
     EventHandler::register_key_callback(this);
     EventHandler::register_cursor_pos_callback(this);
@@ -70,8 +70,8 @@ void PathTracingRenderer::init()
         // model.load("../models/voxel-model/vox/scan/teapot.vox");
         // model.load("../models/voxel-model/vox/monument/monu7.vox");
         // model.load("../models/voxel-model/vox/monument/monu5.vox");
-        // model.load("../models/materials.vox");
-        model.load("../models/testscene.vox");
+        model.load("../models/materials.vox");
+        // model.load("../models/testscene.vox");
         const auto size = model.chunks[0].size;
 
         vk::ImageDescription image_desc{};
@@ -231,10 +231,10 @@ void PathTracingRenderer::render()
 
     cmd.barrier(fc.image, vk::ImageUsage::ColorAttachment);
     cmd.begin_renderpass(fc.framebuffer, {vk::LoadOp::load()});
-    vk::imgui_new_frame();
-    render_gui();
-    vk::imgui_render();
-    vk::imgui_render_draw_data(cmd);
+    // vk::imgui_new_frame();
+    // render_gui();
+    // vk::imgui_render();
+    // vk::imgui_render_draw_data(cmd);
     cmd.end_renderpass();
 
     // present
@@ -317,13 +317,15 @@ void PathTracingRenderer::key_callback(const Event& event, void* object)
         Input::show_cursor(!Input::cursor_enabled());
         auto [x, y] = Input::get_cursor_pos();
         renderer.camera.set_last_x_y(x, y);
-        return;
     }
-    if (event.key() == GLFW_KEY_R && event.key_mods() == GLFW_MOD_CONTROL && event.key_action() == GLFW_PRESS)
+    else if (event.key() == GLFW_KEY_R && event.key_mods() == GLFW_MOD_CONTROL && event.key_action() == GLFW_PRESS)
     {
         renderer.shaders_need_reload = true;
     }
-    renderer.camera.on_key_event(event.key(), event.key_action());
+    else
+    {
+        renderer.camera.on_key_event(event.key(), event.key_action());
+    }
 }
 
 void PathTracingRenderer::cursor_pos_callback(const Event& event, void* object)
