@@ -2,9 +2,8 @@
 
 #include <cmath>
 #include <algorithm>
-#include <GLFW/glfw3.h>
+#include <bul/window.h>
 
-#include "window.hh"
 #include "time.hh"
 
 #undef near
@@ -20,9 +19,9 @@ Camera::Camera(const glm::vec3& pos, const glm::vec3& world_up, float yaw, float
     far_ = far;
     update_vectors();
 
-    width_ = Window::width();
-    height_ = Window::height();
-    aspect_ratio_ = Window::aspect_ratio();
+    width_ = bul::window::size().x;
+    height_ = bul::window::size().y;
+    aspect_ratio_ = bul::window::aspect_ratio();
 }
 
 void Camera::update_vectors()
@@ -161,7 +160,7 @@ void Camera::update()
 
 void Camera::on_key_event(int key, int action)
 {
-    glm::ivec3 dir{0, 0, 0};
+    /* glm::ivec3 dir{0, 0, 0};
     int mult = 0;
 
     if (action == GLFW_PRESS)
@@ -182,12 +181,12 @@ void Camera::on_key_event(int key, int action)
     if (key == GLFW_KEY_C)
         dir.y -= 1;
 
-    dir_ += dir * mult;
+    dir_ += dir * mult; */
 }
 
 void Camera::on_mouse_moved(float x, float y)
 {
-    static bool init = false;
+    /* static bool init = false;
     if (!init)
     {
         last_x_ = x;
@@ -211,7 +210,7 @@ void Camera::on_mouse_moved(float x, float y)
     pitch_ = std::max(pitch_, -89.0f);
 
     update_vectors();
-    recompute_view_ = true;
+    recompute_view_ = true; */
 }
 
 void Camera::set_last_x_y(float x, float y)

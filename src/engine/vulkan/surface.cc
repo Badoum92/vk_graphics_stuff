@@ -1,9 +1,8 @@
 #include "surface.hh"
 
 #include <vector>
-#include <GLFW/glfw3.h>
-
-#include "bul/bul.h"
+#include <bul/bul.h>
+#include <bul/window.h>
 
 #include "vk_tools.hh"
 #include "context.hh"
@@ -37,8 +36,12 @@ static VkQueue get_present_queue(Device& device, const Surface& surface)
 
 Surface Surface::create(Context& context, Device& device)
 {
-    Surface surface{};
-    VK_CHECK(glfwCreateWindowSurface(context.instance, Window::handle(), nullptr, &surface.vk_handle));
+    Surface surface = {};
+    VkWin32SurfaceCreateInfoKHR create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    create_info.hwnd = reinterpret_cast<HWND>(bul::window::handle());
+    create_info.hinstance = GetModuleHandle(nullptr);
+    vkCreateWin32SurfaceKHR(context.instance, &create_info, nullptr, &surface.vk_handle);
     surface.present_queue = get_present_queue(device, surface);
     surface.create_swapchain(device);
     return surface;

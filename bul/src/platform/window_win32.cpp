@@ -11,7 +11,7 @@
 namespace bul::window
 {
 std::vector<Event> events;
-static vec2i size_ = {0, 0};
+static vec2u size_ = {0, 0};
 static HWND handle_ = nullptr;
 static bool should_close_ = false;
 static bool resized_ = false;
@@ -27,7 +27,7 @@ static EnumArray<Key, int> key_to_win32_key = {
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-void create(const std::string_view title, vec2i size)
+void create(const std::string_view title, vec2u size)
 {
     destroy();
 
@@ -67,7 +67,7 @@ void* handle()
     return handle_;
 }
 
-vec2i size()
+vec2u size()
 {
     return size_;
 }

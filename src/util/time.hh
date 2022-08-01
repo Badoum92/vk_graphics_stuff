@@ -1,15 +1,13 @@
 #pragma once
 
-#include <GLFW/glfw3.h>
+#include <bul/timer.h>
 
 class Time
 {
 public:
     static inline void update()
     {
-        double current_frame = glfwGetTime();
-        delta_time_ = current_frame - last_frame_;
-        last_frame_ = current_frame;
+        delta_time_ = timer_.elapsed_s();
     }
 
     static inline double delta_time()
@@ -23,6 +21,6 @@ public:
     }
 
 private:
-    inline static double last_frame_ = 0;
-    inline static double delta_time_ = 0;
+    inline static bul::Timer timer_;
+    inline static double delta_time_;
 };

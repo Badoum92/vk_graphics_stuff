@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include <glm/glm.hpp>
+#include <bul/window.h>
 
-#include "window.hh"
 #include "input.hh"
 #include "time.hh"
 #include "context.hh"
@@ -58,8 +58,8 @@ void PathTracingRenderer::init()
 
     // vk::imgui_init(*p_context, *p_device, *p_surface);
 
-    EventHandler::register_key_callback(this);
-    EventHandler::register_cursor_pos_callback(this);
+    /* EventHandler::register_key_callback(this);
+    EventHandler::register_cursor_pos_callback(this); */
 
     camera.set_speed(50.0f);
 
@@ -128,7 +128,7 @@ void PathTracingRenderer::resize()
     frame_number = 0;
 
     scissor.offset = {0, 0};
-    scissor.extent = {Window::width(), Window::height()};
+    scissor.extent = {bul::window::size().x, bul::window::size().y};
     viewport.width = scissor.extent.width;
     viewport.height = scissor.extent.height;
     viewport.x = 0;
@@ -143,13 +143,13 @@ void PathTracingRenderer::resize()
         p_device->destroy_image(color);
         p_device->destroy_image(color_acc);
 
-        color = p_device->create_image({.width = Window::width(),
-                                        .height = Window::height(),
+        color = p_device->create_image({.width = bul::window::size().x,
+                                        .height = bul::window::size().y,
                                         .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                                         .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT});
 
-        color_acc = p_device->create_image({.width = Window::width(),
-                                            .height = Window::height(),
+        color_acc = p_device->create_image({.width = bul::window::size().x,
+                                            .height = bul::window::size().y,
                                             .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                                             .usage = VK_IMAGE_USAGE_STORAGE_BIT});
     }
@@ -204,7 +204,7 @@ void PathTracingRenderer::render()
     global_uniform_set.proj = camera.get_proj();
     global_uniform_set.inv_proj = camera.get_inv_proj();
     global_uniform_set.camera_pos = glm::vec4(camera.get_pos(), 1.0f);
-    global_uniform_set.resolution = {Window::width(), Window::height()};
+    global_uniform_set.resolution = {bul::window::size().x, bul::window::size().y};
     global_uniform_set.exposure = exposure;
     global_uniform_set.frame_number = frame_number;
     uint32_t uniform_offset = global_uniform_buffer.push(&global_uniform_set, sizeof(GlobalUniformSet));
@@ -221,7 +221,7 @@ void PathTracingRenderer::render()
     cmd.bind_image(raytracing_program, voxels, 2);
     cmd.bind_storage_buffer(raytracing_program, voxel_materials, 3);
     cmd.bind_pipeline(raytracing_program);
-    cmd.dispatch(Window::width(), Window::height());
+    cmd.dispatch(bul::window::size().x, bul::window::size().y);
 
     cmd.barrier(color, vk::ImageUsage::TransferSrc);
     cmd.barrier(fc.image, vk::ImageUsage::TransferDst);

@@ -8,13 +8,13 @@
 
 namespace bul::window
 {
-void create(const std::string_view title, vec2i size = {1280, 720});
+void create(const std::string_view title, vec2u size = {1280, 720});
 void destroy();
 void close();
 bool should_close();
 void* handle();
 
-vec2i size();
+vec2u size();
 bool resized();
 float aspect_ratio();
 
