@@ -19,6 +19,8 @@ bool resized();
 float aspect_ratio();
 
 vec2i cursor_pos();
+void show_cursor(bool show);
+bool cursor_visible();
 
 const std::vector<Event>& poll_events();
 } // namespace bul::window

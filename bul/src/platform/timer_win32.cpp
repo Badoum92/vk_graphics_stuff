@@ -19,34 +19,35 @@ Timer::Timer()
 }
 
 template<size_t N>
-double total(int64_t cur_time, int64_t start_time, int64_t perf_frequency)
+static double total(int64_t start_time, int64_t perf_frequency)
 {
     return double(get_perf_counter() - start_time) * N / perf_frequency;
 }
 
 double Timer::total_s() const
 {
-    return total<S>(get_perf_counter(), start_time_, perf_frequency_);
+    return total<S>(start_time_, perf_frequency_);
 }
 
 double Timer::total_ms() const
 {
-    return total<MS>(get_perf_counter(), start_time_, perf_frequency_);
+    return total<MS>(start_time_, perf_frequency_);
 }
 
 double Timer::total_us() const
 {
-    return total<US>(get_perf_counter(), start_time_, perf_frequency_);
+    return total<US>(start_time_, perf_frequency_);
 }
 
 double Timer::total_ns() const
 {
-    return total<NS>(get_perf_counter(), start_time_, perf_frequency_);
+    return total<NS>(start_time_, perf_frequency_);
 }
 
 template <size_t N>
-double elapsed(int64_t cur_time, int64_t& prev_time, int64_t perf_frequency)
+static double elapsed(int64_t& prev_time, int64_t perf_frequency)
 {
+    int64_t cur_time = get_perf_counter();
     double elapsed = double(cur_time - prev_time) * N / perf_frequency;
     prev_time = cur_time;
     return elapsed;
@@ -54,21 +55,21 @@ double elapsed(int64_t cur_time, int64_t& prev_time, int64_t perf_frequency)
 
 double Timer::elapsed_s()
 {
-    return elapsed<S>(get_perf_counter(), prev_time_, perf_frequency_);
+    return elapsed<S>(prev_time_, perf_frequency_);
 }
 
 double Timer::elapsed_ms()
 {
-    return elapsed<MS>(get_perf_counter(), prev_time_, perf_frequency_);
+    return elapsed<MS>(prev_time_, perf_frequency_);
 }
 
 double Timer::elapsed_us()
 {
-    return elapsed<US>(get_perf_counter(), prev_time_, perf_frequency_);
+    return elapsed<US>(prev_time_, perf_frequency_);
 }
 
 double Timer::elapsed_ns()
 {
-    return elapsed<NS>(get_perf_counter(), prev_time_, perf_frequency_);
+    return elapsed<NS>(prev_time_, perf_frequency_);
 }
 } // namespace bul

@@ -1,6 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
-
-project(bul)
+cmake_minimum_required(VERSION 3.19)
 
 # --- BUL ---
 add_library(bul STATIC
@@ -19,6 +17,13 @@ target_include_directories(bul
 )
 
 target_link_libraries(bul PRIVATE default_interface)
+
+target_compile_definitions(bul PRIVATE
+    $<$<BOOL:${WIN32}>:NOMINMAX>
+    $<$<BOOL:${WIN32}>:NOCOMM>
+    $<$<BOOL:${WIN32}>:WIN32_LEAN_AND_MEAN>
+    $<$<BOOL:${WIN32}>:VC_EXTRALEAN>
+)
 
 # --- TESTS ---
 if(BUILD_TESTS)

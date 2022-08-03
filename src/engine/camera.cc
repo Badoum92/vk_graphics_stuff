@@ -144,61 +144,47 @@ float Camera::get_ortho_size() const
     return ortho_size_;
 }
 
-void Camera::update()
+void Camera::update_pos()
 {
-    static constexpr glm::ivec3 ivec3_zero{0, 0, 0};
-    if (dir_ != ivec3_zero)
-    {
-        auto dir = glm::normalize(glm::vec3{dir_});
-        dir *= speed_ * Time::delta_time();
-        pos_ += dir.x * right_;
-        pos_ += dir.y * world_up_;
-        pos_ += dir.z * front_straight_;
-        recompute_view_ = true;
-    }
-}
+    dir_ = glm::ivec3(0);
+    if (bul::key_down(bul::Key::Z))
+        dir_.z += 1;
+    if (bul::key_down(bul::Key::S))
+        dir_.z -= 1;
+    if (bul::key_down(bul::Key::Q))
+        dir_.x -= 1;
+    if (bul::key_down(bul::Key::D))
+        dir_.x += 1;
+    if (bul::key_down(bul::Key::Space))
+        dir_.y += 1;
+    if (bul::key_down(bul::Key::C))
+        dir_.y -= 1;
 
-void Camera::on_key_event(int key, int action)
-{
-    /* glm::ivec3 dir{0, 0, 0};
-    int mult = 0;
-
-    if (action == GLFW_PRESS)
-        mult = 1;
-    if (action == GLFW_RELEASE)
-        mult = -1;
-
-    if (key == GLFW_KEY_W)
-        dir.z += 1;
-    if (key == GLFW_KEY_S)
-        dir.z -= 1;
-    if (key == GLFW_KEY_D)
-        dir.x += 1;
-    if (key == GLFW_KEY_A)
-        dir.x -= 1;
-    if (key == GLFW_KEY_SPACE)
-        dir.y += 1;
-    if (key == GLFW_KEY_C)
-        dir.y -= 1;
-
-    dir_ += dir * mult; */
-}
-
-void Camera::on_mouse_moved(float x, float y)
-{
-    /* static bool init = false;
-    if (!init)
-    {
-        last_x_ = x;
-        last_y_ = y;
-        init = true;
+    if (dir_ == glm::ivec3(0))
         return;
-    }
 
-    float x_offset = x - last_x_;
-    float y_offset = last_y_ - y;
-    last_x_ = x;
-    last_y_ = y;
+    auto dir = glm::normalize(glm::vec3{dir_});
+    dir *= speed_ * Time::delta_time();
+    pos_ += dir.x * right_;
+    pos_ += dir.y * world_up_;
+    pos_ += dir.z * front_straight_;
+    recompute_view_ = true;
+}
+
+void Camera::update_view()
+{
+    static bul::vec2i last_pos = bul::window::cursor_pos();
+    if (bul::window::cursor_visible())
+        return;
+
+    bul::vec2i pos = bul::window::cursor_pos();
+    if (last_pos == pos)
+        return;
+
+    float x_offset = pos.x - last_pos.x;
+    float y_offset = last_pos.y - pos.y;
+    last_pos.x = pos.x;
+    last_pos.y = pos.y;
 
     x_offset *= sensitivity_;
     y_offset *= sensitivity_;
@@ -210,13 +196,13 @@ void Camera::on_mouse_moved(float x, float y)
     pitch_ = std::max(pitch_, -89.0f);
 
     update_vectors();
-    recompute_view_ = true; */
+    recompute_view_ = true;
 }
 
-void Camera::set_last_x_y(float x, float y)
+void Camera::update()
 {
-    last_x_ = x;
-    last_y_ = y;
+    update_pos();
+    update_view();
 }
 
 void Camera::set_speed(float speed)
@@ -261,5 +247,5 @@ const glm::vec3& Camera::get_right() const
 
 bool Camera::is_moving() const
 {
-    return dir_ != glm::ivec3(0);
+    return recompute_view_;
 }

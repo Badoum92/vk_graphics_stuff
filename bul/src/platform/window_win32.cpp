@@ -1,6 +1,5 @@
 #include "bul/window.h"
 
-#include <iostream>
 #include <Windows.h>
 #include <windowsx.h>
 
@@ -15,7 +14,13 @@ static vec2u size_ = {0, 0};
 static HWND handle_ = nullptr;
 static bool should_close_ = false;
 static bool resized_ = false;
+
 static vec2i cursor_pos_ = {0, 0};
+static bool cursor_visible_ = true;
+static bul::vec2i save_cursor_pos_ = cursor_pos_;
+
+static RAWINPUT* raw_input_ = nullptr;
+static size_t raw_input_size_ = 0;
 
 // clang-format off
 static EnumArray<Key, int> key_to_win32_key = {
@@ -45,10 +50,16 @@ void create(const std::string_view title, vec2u size)
     ASSERT(handle_ != nullptr);
     should_close_ = false;
     ShowWindow(handle_, SW_SHOW);
+    resized_ = false;
+
+    RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, NULL};
+    ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
 }
 
 void destroy()
-{}
+{
+    free(raw_input_);
+}
 
 void close()
 {
@@ -89,6 +100,41 @@ vec2i cursor_pos()
     return cursor_pos_;
 }
 
+void show_cursor(bool show)
+{
+    cursor_visible_ = show;
+    if (!show)
+    {
+        cursor_pos_ = save_cursor_pos_;
+
+        RECT clip_rect;
+        GetClientRect(static_cast<HWND>(window::handle()), &clip_rect);
+        ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&clip_rect.left));
+        ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&clip_rect.right));
+        ClipCursor(&clip_rect);
+        SetCursor(NULL);
+
+        RAWINPUTDEVICE rid = {0x01, 0x02, 0, static_cast<HWND>(window::handle())};
+        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+    }
+    else
+    {
+        save_cursor_pos_ = cursor_pos_;
+        SetCursorPos(size_.x / 2, size_.y / 2);
+
+        ClipCursor(NULL);
+        SetCursor(LoadCursor(NULL, IDC_ARROW));
+
+        RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, NULL};
+        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+    }
+}
+
+bool cursor_visible()
+{
+    return cursor_visible_;
+}
+
 const std::vector<Event>& poll_events()
 {
     events.clear();
@@ -101,12 +147,6 @@ const std::vector<Event>& poll_events()
     }
     return events;
 }
-
-/* static bool is_right_alt(MSG m)
-{
-    return (m.message == WM_KEYDOWN || m.message == WM_SYSKEYDOWN || m.message == WM_KEYUP || m.message == WM_SYSKEYUP)
-        && m.wParam == VK_MENU && (HIWORD(m.lParam) & KF_EXTENDED);
-} */
 
 WPARAM handle_left_right_special_keys(WPARAM wParam, LPARAM lParam)
 {
@@ -195,8 +235,11 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         // Mouse events
 
     case WM_MOUSEMOVE: {
-        cursor_pos_ = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-        events.emplace_back(cursor_pos_.x, cursor_pos_.y);
+        if (cursor_visible())
+        {
+            cursor_pos_ = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+            events.emplace_back(cursor_pos_.x, cursor_pos_.y);
+        }
         return 0;
     }
     case WM_LBUTTONDOWN:
@@ -255,6 +298,37 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
             mouse_buttons[MouseButton::Mouse_5] = false;
             events.emplace_back(MouseButton::Mouse_5, ButtonState::Up);
         }
+        return 0;
+    }
+
+        // Raw input
+
+    case WM_INPUT: {
+        UINT size = 0;
+        HRAWINPUT ri = reinterpret_cast<HRAWINPUT>(lParam);
+
+        GetRawInputData(ri, RID_INPUT, NULL, &size, sizeof(RAWINPUTHEADER));
+        if (size > raw_input_size_)
+        {
+            raw_input_size_ = size;
+            raw_input_ = static_cast<RAWINPUT*>(realloc(raw_input_, size));
+        }
+
+        size = raw_input_size_;
+        ASSERT(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != static_cast<UINT>(-1));
+
+        bul::vec2i delta;
+        if (raw_input_->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
+        {
+            delta.x = raw_input_->data.mouse.lLastX - cursor_pos_.x;
+            delta.y = raw_input_->data.mouse.lLastY - cursor_pos_.y;
+        }
+        else
+        {
+            delta.x = raw_input_->data.mouse.lLastX;
+            delta.y = raw_input_->data.mouse.lLastY;
+        }
+        cursor_pos_ += delta;
         return 0;
     }
     }

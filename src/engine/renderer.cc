@@ -43,9 +43,6 @@ void Renderer::init()
 
     vk::imgui_init(*p_context, *p_device, *p_surface);
 
-    EventHandler::register_key_callback(this);
-    EventHandler::register_cursor_pos_callback(this);
-
     camera.set_speed(50.0f);
 
     auto& cmd = p_device->get_graphics_command();
@@ -282,27 +279,4 @@ void Renderer::render_gui()
     }
 
     ImGui::End();
-}
-
-void Renderer::key_callback(const Event& event, void* object)
-{
-    auto& renderer = *reinterpret_cast<Renderer*>(object);
-    if (event.key() == GLFW_KEY_LEFT_ALT && event.key_action() == GLFW_PRESS)
-    {
-        Input::show_cursor(!Input::cursor_enabled());
-        auto [x, y] = Input::get_cursor_pos();
-        renderer.camera.set_last_x_y(x, y);
-        return;
-    }
-    renderer.camera.on_key_event(event.key(), event.key_action());
-}
-
-void Renderer::cursor_pos_callback(const Event& event, void* object)
-{
-    auto& renderer = *reinterpret_cast<Renderer*>(object);
-    if (!Input::cursor_enabled())
-    {
-        renderer.camera.on_mouse_moved(event.pos_x(), event.pos_y());
-        renderer.frame_number = 0;
-    }
 }

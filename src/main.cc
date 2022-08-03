@@ -59,10 +59,17 @@ int main(int, char**)
         {
             Time::update();
             const auto& events = bul::window::poll_events();
+
             if (bul::key_pressed(bul::Key::Escape))
             {
                 bul::window::close();
             }
+
+            if (bul::key_pressed(bul::Key::LAlt))
+            {
+                bul::window::show_cursor(!bul::window::cursor_visible());
+            }
+
             renderer.render();
         }
 

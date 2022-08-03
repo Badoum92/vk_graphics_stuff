@@ -33,10 +33,7 @@ public:
     float get_ortho_size() const;
 
     void update();
-    void on_key_event(int key, int action);
-    void on_mouse_moved(float x, float y);
 
-    void set_last_x_y(float x, float y);
     void set_speed(float speed);
     void set_sensitivity(float sensitivity);
     void set_position(const glm::vec3& position);
@@ -51,6 +48,9 @@ public:
     bool is_moving() const;
 
 protected:
+    void update_pos();
+    void update_view();
+
     glm::vec3 pos_;
     glm::vec3 world_up_;
     float yaw_;
