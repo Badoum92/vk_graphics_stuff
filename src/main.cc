@@ -15,6 +15,8 @@
 #include "bul/math/vector.h"
 #include "bul/util.h"
 
+#include "bul/uuid.h"
+
 /* std::string to_string(const bul::Event& e)
 {
     std::string s = bul::event_types_str[e.type];
@@ -43,8 +45,54 @@
     return s;
 } */
 
+void print_uuid(bul::UUID uuid)
+{
+    auto data = reinterpret_cast<const uint8_t*>(&uuid);
+    size_t i = 0;
+    for (; i < 4; ++i)
+    {
+        char a = (data[i] & 0xf0) >> 4;
+        char b = (data[i] & 0x0f);
+        printf("%x%x", a, b);
+    }
+    printf("-");
+    for (; i < 6; ++i)
+    {
+        char a = (data[i] & 0xf0) >> 4;
+        char b = (data[i] & 0x0f);
+        printf("%x%x", a, b);
+    }
+    printf("-");
+    for (; i < 8; ++i)
+    {
+        char a = (data[i] & 0xf0) >> 4;
+        char b = (data[i] & 0x0f);
+        printf("%x%x", a, b);
+    }
+    printf("-");
+    for (; i < 10; ++i)
+    {
+        char a = (data[i] & 0xf0) >> 4;
+        char b = (data[i] & 0x0f);
+        printf("%x%x", a, b);
+    }
+    printf("-");
+    for (; i < 16; ++i)
+    {
+        char a = (data[i] & 0xf0) >> 4;
+        char b = (data[i] & 0x0f);
+        printf("%x%x", a, b);
+    }
+    printf("\n");
+}
+
 int main(int, char**)
 {
+    const char* a = "123e4567-e89b-12d3-a456-426614174000";
+    bul::UUID u{a};
+    print_uuid(u);
+    return 0;
+
     try
     {
         bul::window::create("Window");
@@ -58,7 +106,7 @@ int main(int, char**)
         while (!bul::window::should_close())
         {
             Time::update();
-            const auto& events = bul::window::poll_events();
+            bul::window::poll_events();
 
             if (bul::key_pressed(bul::Key::Escape))
             {

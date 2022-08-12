@@ -26,7 +26,6 @@ target_compile_definitions(bul PRIVATE
 )
 
 # --- TESTS ---
-if(BUILD_TESTS)
 add_executable(tests
     tests/main.cpp
     tests/static_vec.cpp
@@ -36,6 +35,10 @@ add_executable(tests
 )
 
 target_link_libraries(tests
-    bul
+    PRIVATE default_interface
+    PRIVATE bul
 )
-endif()
+
+set_target_properties(tests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+)

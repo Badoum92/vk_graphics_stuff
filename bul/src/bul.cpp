@@ -13,6 +13,10 @@ void internal_assert(bool cond, const char* cond_str, const char* msg, const cha
         {
             fprintf(stderr, ": %s\n", msg);
         }
+        else
+        {
+            fprintf(stderr, "\n");
+        }
         __debugbreak();
     }
 }

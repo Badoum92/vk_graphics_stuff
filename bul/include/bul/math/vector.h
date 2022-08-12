@@ -390,6 +390,8 @@ vec2f normalize(vec2f v);
 vec3f normalize(vec3f v);
 vec4f normalize(vec4f v);
 
+vec3f cross(vec3f a, vec3f b);
+
 inline constexpr vec3f right = {1, 0, 0};
 inline constexpr vec3f up = {0, 1, 0};
 inline constexpr vec3f front = {0, 0, -1};
