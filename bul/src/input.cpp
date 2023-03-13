@@ -10,14 +10,14 @@ static EnumArray<MouseButton, bool> mouse_buttons_prev = {false};
 EnumArray<Key, bool> keys = {false};
 static EnumArray<Key, bool> keys_prev = {false};
 
-namespace input::detail
+namespace input::_private
 {
 void new_frame()
 {
     memcpy(mouse_buttons_prev.data, mouse_buttons.data, mouse_buttons.SIZE * sizeof(bool));
     memcpy(keys_prev.data, keys.data, keys.SIZE * sizeof(bool));
 }
-} // namespace detail
+} // namespace _private
 
 bool button_down(MouseButton button)
 {

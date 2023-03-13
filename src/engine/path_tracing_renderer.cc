@@ -3,9 +3,9 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include <bul/window.h>
+#include <bul/time.h>
 
 #include "input.hh"
-#include "time.hh"
 #include "context.hh"
 #include "device.hh"
 #include "surface.hh"
@@ -250,7 +250,7 @@ void PathTracingRenderer::render()
 void PathTracingRenderer::render_gui()
 {
     ImGui::Begin("ImGui");
-    ImGui::Text("FPS: %u", Time::fps());
+    ImGui::Text("FPS: %u", uint32_t(1.0 / bul::time::delta_s()));
 
     if (ImGui::CollapsingHeader("Rendering"))
     {

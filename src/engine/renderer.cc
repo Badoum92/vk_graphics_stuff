@@ -2,10 +2,10 @@
 
 #include <iostream>
 #include <glm/glm.hpp>
+#include <bul/time.h>
 
 #include "window.hh"
 #include "input.hh"
-#include "time.hh"
 #include "context.hh"
 #include "device.hh"
 #include "surface.hh"
@@ -230,7 +230,7 @@ void Renderer::render()
 void Renderer::render_gui()
 {
     ImGui::Begin("ImGui");
-    ImGui::Text("FPS: %u", Time::fps());
+    ImGui::Text("FPS: %u", uint32_t(1.0 / bul::time::delta_s()));
 
     if (ImGui::CollapsingHeader("Camera"))
     {

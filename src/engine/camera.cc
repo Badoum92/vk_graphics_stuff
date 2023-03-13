@@ -3,8 +3,7 @@
 #include <cmath>
 #include <algorithm>
 #include <bul/window.h>
-
-#include "time.hh"
+#include <bul/time.h>
 
 #undef near
 #undef far
@@ -164,7 +163,7 @@ void Camera::update_pos()
         return;
 
     auto dir = glm::normalize(glm::vec3{dir_});
-    dir *= speed_ * Time::delta_time();
+    dir *= speed_ * bul::time::delta_s();
     pos_ += dir.x * right_;
     pos_ += dir.y * world_up_;
     pos_ += dir.z * front_straight_;

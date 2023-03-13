@@ -31,7 +31,7 @@ TEST_CASE("default init")
 
 TEST_CASE("value init")
 {
-    bul::mat4f m{1};
+    bul::mat4f m = bul::mat4f::identity();
     CHECK(memcmp(m.data, identity, 16 * sizeof(float)) == 0);
 }
 

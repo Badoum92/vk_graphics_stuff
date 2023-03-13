@@ -52,7 +52,7 @@ constexpr inline EnumArray<ButtonState, const char*> button_states_str = {
 };
 // clang-format on
 
-namespace input::detail
+namespace input::_private
 {
 void new_frame();
 }

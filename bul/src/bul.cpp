@@ -4,7 +4,7 @@
 
 namespace bul
 {
-void internal_assert(bool cond, const char* cond_str, const char* msg, const char* file, unsigned line)
+void _assert(bool cond, const char* cond_str, const char* msg, const char* file, unsigned line)
 {
     if (!cond)
     {

@@ -17,7 +17,8 @@ static bool resized_ = false;
 
 static vec2i cursor_pos_ = {0, 0};
 static bool cursor_visible_ = true;
-static bul::vec2i save_cursor_pos_ = cursor_pos_;
+static bul::vec2i save_visible_cursor_pos_ = cursor_pos_;
+static bul::vec2i save_invisible_cursor_pos_ = cursor_pos_;
 
 static RAWINPUT* raw_input_ = nullptr;
 static size_t raw_input_size_ = 0;
@@ -44,6 +45,10 @@ void create(const std::string_view title, vec2u size)
     wc.lpszClassName = "Win32 Window Class";
     RegisterClass(&wc);
 
+    RECT rect = {0, 0, static_cast<LONG>(size_.x), static_cast<LONG>(size_.y)};
+    AdjustWindowRectEx(&rect, WS_BORDER | WS_OVERLAPPEDWINDOW, false, 0);
+    size_.x = rect.right - rect.left;
+    size_.y = rect.bottom - rect.top;
     handle_ = CreateWindowEx(0, wc.lpszClassName, title.data(), WS_BORDER | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
                              CW_USEDEFAULT, size_.x, size_.y, nullptr, nullptr, wc.hInstance, nullptr);
 
@@ -53,7 +58,7 @@ void create(const std::string_view title, vec2u size)
     resized_ = false;
 
     RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, NULL};
-    ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+    ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
 }
 
 void destroy()
@@ -103,30 +108,34 @@ vec2i cursor_pos()
 void show_cursor(bool show)
 {
     cursor_visible_ = show;
-    if (!show)
-    {
-        cursor_pos_ = save_cursor_pos_;
 
-        RECT clip_rect;
-        GetClientRect(static_cast<HWND>(window::handle()), &clip_rect);
-        ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&clip_rect.left));
-        ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&clip_rect.right));
-        ClipCursor(&clip_rect);
+    RECT rect;
+    GetClientRect(static_cast<HWND>(window::handle()), &rect);
+    ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&rect.left));
+    ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&rect.right));
+
+    if (!cursor_visible_)
+    {
+        save_visible_cursor_pos_ = cursor_pos_;
+        cursor_pos_ = save_invisible_cursor_pos_;
+
+        ClipCursor(&rect);
         SetCursor(NULL);
 
         RAWINPUTDEVICE rid = {0x01, 0x02, 0, static_cast<HWND>(window::handle())};
-        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+        ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
     }
     else
     {
-        save_cursor_pos_ = cursor_pos_;
-        SetCursorPos(size_.x / 2, size_.y / 2);
+        save_invisible_cursor_pos_ = cursor_pos_;
+        cursor_pos_ = save_visible_cursor_pos_;
 
         ClipCursor(NULL);
+        SetCursorPos(rect.left + cursor_pos_.x, rect.top + cursor_pos_.y);
         SetCursor(LoadCursor(NULL, IDC_ARROW));
 
         RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, NULL};
-        ASSERT(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+        ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
     }
 }
 
@@ -138,7 +147,7 @@ bool cursor_visible()
 const std::vector<Event>& poll_events()
 {
     events.clear();
-    input::detail::new_frame();
+    input::_private::new_frame();
     MSG msg = {};
     while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
     {
@@ -315,7 +324,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         }
 
         size = raw_input_size_;
-        ASSERT(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != static_cast<UINT>(-1));
+        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != static_cast<UINT>(-1));
 
         bul::vec2i delta;
         if (raw_input_->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)

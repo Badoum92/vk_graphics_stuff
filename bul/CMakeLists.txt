@@ -3,12 +3,11 @@ cmake_minimum_required(VERSION 3.19)
 # --- BUL ---
 add_library(bul STATIC
     src/bul.cpp
+    src/file.cpp
     src/input.cpp
-    src/math/vector.cpp
-    src/math/matrix.cpp
     src/platform/util_win32.cpp
     src/platform/window_win32.cpp
-    src/platform/timer_win32.cpp
+    src/platform/time_win32.cpp
 )
 
 target_include_directories(bul
@@ -25,20 +24,21 @@ target_compile_definitions(bul PRIVATE
     $<$<BOOL:${WIN32}>:VC_EXTRALEAN>
 )
 
+set_target_properties(bul PROPERTIES
+    CXX_STANDARD 20
+)
+
 # --- TESTS ---
 add_executable(tests
     tests/main.cpp
-    tests/static_vec.cpp
+    tests/static_vector.cpp
+    tests/static_queue.cpp
     tests/vector.cpp
     tests/matrix.cpp
     tests/pool.cpp
+    tests/map.cpp
 )
 
 target_link_libraries(tests
-    PRIVATE default_interface
-    PRIVATE bul
-)
-
-set_target_properties(tests PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+    bul
 )

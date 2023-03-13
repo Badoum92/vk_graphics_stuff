@@ -2,6 +2,8 @@
 
 #include "bul/bul.h"
 
+#include <cmath>
+
 namespace bul
 {
 template <typename T>
@@ -15,7 +17,7 @@ struct vec2
 
     constexpr vec2() = default;
 
-    constexpr vec2(T val)
+    constexpr explicit vec2(T val)
         : x(val)
         , y(val)
     {}
@@ -30,28 +32,32 @@ struct vec2
         x *= val;
         y *= val;
     }
+
     constexpr void operator/=(T val)
     {
         x /= val;
         y /= val;
     }
 
-    constexpr void operator+=(vec2 other)
+    constexpr void operator+=(const vec2& other)
     {
         x += other.x;
         y += other.y;
     }
-    constexpr void operator-=(vec2 other)
+
+    constexpr void operator-=(const vec2& other)
     {
         x -= other.x;
         y -= other.y;
     }
-    constexpr void operator*=(vec2 other)
+
+    constexpr void operator*=(const vec2& other)
     {
         x *= other.x;
         y *= other.y;
     }
-    constexpr void operator/=(vec2 other)
+
+    constexpr void operator/=(const vec2& other)
     {
         x /= other.x;
         y /= other.y;
@@ -63,6 +69,7 @@ struct vec2
     {
         return &x;
     }
+
     constexpr const T* data() const
     {
         return &x;
@@ -70,10 +77,13 @@ struct vec2
 
     T& operator[](size_t i)
     {
+        ASSERT(i < SIZE);
         return data()[i];
     }
+
     const T& operator[](size_t i) const
     {
+        ASSERT(i < SIZE);
         return data()[i];
     }
 };
@@ -90,7 +100,7 @@ struct vec3
 
     constexpr vec3() = default;
 
-    constexpr vec3(T val)
+    constexpr explicit vec3(T val)
         : x(val)
         , y(val)
         , z(val)
@@ -108,6 +118,7 @@ struct vec3
         y *= val;
         z *= val;
     }
+
     constexpr void operator/=(T val)
     {
         x /= val;
@@ -115,25 +126,28 @@ struct vec3
         z /= val;
     }
 
-    constexpr void operator+=(vec3 other)
+    constexpr void operator+=(const vec3& other)
     {
         x += other.x;
         y += other.y;
         z += other.z;
     }
-    constexpr void operator-=(vec3 other)
+
+    constexpr void operator-=(const vec3& other)
     {
         x -= other.x;
         y -= other.y;
         z -= other.z;
     }
-    constexpr void operator*=(vec3 other)
+
+    constexpr void operator*=(const vec3& other)
     {
         x *= other.x;
         y *= other.y;
         z *= other.z;
     }
-    constexpr void operator/=(vec3 other)
+
+    constexpr void operator/=(const vec3& other)
     {
         x /= other.x;
         y /= other.y;
@@ -146,6 +160,7 @@ struct vec3
     {
         return &x;
     }
+
     constexpr const T* data() const
     {
         return &x;
@@ -153,10 +168,13 @@ struct vec3
 
     T& operator[](size_t i)
     {
+        ASSERT(i < SIZE);
         return data()[i];
     }
+
     const T& operator[](size_t i) const
     {
+        ASSERT(i < SIZE);
         return data()[i];
     }
 };
@@ -174,7 +192,7 @@ struct vec4
 
     constexpr vec4() = default;
 
-    constexpr vec4(T val)
+    constexpr explicit vec4(T val)
         : x(val)
         , y(val)
         , z(val)
@@ -188,6 +206,13 @@ struct vec4
         , w(w_)
     {}
 
+    constexpr vec4(const vec3<T>& xyz, T w_)
+        : x(xyz.x)
+        , y(xyz.y)
+        , z(xyz.z)
+        , w(w_)
+    {}
+
     constexpr void operator*=(T val)
     {
         x *= val;
@@ -195,6 +220,7 @@ struct vec4
         z *= val;
         w *= val;
     }
+
     constexpr void operator/=(T val)
     {
         x /= val;
@@ -203,28 +229,31 @@ struct vec4
         w /= val;
     }
 
-    constexpr void operator+=(vec4 other)
+    constexpr void operator+=(const vec4& other)
     {
         x += other.x;
         y += other.y;
         z += other.z;
         w += other.w;
     }
-    constexpr void operator-=(vec4 other)
+
+    constexpr void operator-=(const vec4& other)
     {
         x -= other.x;
         y -= other.y;
         z -= other.z;
         w -= other.w;
     }
-    constexpr void operator*=(vec4 other)
+
+    constexpr void operator*=(const vec4& other)
     {
         x *= other.x;
         y *= other.y;
         z *= other.z;
         w *= other.w;
     }
-    constexpr void operator/=(vec4 other)
+
+    constexpr void operator/=(const vec4& other)
     {
         x /= other.x;
         y /= other.y;
@@ -238,6 +267,7 @@ struct vec4
     {
         return &x;
     }
+
     constexpr const T* data() const
     {
         return &x;
@@ -245,105 +275,202 @@ struct vec4
 
     T& operator[](size_t i)
     {
+        ASSERT(i < SIZE);
         return data()[i];
     }
+
     const T& operator[](size_t i) const
     {
+        ASSERT(i < SIZE);
         return data()[i];
     }
 };
 
 template <typename T>
-constexpr vec2<T> operator*(vec2<T> v, T val)
+constexpr vec2<T> operator*(const vec2<T>& v, T val)
 {
     return {v.x * val, v.y * val};
 }
+
 template <typename T>
-constexpr vec2<T> operator/(vec2<T> v, T val)
+constexpr vec2<T> operator/(const vec2<T>& v, T val)
 {
     return {v.x / val, v.y / val};
 }
+
 template <typename T>
-constexpr vec2<T> operator+(vec2<T> a, vec2<T> b)
+constexpr vec2<T> operator+(const vec2<T>& a, const vec2<T>& b)
 {
     return {a.x + b.x, a.y + b.y};
 }
+
 template <typename T>
-constexpr vec2<T> operator-(vec2<T> a, vec2<T> b)
+constexpr vec2<T> operator-(const vec2<T>& a, const vec2<T>& b)
 {
     return {a.x - b.x, a.y - b.y};
 }
+
 template <typename T>
-constexpr vec2<T> operator*(vec2<T> a, vec2<T> b)
+constexpr vec2<T> operator*(const vec2<T>& a, const vec2<T>& b)
 {
     return {a.x * b.x, a.y * b.y};
 }
+
 template <typename T>
-constexpr vec2<T> operator/(vec2<T> a, vec2<T> b)
+constexpr vec2<T> operator/(const vec2<T>& a, const vec2<T>& b)
 {
     return {a.x / b.x, a.y / b.y};
 }
 
 template <typename T>
-constexpr vec3<T> operator*(vec3<T> v, T val)
+constexpr vec3<T> operator*(const vec3<T>& v, T val)
 {
     return {v.x * val, v.y * val, v.z * val};
 }
+
 template <typename T>
-constexpr vec3<T> operator/(vec3<T> v, T val)
+constexpr vec3<T> operator/(const vec3<T>& v, T val)
 {
     return {v.x / val, v.y / val, v.z / val};
 }
+
 template <typename T>
-constexpr vec3<T> operator+(vec3<T> a, vec3<T> b)
+constexpr vec3<T> operator+(const vec3<T>& a, const vec3<T>& b)
 {
     return {a.x + b.x, a.y + b.y, a.z + b.z};
 }
+
 template <typename T>
-constexpr vec3<T> operator-(vec3<T> a, vec3<T> b)
+constexpr vec3<T> operator-(const vec3<T>& a, const vec3<T>& b)
 {
     return {a.x - b.x, a.y - b.y, a.z - b.z};
 }
+
 template <typename T>
-constexpr vec3<T> operator*(vec3<T> a, vec3<T> b)
+constexpr vec3<T> operator*(const vec3<T>& a, const vec3<T>& b)
 {
     return {a.x * b.x, a.y * b.y, a.z * b.z};
 }
+
 template <typename T>
-constexpr vec3<T> operator/(vec3<T> a, vec3<T> b)
+constexpr vec3<T> operator/(const vec3<T>& a, const vec3<T>& b)
 {
     return {a.x / b.x, a.y / b.y, a.z / b.z};
 }
 
 template <typename T>
-constexpr vec4<T> operator*(vec4<T> v, T val)
+constexpr vec4<T> operator*(const vec4<T>& v, T val)
 {
     return {v.x * val, v.y * val, v.z * val, v.w * val};
 }
+
 template <typename T>
-constexpr vec4<T> operator/(vec4<T> v, T val)
+constexpr vec4<T> operator/(const vec4<T>& v, T val)
 {
     return {v.x / val, v.y / val, v.z / val, v.w / val};
 }
+
 template <typename T>
-constexpr vec4<T> operator+(vec4<T> a, vec4<T> b)
+constexpr vec4<T> operator+(const vec4<T>& a, const vec4<T>& b)
 {
     return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
 }
+
 template <typename T>
-constexpr vec4<T> operator-(vec4<T> a, vec4<T> b)
+constexpr vec4<T> operator-(const vec4<T>& a, const vec4<T>& b)
 {
     return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
 }
+
 template <typename T>
-constexpr vec4<T> operator*(vec4<T> a, vec4<T> b)
+constexpr vec4<T> operator*(const vec4<T>& a, const vec4<T>& b)
 {
     return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
 }
+
 template <typename T>
-constexpr vec4<T> operator/(vec4<T> a, vec4<T> b)
+constexpr vec4<T> operator/(const vec4<T>& a, const vec4<T>& b)
 {
     return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+}
+
+template <typename V>
+auto min(const V& v)
+{
+    auto res = v[0];
+    for (size_t i = 1; i < V::SIZE; ++i)
+    {
+        res = std::min(res, v[i]);
+    }
+    return res;
+}
+
+template <typename V>
+auto max(const V& v)
+{
+    auto res = v[0];
+    for (size_t i = 1; i < V::SIZE; ++i)
+    {
+        res = std::max(res, v[i]);
+    }
+    return res;
+}
+
+template <typename V>
+size_t min_comp(const V& v)
+{
+    size_t comp = 0;
+    for (size_t i = 1; i < V::SIZE; ++i)
+    {
+        if (v[i] < v[comp])
+        {
+            comp = i;
+        }
+    }
+    return comp;
+}
+
+template <typename V>
+size_t max_comp(const V& v)
+{
+    size_t comp = 0;
+    for (size_t i = 1; i < V::SIZE; ++i)
+    {
+        if (v[i] > v[comp])
+        {
+            comp = i;
+        }
+    }
+    return comp;
+}
+
+template <typename V>
+auto dot(const V& a, const V& b)
+{
+    typename V::value_t res = 0;
+    for (size_t i = 0; i < V::SIZE; ++i)
+    {
+        res += a[i] * b[i];
+    }
+    return res;
+}
+
+template <typename V>
+auto length(const V& v)
+{
+    return std::sqrt(dot(v, v));
+}
+
+template <typename V>
+auto distance(const V& a, const V& b)
+{
+    return length(a - b);
+}
+
+template <typename V>
+V normalize(const V& v)
+{
+    return v / length(v);
 }
 
 using vec2f = vec2<float>;
@@ -358,39 +485,10 @@ using vec4f = vec4<float>;
 using vec4i = vec4<int32_t>;
 using vec4u = vec4<uint32_t>;
 
-float min(vec2f v);
-float min(vec3f v);
-float min(vec4f v);
-
-float max(vec2f v);
-float max(vec3f v);
-float max(vec4f v);
-
-size_t min_comp(vec2f v);
-size_t min_comp(vec3f v);
-size_t min_comp(vec4f v);
-
-size_t max_comp(vec2f v);
-size_t max_comp(vec3f v);
-size_t max_comp(vec4f v);
-
-float dot(vec2f a, vec2f b);
-float dot(vec3f a, vec3f b);
-float dot(vec4f a, vec4f b);
-
-float length(vec2f v);
-float length(vec3f v);
-float length(vec4f v);
-
-float distance(vec2f a, vec2f b);
-float distance(vec3f a, vec3f b);
-float distance(vec4f a, vec4f b);
-
-vec2f normalize(vec2f v);
-vec3f normalize(vec3f v);
-vec4f normalize(vec4f v);
-
-vec3f cross(vec3f a, vec3f b);
+inline vec3f cross(const vec3f& a, const vec3f& b)
+{
+    return {a.y * b.z - b.y * a.z, a.z * b.x - b.z * a.x, a.x * b.y - b.x * a.y};
+}
 
 inline constexpr vec3f right = {1, 0, 0};
 inline constexpr vec3f up = {0, 1, 0};

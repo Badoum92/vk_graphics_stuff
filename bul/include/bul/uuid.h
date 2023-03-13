@@ -43,15 +43,29 @@ struct UUID
         }
     }
 
-    bool operator==(const UUID& other) const;
-
-    void to_string(char (&s)[37])
+    bool operator==(const UUID& other) const
     {
-        constexpr auto number_to_ascii = [](uint8_t n) -> uint8_t { return (n >= 10) ? n + 'a' - 10 : n + '0' };
-        auto lambda = [](char(&s)[37], size_t& data_i, size_t& s_i, size_t n) {
+        // clang-format off
+        return a == other.a
+            && b == other.b
+            && c == other.c
+            && d == other.d
+            && e[0] == other.e[0]
+            && e[1] == other.e[1]
+            && e[2] == other.e[2]
+            && e[3] == other.e[3]
+            && e[4] == other.e[4]
+            && e[5] == other.e[5];
+        // clang-format on
+    }
+
+    void to_string(char* s)
+    {
+        constexpr auto number_to_ascii = [](uint8_t n) -> uint8_t { return (n >= 10) ? n + 'a' - 10 : n + '0'; };
+        auto lambda = [](char* s, size_t& data_i, size_t& s_i, size_t n) {
             for (size_t i = 0; i < n; ++i)
             {
-                s[s_i]
+                s[s_i];
             }
         }
     }
