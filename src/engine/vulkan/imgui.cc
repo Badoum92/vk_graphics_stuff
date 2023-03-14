@@ -2,8 +2,8 @@
 
 #include <imgui/backends/imgui_impl_glfw.h>
 #include <imgui/backends/imgui_impl_vulkan.h>
+#include <bul/window.h>
 
-#include "window.hh"
 #include "context.hh"
 #include "device.hh"
 #include "surface.hh"
@@ -20,7 +20,7 @@ void imgui_init(Context& context, Device& device, Surface& surface)
     style_colors[ImGuiCol_HeaderHovered] = ImVec4(0, 0, 0, 0);
     style_colors[ImGuiCol_HeaderActive] = ImVec4(0, 0, 0, 0);
 
-    ImGui_ImplGlfw_InitForVulkan(Window::handle(), true);
+    // ImGui_ImplGlfw_InitForVulkan(bul::window::handle(), true);
 
     ImGui_ImplVulkan_InitInfo init_info{};
     init_info.Instance = context.instance;

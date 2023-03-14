@@ -3,9 +3,8 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include <bul/time.h>
+#include <bul/window.h>
 
-#include "window.hh"
-#include "input.hh"
 #include "context.hh"
 #include "device.hh"
 #include "surface.hh"
@@ -91,7 +90,7 @@ void Renderer::resize()
     frame_number = 0;
 
     scissor.offset = {0, 0};
-    scissor.extent = {Window::width(), Window::height()};
+    scissor.extent = {bul::window::size().x, bul::window::size().y};
     viewport.width = scissor.extent.width;
     viewport.height = scissor.extent.height;
     viewport.x = 0;
@@ -157,7 +156,7 @@ void Renderer::render()
     global_uniform_set.proj = camera.get_proj();
     global_uniform_set.inv_proj = camera.get_inv_proj();
     global_uniform_set.camera_pos = glm::vec4(camera.get_pos(), 1.0f);
-    global_uniform_set.resolution = {Window::width(), Window::height()};
+    global_uniform_set.resolution = {bul::window::size().x, bul::window::size().y};
     global_uniform_set.frame_number = frame_number;
     uint32_t uniform_offset = global_uniform_buffer.push(&global_uniform_set, sizeof(GlobalUniformSet));
     p_device->global_uniform_set.bind_uniform_buffer(0, global_uniform_buffer.buffer_handle, uniform_offset,
@@ -202,7 +201,7 @@ void Renderer::render()
     cmd.bind_image(tonemap_program, rt_color, 0);
     cmd.bind_image(tonemap_program, fc.image, 1);
     cmd.bind_pipeline(tonemap_program);
-    cmd.dispatch(Window::width(), Window::height());
+    cmd.dispatch(bul::window::size().x, bul::window::size().y);
 
     // gui
 

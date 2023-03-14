@@ -5,7 +5,6 @@
 #include <bul/window.h>
 #include <bul/time.h>
 
-#include "input.hh"
 #include "context.hh"
 #include "device.hh"
 #include "surface.hh"

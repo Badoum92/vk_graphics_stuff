@@ -1,7 +1,5 @@
 #include <iostream>
 
-#include "window.hh"
-
 #include "context.hh"
 #include "device.hh"
 #include "surface.hh"

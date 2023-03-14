@@ -31,10 +31,8 @@ add_executable(main
 
     src/util/implems.cc
 
-    src/engine/window.cc
     src/engine/camera.cc
     src/engine/event.cc
-    src/engine/input.cc
     src/engine/renderer.cc
     src/engine/path_tracing_renderer.cc
     src/engine/gltf.cc

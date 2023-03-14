@@ -8,7 +8,6 @@
 #include "context.hh"
 #include "device.hh"
 #include "image.hh"
-#include "window.hh"
 
 namespace vk
 {
