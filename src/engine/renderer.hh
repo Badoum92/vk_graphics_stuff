@@ -3,7 +3,6 @@
 #include <volk.h>
 
 #include "camera.hh"
-#include "event.hh"
 #include "gltf.hh"
 #include "device.hh"
 
@@ -24,9 +23,6 @@ public:
     void resize();
     void render();
     void render_gui();
-
-    static void key_callback(const Event& event, void* object);
-    static void cursor_pos_callback(const Event& event, void* object);
 
 private:
     vk::Context* p_context = nullptr;
