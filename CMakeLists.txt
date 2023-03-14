@@ -90,7 +90,7 @@ target_compile_definitions(main PRIVATE
     $<$<BOOL:${WIN32}>:VC_EXTRALEAN>
 )
 
-set_target_properties(main bul tests volk PROPERTIES
+set_target_properties(main PROPERTIES
     CXX_STANDARD 20
     CXX_EXTENSIONS OFF
 )

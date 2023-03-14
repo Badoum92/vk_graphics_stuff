@@ -26,6 +26,7 @@ target_compile_definitions(bul PRIVATE
 
 set_target_properties(bul PROPERTIES
     CXX_STANDARD 20
+    CXX_EXTENSIONS OFF
 )
 
 # --- TESTS ---
@@ -41,4 +42,9 @@ add_executable(tests
 
 target_link_libraries(tests
     bul
+)
+
+set_target_properties(tests PROPERTIES
+    CXX_STANDARD 20
+    CXX_EXTENSIONS OFF
 )
