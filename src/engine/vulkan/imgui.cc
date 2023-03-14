@@ -1,7 +1,7 @@
 #include "imgui.hh"
 
-#include <imgui/backends/imgui_impl_glfw.h>
-#include <imgui/backends/imgui_impl_vulkan.h>
+// #include <imgui/backends/imgui_impl_glfw.h>
+// #include <imgui/backends/imgui_impl_vulkan.h>
 #include <bul/window.h>
 
 #include "context.hh"
@@ -11,16 +11,16 @@
 
 namespace vk
 {
-void imgui_init(Context& context, Device& device, Surface& surface)
+void imgui_init(Context&, Device&, Surface&)
 {
-    ImGui::CreateContext();
+    /* ImGui::CreateContext();
     ImGui::StyleColorsDark();
     ImVec4* style_colors = ImGui::GetStyle().Colors;
     style_colors[ImGuiCol_Header] = ImVec4(0, 0, 0, 0);
     style_colors[ImGuiCol_HeaderHovered] = ImVec4(0, 0, 0, 0);
     style_colors[ImGuiCol_HeaderActive] = ImVec4(0, 0, 0, 0);
 
-    // ImGui_ImplGlfw_InitForVulkan(bul::window::handle(), true);
+    ImGui_ImplGlfw_InitForVulkan(bul::window::handle(), true);
 
     ImGui_ImplVulkan_InitInfo init_info{};
     init_info.Instance = context.instance;
@@ -39,28 +39,28 @@ void imgui_init(Context& context, Device& device, Surface& surface)
     ImGui_ImplVulkan_CreateFontsTexture(cmd.vk_handle);
     device.submit_blocking(cmd);
 
-    ImGui_ImplVulkan_DestroyFontUploadObjects();
+    ImGui_ImplVulkan_DestroyFontUploadObjects(); */
 }
 
 void imgui_shutdown()
 {
-    ImGui_ImplVulkan_Shutdown();
+    /* ImGui_ImplVulkan_Shutdown(); */
 }
 
 void imgui_new_frame()
 {
-    ImGui_ImplVulkan_NewFrame();
+    /* ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    ImGui::NewFrame(); */
 }
 
 void imgui_render()
 {
-    ImGui::Render();
+    /* ImGui::Render(); */
 }
 
-void imgui_render_draw_data(Command& cmd)
+void imgui_render_draw_data(Command&)
 {
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd.vk_handle);
+    /* ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd.vk_handle); */
 }
 } // namespace vk

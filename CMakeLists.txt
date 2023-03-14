@@ -65,7 +65,6 @@ target_include_directories(main
 
 target_include_directories(main
     SYSTEM PRIVATE ${Vulkan_INCLUDE_DIRS}
-    SYSTEM PRIVATE third_party/glfw/include
     SYSTEM PRIVATE third_party/glm
     SYSTEM PRIVATE third_party/imgui
     SYSTEM PRIVATE third_party/nlohmann/include
@@ -74,15 +73,12 @@ target_include_directories(main
 
 target_link_libraries(main
     default_interface
-    # ${Vulkan_LIBRARIES}
-    glfw
     imgui
     bul
     volk
 )
 
 add_definitions(
-    -DGLFW_INCLUDE_VULKAN
     -DGLM_FORCE_RADIANS
     -DGLM_FORCE_DEPTH_ZERO_TO_ONE
     -DGLM_FORCE_RIGHT_HANDED
