@@ -1,45 +1,81 @@
 #include "gltf.hh"
 
 #include <iostream>
-#include <fstream>
-#include <cstdio>
-#include <cassert>
-#include <glm/ext.hpp>
-#include <glm/gtx/quaternion.hpp>
-
-#include "tools.hh"
-#include "device.hh"
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <bul/file.h>
 
 namespace gltf
 {
-template <typename T>
-static T get_value(void* data)
+using rapidjson_document = rapidjson::Document;
+using rapidjson_array = rapidjson::GenericArray<true, rapidjson::Value>;
+using Buffer = std::vector<uint8_t>;
+
+enum AccessorComponentType
 {
-    return *reinterpret_cast<T*>(data);
+    BYTE = 1,
+    UNSIGNED_BYTE = 1,
+    SHORT = 2,
+    UNSIGNED_SHORT = 2,
+    UNSIGNED_INT = 4,
+    FLOAT = 4
+};
+
+enum AccessorType
+{
+    SCALAR = 1,
+    VEC2 = 2,
+    VEC3 = 3,
+    VEC4 = 4,
+    MAT2 = 4,
+    MAT3 = 9,
+    MAT4 = 16
+};
+
+struct BufferView
+{
+    const uint8_t* data = nullptr;
+    uint32_t byte_length = 0;
+    uint32_t byte_stride = 0;
+};
+
+struct Accessor
+{
+    const uint8_t* data = nullptr;
+    uint32_t count;
+    AccessorComponentType component_type;
+    AccessorType type;
+    BufferView buffer_view;
+};
+
+template <typename T>
+static T get_value(const void* data)
+{
+    return *(const T*)data;
 }
 
-static AccessorCompType int_to_accessor_comp_type(int i)
+static AccessorComponentType uint_to_accessor_component_type(uint32_t i)
 {
     switch (i)
     {
     case 5120:
-        return AccessorCompType::BYTE;
+        return AccessorComponentType::BYTE;
     case 5121:
-        return AccessorCompType::UNSIGNED_BYTE;
+        return AccessorComponentType::UNSIGNED_BYTE;
     case 5122:
-        return AccessorCompType::SHORT;
+        return AccessorComponentType::SHORT;
     case 5123:
-        return AccessorCompType::UNSIGNED_SHORT;
+        return AccessorComponentType::UNSIGNED_SHORT;
     case 5125:
-        return AccessorCompType::UNSIGNED_INT;
+        return AccessorComponentType::UNSIGNED_INT;
     case 5126:
-        return AccessorCompType::FLOAT;
+        return AccessorComponentType::FLOAT;
     }
-    assert(!"Unknown AccessorCompType");
-    return AccessorCompType::BYTE;
+    assert(!"Unknown AccessorComponentType");
+    return AccessorComponentType::BYTE;
 }
 
-static AccessorType string_to_accessor_type(const std::string& s)
+static AccessorType string_to_accessor_type(std::string_view s)
 {
     if (s == "SCALAR")
         return AccessorType::SCALAR;
@@ -59,356 +95,382 @@ static AccessorType string_to_accessor_type(const std::string& s)
     return AccessorType::SCALAR;
 }
 
-Model load_model(const std::filesystem::path& path, vk::Device& device)
+static BufferView get_buffer_view(rapidjson_document& json, uint64_t buffer_view_index,
+                                  const std::vector<Buffer>& buffers)
 {
-    Loader loader{};
-    return loader.load(path, device);
-}
+    const auto& buffer_view_json = json["bufferViews"].GetArray()[buffer_view_index];
+    uint64_t buffer_index = buffer_view_json["buffer"].GetUint64();
 
-Model Loader::load(const std::filesystem::path& path, vk::Device& device)
-{
-    std::cout << "Loading model " << path.filename() << " ...\n";
-    buffers_.clear();
-
-    p_device_ = &device;
-    dir_ = path;
-    dir_.remove_filename();
-    std::ifstream gltf_file(path);
-    gltf_ = nlohmann::json::parse(gltf_file);
-
-    Model model;
-    model_ = &model;
-
-    load_buffers();
-    load_images();
-    load_textures();
-    load_materials();
-    load_meshes();
-    load_nodes();
-
-    int scene_idx = gltf_["scene"];
-    auto gltf_scene = gltf_["scenes"][scene_idx];
-    for (int node_idx : gltf_scene["nodes"])
+    uint32_t byte_offset = 0;
+    if (buffer_view_json.HasMember("byteOffset"))
     {
-        model.scene.push_back(node_idx);
+        byte_offset = buffer_view_json["byteOffset"].GetUint64();
     }
 
-    compute_nodes_transform();
-    gpu_upload();
+    uint32_t byte_length = buffer_view_json["byteLength"].GetUint();
 
-    std::cout << "Done\n";
-
-    return model;
-}
-
-void Loader::load_buffers()
-{
-    auto buffers = gltf_["buffers"];
-    for (const auto& buf : buffers)
+    uint32_t byte_stride = 0;
+    if (buffer_view_json.HasMember("byteStride"))
     {
-        std::string uri = buf["uri"];
-        auto path = dir_ / uri;
-        buffers_.push_back(tools::read_file<std::vector<uint8_t>>(path));
+        byte_stride = buffer_view_json["byteStride"].GetUint();
     }
+
+    return {buffers[buffer_index].data() + byte_offset, byte_length, byte_stride};
 }
 
-void Loader::load_images()
+static Accessor get_accessor(rapidjson_document& json, uint64_t accessor_index, const std::vector<Buffer>& buffers)
 {
-    auto images = gltf_["images"];
-    model_->images.reserve(images.size());
-    for (const auto& img : images)
+    Accessor accessor;
+
+    if (accessor_index == (uint64_t)-1)
     {
-        std::string uri = img["uri"];
-        model_->images.push_back({(dir_ / uri).string()});
+        return accessor;
     }
-}
 
-void Loader::load_textures()
-{
-    auto textures = gltf_["textures"];
-    model_->textures.reserve(textures.size());
-    for (const auto& tex : textures)
+    const auto& json_accessor = json["accessors"].GetArray()[accessor_index];
+    uint64_t buffer_view_index = json_accessor["bufferView"].GetUint64();
+    uint64_t byte_offset = 0;
+    if (json_accessor.HasMember("byteOffset"))
     {
-        auto source = tex["source"];
-        model_->textures.push_back({source});
+        byte_offset = json_accessor["byteOffset"].GetUint64();
     }
+
+    accessor.buffer_view = get_buffer_view(json, buffer_view_index, buffers);
+    accessor.data = accessor.buffer_view.data + byte_offset;
+    accessor.count = json_accessor["count"].GetUint();
+    accessor.component_type = uint_to_accessor_component_type(json_accessor["componentType"].GetUint());
+    accessor.type = string_to_accessor_type(json_accessor["type"].GetString());
+    return accessor;
 }
 
-void Loader::load_materials()
+static std::vector<Buffer> load_buffers(const std::string& dir_path, rapidjson_document& json)
 {
-    auto materials = gltf_["materials"];
-    model_->materials.reserve(materials.size());
-    for (const auto& mat : materials)
+    std::vector<Buffer> buffers;
+    const auto& json_buffers = json["buffers"].GetArray();
+    buffers.reserve(json_buffers.Size());
+    for (const auto& json_buffer : json_buffers)
     {
-        Material material;
-        auto pbr = mat["pbrMetallicRoughness"];
+        std::string_view uri = json_buffer["uri"].GetString();
+        std::string buffer_path = dir_path + uri.data();
+        Buffer& buffer = buffers.emplace_back();
+        bul::read_file(buffer_path.c_str(), buffer);
+    }
+    return buffers;
+}
+
+static std::vector<Image> load_images(const std::string& dir_path, rapidjson_document& json)
+{
+    std::vector<Image> images;
+    const auto& json_images = json["images"].GetArray();
+    images.reserve(json_images.Size());
+    for (const auto& json_image : json_images)
+    {
+        std::string_view uri = json_image["uri"].GetString();
+        images.emplace_back(Image{dir_path + uri.data()});
+    }
+    return images;
+}
+
+static std::vector<Texture> load_textures(rapidjson_document& json)
+{
+    std::vector<Texture> textures;
+    const auto& json_textures = json["textures"].GetArray();
+    textures.reserve(json_textures.Size());
+    for (const auto& json_texture : json_textures)
+    {
+        uint32_t source_image = json_texture["source"].GetUint();
+        textures.emplace_back(Texture{source_image});
+    }
+    return textures;
+}
+
+static std::vector<Material> load_materials(rapidjson_document& json)
+{
+    std::vector<Material> materials;
+    const auto& json_materials = json["materials"].GetArray();
+    materials.reserve(json_materials.Size());
+    for (const auto& json_material : json_materials)
+    {
+        Material& material = materials.emplace_back();
+        const auto& pbr = json_material["pbrMetallicRoughness"];
+        const auto& base_color_factor = pbr["baseColorFactor"].GetArray();
         for (size_t i = 0; i < 4; ++i)
-            material.base_color_factor[i] = pbr["baseColorFactor"][i];
-        material.base_color_tex = pbr["baseColorTexture"]["index"];
-
-        model_->materials.push_back(material);
+        {
+            material.base_color_factor[i] = base_color_factor[i].GetFloat();
+        }
+        material.base_color_tex = pbr["baseColorTexture"]["index"].GetUint();
     }
+    return materials;
 }
 
-void Loader::load_meshes()
+static std::vector<Primitive> load_primitives(rapidjson_document& json, const rapidjson_array& json_primitives,
+                                              const std::vector<Buffer>& buffers, std::vector<Vertex>& vertices,
+                                              std::vector<uint32_t>& indices)
 {
-    auto meshes = gltf_["meshes"];
-    model_->meshes.reserve(meshes.size());
-    for (const auto& m : meshes)
+    std::vector<Primitive> primitives;
+    primitives.reserve(json_primitives.Size());
+    for (const auto& json_primitive : json_primitives)
     {
-        Mesh mesh;
-        auto primitives = m["primitives"];
-        for (const auto& p : primitives)
+        Primitive& primitive = primitives.emplace_back();
+        primitive.vertex_start = (uint32_t)vertices.size();
+        primitive.index_start = (uint32_t)indices.size();
+
+        if (json_primitive.HasMember("material"))
         {
-            mesh.primitives.push_back(model_->primitives.size());
-            load_primitive(p);
+            primitive.material = json_primitive["material"].GetUint();
         }
-        model_->meshes.push_back(mesh);
-    }
-}
-
-void Loader::load_primitive(const json& p)
-{
-    Primitive primitive;
-
-    primitive.vertex_start = model_->vertices.size();
-    primitive.index_start = model_->indices.size();
-    if (p.count("material"))
-    {
-        primitive.material = p["material"];
-    }
-    if (p.count("mode"))
-    {
-        primitive.mode = p["mode"];
-    }
-
-    // indices
-    int indices_idx = p["indices"];
-    auto indices_accessor = get_accessor_data(indices_idx);
-    assert(indices_accessor.type == AccessorType::SCALAR);
-    primitive.index_count = indices_accessor.count;
-
-    uint8_t* indices_data = indices_accessor.data;
-    int step = indices_accessor.comp_type;
-    if (indices_accessor.buf_view.byte_stride)
-        step = indices_accessor.buf_view.byte_stride;
-
-    if (indices_accessor.comp_type == AccessorCompType::BYTE)
-    {
-        for (unsigned i = 0; i < indices_accessor.count; ++i, indices_data += step)
+        if (json_primitive.HasMember("mode"))
         {
-            model_->indices.push_back(primitive.vertex_start + get_value<uint8_t>(indices_data));
-        }
-    }
-    else if (indices_accessor.comp_type == AccessorCompType::UNSIGNED_SHORT)
-    {
-        for (unsigned i = 0; i < indices_accessor.count; ++i, indices_data += step)
-        {
-            model_->indices.push_back(primitive.vertex_start + get_value<unsigned short>(indices_data));
-        }
-    }
-    else if (indices_accessor.comp_type == AccessorCompType::UNSIGNED_INT)
-    {
-        for (unsigned i = 0; i < indices_accessor.count; ++i, indices_data += step)
-        {
-            model_->indices.push_back(primitive.vertex_start + get_value<unsigned int>(indices_data));
-        }
-    }
-    else
-    {
-        assert(!"Invalid gltf index type");
-    }
-
-    // attributes
-    auto attributes = p["attributes"];
-    int pos_idx = attributes.value("POSITION", -1);
-    auto pos = get_accessor_data(pos_idx);
-    auto pos_data = pos.data;
-    int pos_step = sizeof(glm::vec3);
-    if (pos.buf_view.byte_stride)
-        pos_step = pos.buf_view.byte_stride;
-
-    int normal_idx = attributes.value("NORMAL", -1);
-    auto normal = get_accessor_data(normal_idx);
-    auto normal_data = normal.data;
-    int normal_step = sizeof(glm::vec3);
-    if (normal.buf_view.byte_stride)
-        normal_step = normal.buf_view.byte_stride;
-
-    int uv_0_idx = attributes.value("TEXCOORD_0", -1);
-    auto uv_0 = get_accessor_data(uv_0_idx);
-    auto texcoords_0_data = uv_0.data;
-    int uv_0_step = sizeof(glm::vec2);
-    if (uv_0.buf_view.byte_stride)
-        uv_0_step = uv_0.buf_view.byte_stride;
-
-    for (unsigned i = 0; i < pos.count; ++i)
-    {
-        Vertex v;
-        if (pos_data)
-        {
-            v.position = glm::vec4{get_value<glm::vec3>(pos_data), 1.0f};
-            pos_data += pos_step;
-        }
-        if (normal_data)
-        {
-            v.normal = glm::vec4{get_value<glm::vec3>(normal_data), 1.0f};
-            normal_data += normal_step;
-        }
-        if (texcoords_0_data)
-        {
-            v.uv_0 = get_value<glm::vec2>(texcoords_0_data);
-            texcoords_0_data += uv_0_step;
-        }
-        model_->vertices.push_back(v);
-    }
-
-    model_->primitives.push_back(primitive);
-}
-
-void Loader::load_nodes()
-{
-    auto nodes = gltf_["nodes"];
-    model_->nodes.reserve(nodes.size());
-    for (const auto& n : nodes)
-    {
-        Node node;
-
-        if (n.count("mesh"))
-        {
-            node.mesh = n["mesh"];
+            primitive.mode = (PrimitiveMode)json_primitive["mode"].GetUint();
         }
 
-        if (n.count("children"))
+        uint64_t indices_index = json_primitive["indices"].GetUint64();
+        Accessor indices_accessor = get_accessor(json, indices_index, buffers);
+        ASSERT(indices_accessor.type == AccessorType::SCALAR);
+        primitive.index_count = indices_accessor.count;
+
+        const uint8_t* indices_data = indices_accessor.data;
+        uint32_t step = indices_accessor.component_type;
+        if (indices_accessor.buffer_view.byte_stride)
         {
-            for (unsigned child : n["children"])
+            step = indices_accessor.buffer_view.byte_stride;
+        }
+
+        if (indices_accessor.component_type == AccessorComponentType::BYTE)
+        {
+            for (size_t i = 0; i < indices_accessor.count; ++i, indices_data += step)
             {
-                node.children.push_back(child);
+                indices.push_back(primitive.vertex_start + get_value<uint8_t>(indices_data));
+            }
+        }
+        else if (indices_accessor.component_type == AccessorComponentType::UNSIGNED_SHORT)
+        {
+            for (size_t i = 0; i < indices_accessor.count; ++i, indices_data += step)
+            {
+                indices.push_back(primitive.vertex_start + get_value<uint16_t>(indices_data));
+            }
+        }
+        else if (indices_accessor.component_type == AccessorComponentType::UNSIGNED_INT)
+        {
+            for (size_t i = 0; i < indices_accessor.count; ++i, indices_data += step)
+            {
+                indices.push_back(primitive.vertex_start + get_value<uint32_t>(indices_data));
+            }
+        }
+        else
+        {
+            ASSERT_MSG(false, "Invalid gltf index type");
+        }
+
+        const auto& json_attributes = json_primitive["attributes"];
+
+        uint64_t position_accessor_index = -1;
+        if (json_attributes.HasMember("POSITION"))
+        {
+            position_accessor_index = json_attributes["POSITION"].GetUint64();
+        }
+        Accessor position_accessor = get_accessor(json, position_accessor_index, buffers);
+        const uint8_t* position_data = position_accessor.data;
+        uint32_t position_step = sizeof(bul::vec3f);
+        if (position_accessor.buffer_view.byte_stride)
+        {
+            position_step = position_accessor.buffer_view.byte_stride;
+        }
+
+        uint64_t normal_accessor_index = -1;
+        if (json_attributes.HasMember("NORMAL"))
+        {
+            normal_accessor_index = json_attributes["NORMAL"].GetUint64();
+        }
+        Accessor normal_accessor = get_accessor(json, normal_accessor_index, buffers);
+        const uint8_t* normal_data = normal_accessor.data;
+        uint32_t normal_step = sizeof(bul::vec3f);
+        if (normal_accessor.buffer_view.byte_stride)
+        {
+            normal_step = normal_accessor.buffer_view.byte_stride;
+        }
+
+        uint64_t uv_0_accessor_index = -1;
+        if (json_attributes.HasMember("TEXCOORD_0"))
+        {
+            uv_0_accessor_index = json_attributes["TEXCOORD_0"].GetUint64();
+        }
+        Accessor uv_0_accessor = get_accessor(json, uv_0_accessor_index, buffers);
+        const uint8_t* uv_0_data = uv_0_accessor.data;
+        uint32_t uv_0_step = sizeof(bul::vec2f);
+        if (uv_0_accessor.buffer_view.byte_stride)
+        {
+            uv_0_step = uv_0_accessor.buffer_view.byte_stride;
+        }
+
+        size_t count = std::max(position_accessor.count, std::max(normal_accessor.count, uv_0_accessor.count));
+        for (size_t i = 0; i < count; ++i)
+        {
+            Vertex& vertex = vertices.emplace_back();
+            if (position_data)
+            {
+                vertex.position = bul::vec4f{get_value<bul::vec3f>(position_data), 1.0f};
+                position_data += position_step;
+            }
+            if (normal_data)
+            {
+                vertex.normal = bul::vec4f{get_value<bul::vec3f>(normal_data), 1.0f};
+                normal_data += normal_step;
+            }
+            if (uv_0_data)
+            {
+                vertex.uv_0 = get_value<bul::vec2f>(uv_0_data);
+                uv_0_data += uv_0_step;
+            }
+        }
+    }
+    return primitives;
+}
+
+static std::vector<Mesh> load_meshes(rapidjson_document& json, const std::vector<Buffer>& buffers,
+                                     std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+{
+    std::vector<Mesh> meshes;
+    const auto& json_meshes = json["meshes"].GetArray();
+    meshes.reserve(json_meshes.Size());
+    for (const auto& json_mesh : json_meshes)
+    {
+        Mesh& mesh = meshes.emplace_back();
+        const auto& json_primitives = json_mesh["primitives"].GetArray();
+        mesh.primitives = load_primitives(json, json_primitives, buffers, vertices, indices);
+    }
+    return meshes;
+}
+
+static std::vector<Node> load_nodes(rapidjson_document& json)
+{
+    std::vector<Node> nodes;
+    const auto& json_nodes = json["nodes"].GetArray();
+    nodes.reserve(json_nodes.Size());
+    for (const auto& json_node : json_nodes)
+    {
+        Node& node = nodes.emplace_back();
+        if (json_node.HasMember("mesh"))
+        {
+            node.mesh = json_node["mesh"].GetUint();
+        }
+
+        if (json_node.HasMember("children"))
+        {
+            const auto& json_children = json_node["children"].GetArray();
+            node.children.reserve(json_children.Size());
+            for (const auto& json_child : json_children)
+            {
+                node.children.push_back(json_child.GetUint());
             }
         }
 
-        if (n.count("matrix"))
+        if (json_node.HasMember("matrix"))
         {
-            auto matrix = n["matrix"];
-            for (int y = 0; y < 4; ++y)
+            const auto& json_matrix = json_node["matrix"].GetArray();
+            for (size_t y = 0; y < 4; ++y)
             {
-                for (int x = 0; x < 4; ++x)
+                for (size_t x = 0; x < 4; ++x)
                 {
-                    node.transform[y][x] = matrix[y * 4 + x];
+                    node.transform[y][x] = json_matrix[y * 4 + x].GetFloat();
                 }
             }
         }
         else
         {
-            glm::mat4 translation{1.0f};
-            glm::mat4 rotation{1.0f};
-            glm::mat4 scale{1.0f};
+            bul::mat4f translation = bul::mat4f::identity();
+            bul::mat4f rotation = bul::mat4f::identity();
+            bul::mat4f scale = bul::mat4f::identity();
 
-            if (n.count("translation"))
+            if (json_node.HasMember("translation"))
             {
-                const auto& t = n["translation"];
-                float x = t[0];
-                float y = t[1];
-                float z = t[2];
-                translation = glm::translate(translation, {x, y, z});
+                const auto& json_translation = json_node["translation"];
+                float x = json_translation[0].GetFloat();
+                float y = json_translation[1].GetFloat();
+                float z = json_translation[2].GetFloat();
+                translation = bul::translation({x, y, z});
             }
-            if (n.count("rotation"))
+            if (json_node.HasMember("rotation"))
             {
-                const auto& r = n["rotation"];
-                float x = r[0];
-                float y = r[1];
-                float z = r[2];
-                float w = r[3];
-                rotation = glm::toMat4(glm::qua{x, y, z, w});
+                const auto& json_rotation = json_node["rotation"];
+                float x = json_rotation[0].GetFloat();
+                float y = json_rotation[1].GetFloat();
+                float z = json_rotation[2].GetFloat();
+                float w = json_rotation[3].GetFloat();
+                bul::rotation({x, y, z, w});
             }
-            if (n.count("scale"))
+            if (json_node.HasMember("scale"))
             {
-                const auto& s = n["scale"];
-                float x = s[0];
-                float y = s[1];
-                float z = s[2];
-                scale = glm::scale(scale, {x, y, z});
+                const auto& json_scale = json_node["scale"];
+                float x = json_scale[0].GetFloat();
+                float y = json_scale[1].GetFloat();
+                float z = json_scale[2].GetFloat();
+                scale = bul::scale({x, y, z});
             }
 
             node.transform = translation * rotation * scale;
         }
-
-        model_->nodes.push_back(node);
     }
+    return nodes;
 }
 
-void Loader::compute_nodes_transform()
+static std::vector<uint32_t> load_scene(rapidjson_document& json)
 {
-    for (unsigned node_idx : model_->scene)
+    std::vector<uint32_t> scene;
+    uint32_t scene_index = json["scene"].GetUint();
+    const auto& json_scene = json["scenes"].GetArray()[scene_index];
+    const auto& json_scene_nodes = json_scene["nodes"].GetArray();
+    scene.reserve(json_scene_nodes.Size());
+    for (const auto& node_index : json_scene_nodes)
     {
-        compute_node_transform(model_->nodes[node_idx], glm::mat4(1.0f));
+        scene.push_back(node_index.GetUint());
     }
+    return scene;
 }
 
-void Loader::compute_node_transform(Node& node, const glm::mat4& transform)
+static void compute_nodes_transform(Node& node, const bul::mat4f& transform, std::vector<Node>& nodes)
 {
     node.transform = transform * node.transform;
-    for (unsigned node_idx : node.children)
+    for (uint32_t node_index : node.children)
     {
-        compute_node_transform(model_->nodes[node_idx], node.transform);
+        compute_nodes_transform(nodes[node_index], node.transform, nodes);
     }
 }
 
-BufViewData Loader::get_buf_view_data(int buf_view_idx)
+static void compute_nodes_transform(const std::vector<uint32_t>& scene, std::vector<Node>& nodes)
 {
-    auto buf_view = gltf_["bufferViews"][buf_view_idx];
-    int buf_idx = buf_view["buffer"];
-    unsigned byte_offset = buf_view.value("byteOffset", 0);
-    unsigned byte_length = buf_view["byteLength"];
-    unsigned byte_stride = buf_view.value("byteStride", 0);
-    return {buffers_[buf_idx].data() + byte_offset, byte_length, byte_stride};
+    for (uint32_t node_index : scene)
+    {
+        compute_nodes_transform(nodes[node_index], bul::mat4f::identity(), nodes);
+    }
 }
 
-AccessorData Loader::get_accessor_data(int accessor_idx)
+Model load(std::string_view gltf_path)
 {
-    AccessorData accessor_data;
+    std::cout << "Loading model " << gltf_path << "...\n";
 
-    if (accessor_idx == -1)
+    size_t dir_separator_index = gltf_path.find_last_of('/');
+    if (dir_separator_index == std::string_view::npos)
     {
-        return accessor_data;
+        dir_separator_index = gltf_path.find_last_of('\\');
     }
+    std::string dir_path{gltf_path.substr(0, dir_separator_index + 1)};
 
-    auto accessor = gltf_["accessors"][accessor_idx];
-    int buf_view_idx = accessor["bufferView"];
-    int byte_offset = accessor.value("byteOffset", 0);
-    accessor_data.buf_view = get_buf_view_data(buf_view_idx);
+    std::vector<uint8_t> json_data;
+    bul::read_file(gltf_path.data(), json_data);
+    rapidjson_document json;
+    json.Parse((const char*)json_data.data(), json_data.size());
 
-    int component_type = accessor["componentType"];
-    int count = accessor["count"];
-    std::string type = accessor["type"];
+    const auto& buffers = load_buffers(dir_path, json);
 
-    accessor_data.data = accessor_data.buf_view.data + byte_offset;
-    accessor_data.count = count;
-    accessor_data.comp_type = int_to_accessor_comp_type(component_type);
-    accessor_data.type = string_to_accessor_type(type);
-
-    return accessor_data;
-}
-
-void Loader::gpu_upload()
-{
-    auto& cmd = p_device_->get_transfer_command();
-
-    model_->vertex_buffer =
-        p_device_->create_buffer({.size = static_cast<uint32_t>(model_->vertices.size() * sizeof(Vertex))});
-    model_->index_buffer =
-        p_device_->create_buffer({.size = static_cast<uint32_t>(model_->indices.size() * sizeof(uint32_t)),
-                                  .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT});
-
-    cmd.upload_buffer(model_->vertex_buffer, model_->vertices.data(), model_->vertices.size() * sizeof(Vertex));
-    cmd.upload_buffer(model_->index_buffer, model_->indices.data(), model_->indices.size() * sizeof(uint32_t));
-
-    for (auto& image : model_->images)
-    {
-        image.handle = p_device_->create_image({}, image.uri);
-        cmd.upload_image(image.handle, image.uri);
-    }
-
-    p_device_->submit_blocking(cmd);
+    Model model;
+    model.images = load_images(dir_path, json);
+    model.textures = load_textures(json);
+    model.materials = load_materials(json);
+    model.meshes = load_meshes(json, buffers, model.vertices, model.indices);
+    model.nodes = load_nodes(json);
+    model.scene_nodes = load_scene(json);
+    compute_nodes_transform(model.scene_nodes, model.nodes);
+    return model;
 }
 } // namespace gltf

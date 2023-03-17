@@ -38,7 +38,7 @@ bool read_file(const char* path, uint8_t* data, size_t size)
     return read == size;
 }
 
-bool read_file(const char* path, std::vector<char>& data)
+bool read_file(const char* path, std::vector<uint8_t>& data)
 {
     FILE* file = nullptr;
     if (fopen_s(&file, path, "rb") != 0)

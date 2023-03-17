@@ -154,7 +154,7 @@ inline mat4f translation(const vec3f& v)
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f,
-        v.x , v.y , v.y , 1.0f
+        v.x , v.y , v.y , 1.0f,
     }};
     // clang-format on
 }
@@ -166,7 +166,7 @@ inline mat4f scale(const vec3f& s)
         s.x , 0.0f, 0.0f, 0.0f,
         0.0f, s.y , 0.0f, 0.0f,
         0.0f, 0.0f, s.z , 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
+        0.0f, 0.0f, 0.0f, 1.0f,
     }};
     // clang-format on
 }
@@ -180,7 +180,7 @@ inline mat4f rotation_x(float angle)
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, c,    s,    0.0f,
         0.0f, -s,   c,    0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
+        0.0f, 0.0f, 0.0f, 1.0f,
     }};
     // clang-format on
 }
@@ -209,6 +209,28 @@ inline mat4f rotation_z(float angle)
         0.0f, 1.0f, 0.0f, 0.0f,
         s,    0.0f, c,    0.0f,
         0.0f, 0.0f, 0.0f, 1.0f,
+    });
+    // clang-format on
+}
+
+inline mat4f rotation(bul::vec4f quaternion)
+{
+    float qxx = quaternion.x * quaternion.x;
+    float qyy = quaternion.y * quaternion.y;
+    float qzz = quaternion.z * quaternion.z;
+    float qxz = quaternion.x * quaternion.z;
+    float qxy = quaternion.x * quaternion.y;
+    float qyz = quaternion.y * quaternion.z;
+    float qwx = quaternion.w * quaternion.x;
+    float qwy = quaternion.w * quaternion.y;
+    float qwz = quaternion.w * quaternion.z;
+
+    // clang-format off
+    return mat4f({
+        1.0f - 2.0f * (qyy + qzz), 2.0f * (qxy + qwz),        2.0f * (qxz - qwy),        0.0f,
+        2.0f * (qxy - qwz),        1.0f - 2.0f * (qxx + qzz), 2.0f * (qyz + qwx),        0.0f,
+        2.0f * (qxz + qwy),        2.0f * (qyz - qwx),        1.0f - 2.0f * (qxx + qyy), 0.0f,
+        0.0f,                      0.0f,                      0.0f,                      1.0f,
     });
     // clang-format on
 }
@@ -288,7 +310,7 @@ inline mat4f lookat(bul::vec3f pos, bul::vec3f target, bul::vec3f up, mat4f* inv
         x.x,  x.y,  x.z,  -dot(pos, x),
         y.x,  y.y,  y.z,  -dot(pos, y),
         -z.x, -z.y, -z.z, dot(pos, z),
-        0.0f, 0.0f, 0.0f, 1.0f
+        0.0f, 0.0f, 0.0f, 1.0f,
     }};
 
     if (inv)
@@ -297,7 +319,7 @@ inline mat4f lookat(bul::vec3f pos, bul::vec3f target, bul::vec3f up, mat4f* inv
             x.x,  y.x,  -z.x, pos.x,
             x.y,  y.y,  -z.y, pos.y,
             x.z,  y.z,  -z.z, pos.z,
-            0.0f, 0.0f, 0.0f, 1.0f
+            0.0f, 0.0f, 0.0f, 1.0f,
         }};
     }
     // clang-format on
@@ -305,7 +327,7 @@ inline mat4f lookat(bul::vec3f pos, bul::vec3f target, bul::vec3f up, mat4f* inv
     return ret;
 }
 
-inline mat4f perspective(float fov_y, float aspect_ratio, float near, float far, mat4f* inv = nullptr)
+inline mat4f perspective(float fov_y, float aspect_ratio, float _near, float _far, mat4f* inv = nullptr)
 {
     float A = std::tan(fov_y / 2.0f);
     float B = A * aspect_ratio;
@@ -314,8 +336,8 @@ inline mat4f perspective(float fov_y, float aspect_ratio, float near, float far,
     mat4f proj{{
         1.0f / B, 0.0f,      0.0f,                0.0f,
         0.0f,     -1.0f / A, 0.0f,                0.0f,
-        0.0f,     0.0f,      near / (far - near), (far * near) / (far - near),
-        0.0f,     0.0f,      -1.0f,               0.0f
+        0.0f,     0.0f,      _near / (_far - _near), (_far * _near) / (_far - _near),
+        0.0f,     0.0f,      -1.0f,               0.0f,
     }};
 
     if (inv)
@@ -324,7 +346,7 @@ inline mat4f perspective(float fov_y, float aspect_ratio, float near, float far,
             B,    0.0f, 0.0f,                        0.0f,
             0.0f, -A,   0.0f,                        0.0f,
             0.0f, 0.0f, 0.0f,                        -1.0f,
-            0.0f, 0.0f, (far - near) / (far * near), 1.0f / far
+            0.0f, 0.0f, (_far - _near) / (_far * _near), 1.0f / _far,
         }};
     }
     // clang-format on

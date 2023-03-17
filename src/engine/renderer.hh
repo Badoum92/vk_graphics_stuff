@@ -31,7 +31,10 @@ private:
 
     uint32_t frame_number = 0;
 
-    gltf::Model model{};
+    gltf::Model model;
+    std::vector<Handle<vk::Image>> model_images;
+    Handle<vk::Buffer> model_vertex_buffer;
+    Handle<vk::Buffer> model_index_buffer;
 
     Camera camera{};
 

@@ -46,11 +46,30 @@ void Renderer::init()
 
     auto& cmd = p_device->get_graphics_command();
     {
-        model = gltf::load_model("../models/Sponza/glTF/Sponza.gltf", *p_device);
-        // model = gltf::load_model("../models/backpack/scene.gltf", *p_device);
-        for (auto& img : model.images)
+        auto& transfer_cmd = p_device->get_transfer_command();
+        model = gltf::load("../models/Sponza/glTF/Sponza.gltf");
+        // model = gltf::load("../models/backpack/scene.gltf");
+        model_vertex_buffer =
+            p_device->create_buffer({.size = (uint32_t)(model.vertices.size() * sizeof(gltf::Vertex))});
+        model_index_buffer =
+            p_device->create_buffer({.size = (uint32_t)(model.indices.size() * sizeof(uint32_t)),
+                                     .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT});
+
+        transfer_cmd.upload_buffer(model_vertex_buffer, model.vertices.data(), model.vertices.size() * sizeof(gltf::Vertex));
+        transfer_cmd.upload_buffer(model_index_buffer, model.indices.data(), model.indices.size() * sizeof(uint32_t));
+
+        model_images.reserve(model.images.size());
+        for (const auto& image : model.images)
         {
-            cmd.barrier(img.handle, vk::ImageUsage::GraphicsShaderRead);
+            model_images.push_back(p_device->create_image({}, image.uri));
+            transfer_cmd.upload_image(model_images.back(), image.uri);
+        }
+
+        p_device->submit_blocking(transfer_cmd);
+
+        for (auto& image : model_images)
+        {
+            cmd.barrier(image, vk::ImageUsage::GraphicsShaderRead);
         }
     }
     {
@@ -167,22 +186,21 @@ void Renderer::render()
 
     cmd.barrier(rt_color, vk::ImageUsage::ColorAttachment);
     cmd.begin_renderpass(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
-    cmd.bind_index_buffer(model.index_buffer, VK_INDEX_TYPE_UINT32, 0);
-    cmd.bind_storage_buffer(graphics_program, model.vertex_buffer, 0);
+    cmd.bind_index_buffer(model_index_buffer, VK_INDEX_TYPE_UINT32, 0);
+    cmd.bind_storage_buffer(graphics_program, model_vertex_buffer, 0);
 
     for (const auto& node : model.nodes)
     {
-        if (!node.mesh)
+        if (node.mesh == (uint32_t)-1)
             continue;
 
         uniform_offset = global_uniform_buffer.push(&node.transform, sizeof(glm::mat4));
 
-        const auto& mesh = model.meshes[*node.mesh];
-        for (unsigned primitive_idx : mesh.primitives)
+        const auto& mesh = model.meshes[node.mesh];
+        for (const auto& primitive : mesh.primitives)
         {
-            const auto& primitive = model.primitives[primitive_idx];
             const auto& material = model.materials[primitive.material];
-            const auto& image_handle = model.images[model.textures[material.base_color_tex].source].handle;
+            const auto& image_handle = model_images[model.textures[material.base_color_tex].source_image];
 
             cmd.bind_uniform_buffer(graphics_program, global_uniform_buffer.buffer_handle, 1, uniform_offset,
                                     sizeof(glm::mat4));
@@ -205,13 +223,13 @@ void Renderer::render()
 
     // gui
 
-    cmd.barrier(fc.image, vk::ImageUsage::ColorAttachment);
+    /* cmd.barrier(fc.image, vk::ImageUsage::ColorAttachment);
     cmd.begin_renderpass(fc.framebuffer, {vk::LoadOp::load()});
     vk::imgui_new_frame();
     render_gui();
     vk::imgui_render();
     vk::imgui_render_draw_data(cmd);
-    cmd.end_renderpass();
+    cmd.end_renderpass(); */
 
     // present
 
