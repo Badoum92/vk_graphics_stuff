@@ -1,7 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
+#include <bul/math/matrix.h>
+#include <bul/math/vector.h>
 
 class Camera
 {
@@ -12,17 +12,17 @@ public:
         ORTHOGRAPHIC
     };
 
-    Camera(const glm::vec3& pos = {0.0f, 0.0f, 0.0f}, const glm::vec3& world_up = {0.0f, 1.0f, 0.0f}, float yaw = -90.0f,
+    Camera(const bul::vec3f& pos = {0.0f, 0.0f, 0.0f}, const bul::vec3f& world_up = {0.0f, 1.0f, 0.0f}, float yaw = -90.0f,
            float pitch = 0.0f, float near = 0.001f, float far = 1000.0f);
 
     void update_vectors();
-    const glm::mat4& get_view();
-    const glm::mat4& get_inv_view();
+    const bul::mat4f& get_view();
+    const bul::mat4f& get_inv_view();
     void compute_view();
-    const glm::mat4& get_proj();
-    const glm::mat4& get_inv_proj();
+    const bul::mat4f& get_proj();
+    const bul::mat4f& get_inv_proj();
     void compute_proj();
-    const glm::mat4& get_view_proj();
+    const bul::mat4f& get_view_proj();
 
     void set_aspect_ratio(float width, float height);
     void set_clip(float near, float far);
@@ -36,14 +36,14 @@ public:
 
     void set_speed(float speed);
     void set_sensitivity(float sensitivity);
-    void set_position(const glm::vec3& position);
+    void set_position(const bul::vec3f& position);
 
     float get_speed() const;
 
-    const glm::vec3& get_pos() const;
-    const glm::vec3& get_front() const;
-    const glm::vec3& get_up() const;
-    const glm::vec3& get_right() const;
+    const bul::vec3f& get_pos() const;
+    const bul::vec3f& get_front() const;
+    const bul::vec3f& get_up() const;
+    const bul::vec3f& get_right() const;
 
     bool is_moving() const;
 
@@ -51,14 +51,14 @@ protected:
     void update_pos();
     void update_view();
 
-    glm::vec3 pos_;
-    glm::vec3 world_up_;
+    bul::vec3f pos_;
+    bul::vec3f world_up_;
     float yaw_;
     float pitch_;
-    glm::vec3 front_;
-    glm::vec3 front_straight_;
-    glm::vec3 up_;
-    glm::vec3 right_;
+    bul::vec3f front_;
+    bul::vec3f front_straight_;
+    bul::vec3f up_;
+    bul::vec3f right_;
 
     float width_;
     float height_;
@@ -70,17 +70,17 @@ protected:
     float fov_ = 90.0f;
     float ortho_size_ = 90.0f;
 
-    glm::mat4 view_;
-    glm::mat4 inv_view_;
-    glm::mat4 proj_;
-    glm::mat4 inv_proj_;
-    glm::mat4 view_proj_;
+    bul::mat4f view_;
+    bul::mat4f inv_view_;
+    bul::mat4f proj_;
+    bul::mat4f inv_proj_;
+    bul::mat4f view_proj_;
     bool recompute_view_ = true;
     bool recompute_proj_ = true;
 
     ProjectionType proj_type_ = ProjectionType::PERSPECTIVE;
 
-    glm::ivec3 dir_{0, 0, 0};
+    bul::vec3i dir_{0, 0, 0};
 
     float speed_ = 50.0f;
     float sensitivity_ = 0.1f;

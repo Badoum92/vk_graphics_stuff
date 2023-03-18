@@ -1,7 +1,7 @@
 #include "path_tracing_renderer.hh"
 
 #include <iostream>
-#include <glm/glm.hpp>
+#include <bul/math/matrix.h>
 #include <bul/window.h>
 #include <bul/time.h>
 
@@ -15,25 +15,25 @@
 // add some sky color / intensity
 struct GlobalUniformSet
 {
-    glm::mat4 view;
-    glm::mat4 inv_view;
-    glm::mat4 proj;
-    glm::mat4 inv_proj;
-    glm::vec4 camera_pos;
-    glm::uvec2 resolution;
+    bul::mat4f view;
+    bul::mat4f inv_view;
+    bul::mat4f proj;
+    bul::mat4f inv_proj;
+    bul::vec4f camera_pos;
+    bul::vec2u resolution;
     float exposure;
     uint32_t frame_number;
 };
 
 struct VoxelMaterial
 {
-    glm::vec3 base_color = glm::vec3(1.0f, 0.0f, 1.0f);
+    bul::vec3f base_color = bul::vec3f(1.0f, 0.0f, 1.0f);
     float metalness = 0.0f;
-    glm::vec3 emissive = glm::vec3(1.0f, 0.0f, 1.0f);
+    bul::vec3f emissive = bul::vec3f(1.0f, 0.0f, 1.0f);
     float roughness = 0.0f;
     float ior = 1.0f;
     float transparency = 0.0f;
-    glm::vec2 padding;
+    bul::vec2f padding;
 };
 
 PathTracingRenderer PathTracingRenderer::create(vk::Context& context, vk::Device& device, vk::Surface& surface)
@@ -95,9 +95,9 @@ void PathTracingRenderer::init()
             auto& material = voxel_materials_data[i];
             const auto& matl = model.materials[i];
             const auto& color = model.palette[i];
-            material.base_color.r = color.r / 255.0f;
-            material.base_color.g = color.g / 255.0f;
-            material.base_color.b = color.b / 255.0f;
+            material.base_color.x = color.r / 255.0f;
+            material.base_color.y = color.g / 255.0f;
+            material.base_color.z = color.b / 255.0f;
             material.emissive = material.base_color * matl.emit * std::powf(2, matl.flux);
             material.metalness = matl.metal;
             material.roughness = matl.rough;
@@ -199,7 +199,7 @@ void PathTracingRenderer::render()
     global_uniform_set.inv_view = camera.get_inv_view();
     global_uniform_set.proj = camera.get_proj();
     global_uniform_set.inv_proj = camera.get_inv_proj();
-    global_uniform_set.camera_pos = glm::vec4(camera.get_pos(), 1.0f);
+    global_uniform_set.camera_pos = bul::vec4f(camera.get_pos(), 1.0f);
     global_uniform_set.resolution = {bul::window::size().x, bul::window::size().y};
     global_uniform_set.exposure = exposure;
     global_uniform_set.frame_number = frame_number;

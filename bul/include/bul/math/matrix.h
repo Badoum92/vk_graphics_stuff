@@ -23,7 +23,13 @@ struct mat4f
 
     explicit mat4f(const float (&values)[16])
     {
-        memcpy(data, values, 16 * sizeof(float));
+        for (size_t x = 0; x < 4; ++x)
+        {
+            for (size_t y = 0; y < 4; ++y)
+            {
+                (*this)[x][y] = values[y * 4 + x];
+            }
+        }
     }
 
     mat4f(const mat4f& other)
@@ -334,19 +340,19 @@ inline mat4f perspective(float fov_y, float aspect_ratio, float _near, float _fa
 
     // clang-format off
     mat4f proj{{
-        1.0f / B, 0.0f,      0.0f,                0.0f,
-        0.0f,     -1.0f / A, 0.0f,                0.0f,
-        0.0f,     0.0f,      _near / (_far - _near), (_far * _near) / (_far - _near),
-        0.0f,     0.0f,      -1.0f,               0.0f,
+        1.0f / B, 0.0f,      0.0f,                  0.0f,
+        0.0f,     -1.0f / A, 0.0f,                  0.0f,
+        0.0f,     0.0f,      _far / (_near - _far), -(_far * _near) / (_far - _near),
+        0.0f,     0.0f,      -1.0f,                 0.0f,
     }};
 
     if (inv)
     {
         *inv = mat4f{{
-            B,    0.0f, 0.0f,                        0.0f,
-            0.0f, -A,   0.0f,                        0.0f,
-            0.0f, 0.0f, 0.0f,                        -1.0f,
-            0.0f, 0.0f, (_far - _near) / (_far * _near), 1.0f / _far,
+            B,    0.0f, 0.0f,                            0.0f,
+            0.0f, -A,   0.0f,                            0.0f,
+            0.0f, 0.0f, 0.0f,                            -1.0f,
+            0.0f, 0.0f, -(_far - _near) / (_far * _near), 1.0f / _near,
         }};
     }
     // clang-format on

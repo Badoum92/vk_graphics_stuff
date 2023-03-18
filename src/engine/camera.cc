@@ -4,11 +4,12 @@
 #include <algorithm>
 #include <bul/window.h>
 #include <bul/time.h>
+#include <bul/math/math.h>
 
 #undef near
 #undef far
 
-Camera::Camera(const glm::vec3& pos, const glm::vec3& world_up, float yaw, float pitch, float near, float far)
+Camera::Camera(const bul::vec3f& pos, const bul::vec3f& world_up, float yaw, float pitch, float near, float far)
 {
     pos_ = pos;
     world_up_ = world_up;
@@ -25,17 +26,17 @@ Camera::Camera(const glm::vec3& pos, const glm::vec3& world_up, float yaw, float
 
 void Camera::update_vectors()
 {
-    glm::vec3 dir;
-    dir.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-    dir.y = sin(glm::radians(pitch_));
-    dir.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-    front_ = glm::normalize(dir);
-    right_ = glm::normalize(glm::cross(front_, world_up_));
-    up_ = glm::normalize(glm::cross(right_, front_));
-    front_straight_ = glm::normalize(glm::cross(world_up_, right_));
+    bul::vec3f dir;
+    dir.x = cos(bul::radians(yaw_)) * cos(bul::radians(pitch_));
+    dir.y = sin(bul::radians(pitch_));
+    dir.z = sin(bul::radians(yaw_)) * cos(bul::radians(pitch_));
+    front_ = bul::normalize(dir);
+    right_ = bul::normalize(bul::cross(front_, world_up_));
+    up_ = bul::normalize(bul::cross(right_, front_));
+    front_straight_ = bul::normalize(bul::cross(world_up_, right_));
 }
 
-const glm::mat4& Camera::get_view()
+const bul::mat4f& Camera::get_view()
 {
     if (recompute_view_)
     {
@@ -45,7 +46,7 @@ const glm::mat4& Camera::get_view()
     return view_;
 }
 
-const glm::mat4& Camera::get_inv_view()
+const bul::mat4f& Camera::get_inv_view()
 {
     if (recompute_view_)
     {
@@ -57,11 +58,10 @@ const glm::mat4& Camera::get_inv_view()
 
 void Camera::compute_view()
 {
-    view_ = glm::lookAt(pos_, pos_ + front_, up_);
-    inv_view_ = glm::inverse(view_);
+    view_ = bul::lookat(pos_, pos_ + front_, up_, &inv_view_);
 }
 
-const glm::mat4& Camera::get_proj()
+const bul::mat4f& Camera::get_proj()
 {
     if (recompute_proj_)
     {
@@ -71,7 +71,7 @@ const glm::mat4& Camera::get_proj()
     return proj_;
 }
 
-const glm::mat4& Camera::get_inv_proj()
+const bul::mat4f& Camera::get_inv_proj()
 {
     if (recompute_proj_)
     {
@@ -85,20 +85,18 @@ void Camera::compute_proj()
 {
     if (proj_type_ == ProjectionType::PERSPECTIVE)
     {
-        float fov = glm::radians(fov_);
-        proj_ = glm::perspective(fov, aspect_ratio_, far_, near_);
+        float fov = bul::radians(fov_);
+        proj_ = bul::perspective(fov, aspect_ratio_, far_, near_, &inv_proj_);
     }
     else if (proj_type_ == ProjectionType::ORTHOGRAPHIC)
     {
-        float v = ortho_size_ * 0.5f;
-        float h = ortho_size_ * aspect_ratio_ * 0.5f;
-        proj_ = glm::ortho(-h, h, -v, v, near_, far_);
+        // float v = ortho_size_ * 0.5f;
+        // float h = ortho_size_ * aspect_ratio_ * 0.5f;
+        // proj_ = bul::ortho(-h, h, -v, v, near_, far_); // FIXME
     }
-    proj_[1][1] *= -1;
-    inv_proj_ = glm::inverse(proj_);
 }
 
-const glm::mat4& Camera::get_view_proj()
+const bul::mat4f& Camera::get_view_proj()
 {
     view_proj_ = get_proj() * get_view();
     return view_proj_;
@@ -145,7 +143,7 @@ float Camera::get_ortho_size() const
 
 void Camera::update_pos()
 {
-    dir_ = glm::ivec3(0);
+    dir_ = bul::vec3i(0);
     if (bul::key_down(bul::Key::Z))
         dir_.z += 1;
     if (bul::key_down(bul::Key::S))
@@ -159,14 +157,14 @@ void Camera::update_pos()
     if (bul::key_down(bul::Key::C))
         dir_.y -= 1;
 
-    if (dir_ == glm::ivec3(0))
+    if (dir_ == bul::vec3i(0))
         return;
 
-    auto dir = glm::normalize(glm::vec3{dir_});
+    auto dir = bul::normalize(bul::vec3f{(float)dir_.x, (float)dir_.y, (float)dir_.z});
     dir *= speed_ * bul::time::delta_s();
-    pos_ += dir.x * right_;
-    pos_ += dir.y * world_up_;
-    pos_ += dir.z * front_straight_;
+    pos_ += right_ * dir.x;
+    pos_ += world_up_ * dir.y;
+    pos_ += front_straight_ * dir.z;
     recompute_view_ = true;
 }
 
@@ -214,7 +212,7 @@ void Camera::set_sensitivity(float sensitivity)
     sensitivity_ = sensitivity;
 }
 
-void Camera::set_position(const glm::vec3& position)
+void Camera::set_position(const bul::vec3f& position)
 {
     pos_ = position;
 }
@@ -224,22 +222,22 @@ float Camera::get_speed() const
     return speed_;
 }
 
-const glm::vec3& Camera::get_pos() const
+const bul::vec3f& Camera::get_pos() const
 {
     return pos_;
 }
 
-const glm::vec3& Camera::get_front() const
+const bul::vec3f& Camera::get_front() const
 {
     return front_;
 }
 
-const glm::vec3& Camera::get_up() const
+const bul::vec3f& Camera::get_up() const
 {
     return up_;
 }
 
-const glm::vec3& Camera::get_right() const
+const bul::vec3f& Camera::get_right() const
 {
     return right_;
 }

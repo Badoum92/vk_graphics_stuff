@@ -1,7 +1,7 @@
 #include "renderer.hh"
 
 #include <iostream>
-#include <glm/glm.hpp>
+#include <bul/math/matrix.h>
 #include <bul/time.h>
 #include <bul/window.h>
 
@@ -12,12 +12,12 @@
 
 struct GlobalUniformSet
 {
-    glm::mat4 view;
-    glm::mat4 inv_view;
-    glm::mat4 proj;
-    glm::mat4 inv_proj;
-    glm::vec4 camera_pos;
-    glm::uvec2 resolution;
+    bul::mat4f view;
+    bul::mat4f inv_view;
+    bul::mat4f proj;
+    bul::mat4f inv_proj;
+    bul::vec4f camera_pos;
+    bul::vec2u resolution;
     float exposure;
     uint32_t frame_number;
 };
@@ -174,7 +174,7 @@ void Renderer::render()
     global_uniform_set.inv_view = camera.get_inv_view();
     global_uniform_set.proj = camera.get_proj();
     global_uniform_set.inv_proj = camera.get_inv_proj();
-    global_uniform_set.camera_pos = glm::vec4(camera.get_pos(), 1.0f);
+    global_uniform_set.camera_pos = bul::vec4f(camera.get_pos(), 1.0f);
     global_uniform_set.resolution = {bul::window::size().x, bul::window::size().y};
     global_uniform_set.frame_number = frame_number;
     uint32_t uniform_offset = global_uniform_buffer.push(&global_uniform_set, sizeof(GlobalUniformSet));
@@ -194,7 +194,7 @@ void Renderer::render()
         if (node.mesh == (uint32_t)-1)
             continue;
 
-        uniform_offset = global_uniform_buffer.push(&node.transform, sizeof(glm::mat4));
+        uniform_offset = global_uniform_buffer.push(&node.transform, sizeof(bul::mat4f));
 
         const auto& mesh = model.meshes[node.mesh];
         for (const auto& primitive : mesh.primitives)
@@ -203,7 +203,7 @@ void Renderer::render()
             const auto& image_handle = model_images[model.textures[material.base_color_tex].source_image];
 
             cmd.bind_uniform_buffer(graphics_program, global_uniform_buffer.buffer_handle, 1, uniform_offset,
-                                    sizeof(glm::mat4));
+                                    sizeof(bul::mat4f));
             cmd.bind_image(graphics_program, image_handle, 2);
             cmd.bind_pipeline(graphics_program);
 
