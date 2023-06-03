@@ -324,7 +324,8 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         }
 
         size = raw_input_size_;
-        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != static_cast<UINT>(-1));
+        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != (UINT)-1);
+        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != (UINT)-1);
 
         bul::vec2i delta;
         if (raw_input_->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)

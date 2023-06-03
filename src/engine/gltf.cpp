@@ -1,9 +1,11 @@
 #include "gltf.h"
 
+#include "bul/bul.h"
+#include "bul/file.h"
+
 #include <iostream>
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/document.h>
-#include <bul/file.h>
 
 namespace gltf
 {
@@ -71,7 +73,7 @@ static AccessorComponentType uint_to_accessor_component_type(uint32_t i)
     case 5126:
         return AccessorComponentType::FLOAT;
     }
-    assert(!"Unknown AccessorComponentType");
+    ASSERT(!"Unknown AccessorComponentType");
     return AccessorComponentType::BYTE;
 }
 
@@ -91,7 +93,7 @@ static AccessorType string_to_accessor_type(std::string_view s)
         return AccessorType::MAT3;
     else if (s == "MAT4")
         return AccessorType::MAT4;
-    assert(!"Unknown AccessorType");
+    ASSERT(!"Unknown AccessorType");
     return AccessorType::SCALAR;
 }
 

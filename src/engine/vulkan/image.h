@@ -29,13 +29,12 @@ struct ImageAccess
 struct ImageView
 {
     VkImageView vk_handle = VK_NULL_HANDLE;
-    VkFormat format;
+    VkFormat format = VK_FORMAT_UNDEFINED;
     VkImageSubresourceRange range;
 };
 
 struct ImageDescription
 {
-
     uint32_t width = 1;
     uint32_t height = 1;
     uint32_t depth = 1;

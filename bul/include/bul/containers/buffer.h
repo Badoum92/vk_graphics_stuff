@@ -14,7 +14,7 @@ public:
 
     Buffer(size_t size)
     {
-        data_ = (T*)calloc(1, size * sizeof(T));
+        data_ = (T*)malloc(1, size * sizeof(T));
         ASSERT(data_ != nullptr);
         size_ = size;
     }
@@ -48,10 +48,6 @@ public:
     {
         data_ = (T*)realloc(data_, size * sizeof(T));
         ASSERT(data_ != nullptr);
-        if (size > size_)
-        {
-            memset(data_ + size_, 0, (size - size_) * sizeof(T));
-        }
         size_ = size;
     }
 

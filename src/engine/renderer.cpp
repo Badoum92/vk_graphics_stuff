@@ -123,9 +123,12 @@ void Renderer::resize()
     const auto& fb_desc = p_device->framebuffers.get(p_surface->framebuffers[0]).description;
 
     {
-        p_device->destroy_image(rt_color);
-        p_device->destroy_image(rt_depth);
-        p_device->destroy_framebuffer(render_target);
+        p_device->destroy_image(p_device->images.get(rt_color));
+        p_device->images.erase(rt_color);
+        p_device->destroy_image(p_device->images.get(rt_depth));
+        p_device->images.erase(rt_depth);
+        p_device->destroy_framebuffer(p_device->framebuffers.get(render_target));
+        p_device->framebuffers.erase(render_target);
 
         rt_color = p_device->create_image({.width = fb_desc.width,
                                            .height = fb_desc.height,

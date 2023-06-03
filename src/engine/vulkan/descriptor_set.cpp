@@ -1,6 +1,6 @@
 #include "descriptor_set.h"
 
-#include <cassert>
+#include "bul/bul.h"
 
 #include "hash.h"
 #include "vk_tools.h"
@@ -61,22 +61,22 @@ DescriptorSet Device::create_descriptor_set(const std::vector<DescriptorType>& d
     return descriptor_set;
 }
 
-void DescriptorSet::bind_image(uint32_t binding, const Handle<Image>& image)
+void DescriptorSet::bind_image(uint32_t binding, const bul::Handle<Image>& image)
 {
-    assert(descriptor_types[binding].info.type == DescriptorType::Type::SampledImage
+    ASSERT(descriptor_types[binding].info.type == DescriptorType::Type::SampledImage
            || descriptor_types[binding].info.type == DescriptorType::Type::StorageImage);
     descriptors[binding].image = {image};
 }
 
-void DescriptorSet::bind_storage_buffer(uint32_t binding, const Handle<Buffer>& buffer)
+void DescriptorSet::bind_storage_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer)
 {
-    assert(descriptor_types[binding].info.type == DescriptorType::Type::StorageBuffer);
+    ASSERT(descriptor_types[binding].info.type == DescriptorType::Type::StorageBuffer);
     descriptors[binding].buffer = {buffer};
 }
 
-void DescriptorSet::bind_uniform_buffer(uint32_t binding, const Handle<Buffer>& buffer, uint32_t offset, uint32_t size)
+void DescriptorSet::bind_uniform_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer, uint32_t offset, uint32_t size)
 {
-    assert(descriptor_types[binding].info.type == DescriptorType::Type::DynamicBuffer);
+    ASSERT(descriptor_types[binding].info.type == DescriptorType::Type::DynamicBuffer);
     descriptors[binding].dynamic = {buffer, offset, size};
 
     for (size_t i = 0; i < dynamic_descriptors.size(); ++i)

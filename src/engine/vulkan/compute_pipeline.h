@@ -11,7 +11,7 @@ namespace vk
 {
 struct ComputeProgramDescription
 {
-    Handle<Shader> shader;
+    bul::Handle<Shader> shader;
     std::vector<DescriptorType> descriptor_types;
 };
 

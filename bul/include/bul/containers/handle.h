@@ -34,6 +34,11 @@ struct Handle
         return value < other.value;
     }
 
+    explicit operator bool() const
+    {
+        return is_valid();
+    }
+
     uint32_t value = 0;
     uint32_t version = 0;
 

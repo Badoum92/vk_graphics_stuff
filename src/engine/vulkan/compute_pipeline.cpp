@@ -6,7 +6,7 @@
 
 namespace vk
 {
-Handle<ComputeProgram> Device::create_compute_program(const ComputeProgramDescription& description)
+bul::Handle<ComputeProgram> Device::create_compute_program(const ComputeProgramDescription& description)
 {
     DescriptorSet set = create_descriptor_set(description.descriptor_types);
 
@@ -33,24 +33,16 @@ Handle<ComputeProgram> Device::create_compute_program(const ComputeProgramDescri
 
     VK_CHECK(vkCreateComputePipelines(vk_handle, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &program.pipeline));
 
-    return compute_programs.insert(program);
+    return compute_programs.insert(std::move(program));
 }
 
-void Device::destroy_compute_program(const Handle<ComputeProgram>& handle)
+void Device::destroy_compute_program(ComputeProgram& compute_program)
 {
-    if (!handle.is_valid())
-    {
-        return;
-    }
+    vkDestroyPipeline(vk_handle, compute_program.pipeline, nullptr);
+    vkDestroyPipelineLayout(vk_handle, compute_program.layout, nullptr);
+    destroy_descriptor_set(compute_program.descriptor_set);
 
-    auto& program = compute_programs.get(handle);
-    vkDestroyPipeline(vk_handle, program.pipeline, nullptr);
-    vkDestroyPipelineLayout(vk_handle, program.layout, nullptr);
-    destroy_descriptor_set(program.descriptor_set);
-
-    program.layout = VK_NULL_HANDLE;
-    program.pipeline = VK_NULL_HANDLE;
-
-    compute_programs.remove(handle);
+    compute_program.layout = VK_NULL_HANDLE;
+    compute_program.pipeline = VK_NULL_HANDLE;
 }
 } // namespace vk

@@ -4,7 +4,7 @@
 #include <vma/vk_mem_alloc.h>
 
 #include "fwd.h"
-#include "handle.h"
+#include "bul/containers/handle.h"
 
 namespace vk
 {
@@ -28,7 +28,7 @@ struct RingBuffer
     static RingBuffer create(Device& device, const BufferDescription& description);
     uint32_t push(const void* data, uint32_t size);
 
-    Handle<Buffer> buffer_handle;
+    bul::Handle<Buffer> buffer_handle;
     BufferDescription description;
     uint8_t* mapped_data = nullptr;
     uint32_t alignment = 0;

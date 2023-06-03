@@ -7,7 +7,7 @@
 
 #include "fwd.h"
 #include "vk_tools.h"
-#include "handle.h"
+#include "bul/containers/handle.h"
 
 namespace vk
 {
@@ -16,17 +16,17 @@ struct Command
     void begin();
     void end();
 
-    void barrier(const Handle<Image>& image_handle, ImageUsage dst_usage);
+    void barrier(const bul::Handle<Image>& image_handle, ImageUsage dst_usage);
 
-    void bind_image(const Handle<GraphicsProgram>& program_handle, const Handle<Image>& image_handle, uint32_t binding);
-    void bind_uniform_buffer(const Handle<GraphicsProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+    void bind_image(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Image>& image_handle, uint32_t binding);
+    void bind_uniform_buffer(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
                              uint32_t binding, uint32_t offset, uint32_t size);
-    void bind_storage_buffer(const Handle<GraphicsProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+    void bind_storage_buffer(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
                              uint32_t binding);
-    void bind_image(const Handle<ComputeProgram>& program_handle, const Handle<Image>& image_handle, uint32_t binding);
-    void bind_uniform_buffer(const Handle<ComputeProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+    void bind_image(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Image>& image_handle, uint32_t binding);
+    void bind_uniform_buffer(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
                              uint32_t binding, uint32_t offset, uint32_t size);
-    void bind_storage_buffer(const Handle<ComputeProgram>& program_handle, const Handle<Buffer>& buffer_handle,
+    void bind_storage_buffer(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
                              uint32_t binding);
 
     Device* p_device = nullptr;
@@ -37,16 +37,16 @@ struct Command
 
 struct TransferCommand : public Command
 {
-    void upload_buffer(const Handle<Buffer>& buffer_handle, void* data, uint32_t size);
-    void upload_image(const Handle<Image>& image_handle, void* data, uint32_t size);
-    void upload_image(const Handle<Image>& image_handle, const std::string& path);
-    void blit_image(const Handle<Image>& src, const Handle<Image>& dst);
+    void upload_buffer(const bul::Handle<Buffer>& buffer_handle, void* data, uint32_t size);
+    void upload_image(const bul::Handle<Image>& image_handle, void* data, uint32_t size);
+    void upload_image(const bul::Handle<Image>& image_handle, const std::string& path);
+    void blit_image(const bul::Handle<Image>& src, const bul::Handle<Image>& dst);
 };
 
 struct ComputeCommand : public TransferCommand
 {
-    void bind_descriptor_set(const Handle<ComputeProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
-    void bind_pipeline(const Handle<ComputeProgram>& program_handle);
+    void bind_descriptor_set(const bul::Handle<ComputeProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
+    void bind_pipeline(const bul::Handle<ComputeProgram>& program_handle);
     void dispatch(uint32_t x, uint32_t y, uint32_t z = 1);
 };
 
@@ -55,11 +55,11 @@ struct GraphicsCommand : public ComputeCommand
     void set_scissor(const VkRect2D& rect);
     void set_viewport(const VkViewport& viewport);
 
-    void bind_index_buffer(const Handle<Buffer>& buffer_handle, VkIndexType index_type, uint32_t offset);
-    void bind_descriptor_set(const Handle<GraphicsProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
-    void bind_pipeline(const Handle<GraphicsProgram>& program_handle, uint32_t pipeline_index = 0);
+    void bind_index_buffer(const bul::Handle<Buffer>& buffer_handle, VkIndexType index_type, uint32_t offset);
+    void bind_descriptor_set(const bul::Handle<GraphicsProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
+    void bind_pipeline(const bul::Handle<GraphicsProgram>& program_handle, uint32_t pipeline_index = 0);
 
-    void begin_renderpass(const Handle<FrameBuffer>& framebuffer_handle, const std::vector<LoadOp>& load_ops);
+    void begin_renderpass(const bul::Handle<FrameBuffer>& framebuffer_handle, const std::vector<LoadOp>& load_ops);
     void end_renderpass();
 
     void draw(uint32_t vertex_count, uint32_t first_vertex = 0);

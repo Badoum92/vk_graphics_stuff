@@ -1,19 +1,21 @@
 #include "shader.h"
 
-#include "tools.h"
+#include "bul/file.h"
+
 #include "vk_tools.h"
 #include "device.h"
 
 namespace vk
 {
-Handle<Shader> Device::create_shader(const std::string& path)
+bul::Handle<Shader> Device::create_shader(const std::string& path)
 {
-    auto shader_code = tools::read_file<std::vector<uint32_t>>(path + ".spv");
+    std::vector<uint8_t> shader_code;
+    bul::read_file((path + ".spv").c_str(), shader_code);
 
     VkShaderModuleCreateInfo shader_info{};
     shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_info.codeSize = shader_code.size() * sizeof(uint32_t);
-    shader_info.pCode = shader_code.data();
+    shader_info.codeSize = shader_code.size();
+    shader_info.pCode = (uint32_t*)shader_code.data();
 
     VkShaderModule vk_shader = VK_NULL_HANDLE;
     VK_CHECK(vkCreateShaderModule(vk_handle, &shader_info, nullptr, &vk_shader));
@@ -21,16 +23,9 @@ Handle<Shader> Device::create_shader(const std::string& path)
     return shaders.insert({.path = std::string(path), .vk_handle = vk_shader});
 }
 
-void Device::destroy_shader(const Handle<Shader>& handle)
+void Device::destroy_shader(Shader& shader)
 {
-    if (!handle.is_valid())
-    {
-        return;
-    }
-
-    Shader& shader = shaders.get(handle);
     vkDestroyShaderModule(vk_handle, shader.vk_handle, nullptr);
     shader.vk_handle = VK_NULL_HANDLE;
-    shaders.remove(handle);
 }
 } // namespace vk

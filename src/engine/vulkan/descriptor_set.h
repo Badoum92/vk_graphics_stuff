@@ -5,23 +5,23 @@
 #include <volk.h>
 
 #include "fwd.h"
-#include "handle.h"
+#include "bul/containers/handle.h"
 
 namespace vk
 {
 struct ImageDescriptor
 {
-    Handle<Image> handle;
+    bul::Handle<Image> handle;
 };
 
 struct BufferDescriptor
 {
-    Handle<Buffer> handle;
+    bul::Handle<Buffer> handle;
 };
 
 struct DynamicDescriptor
 {
-    Handle<Buffer> handle;
+    bul::Handle<Buffer> handle;
     uint32_t offset = 0;
     uint32_t size = 0;
 };
@@ -81,9 +81,9 @@ struct DescriptorSet
     std::vector<uint32_t> dynamic_descriptors;
     std::vector<uint32_t> dynamic_offsets;
 
-    void bind_image(uint32_t binding, const Handle<Image>& image);
-    void bind_storage_buffer(uint32_t binding, const Handle<Buffer>& buffer);
-    void bind_uniform_buffer(uint32_t binding, const Handle<Buffer>& buffer, uint32_t offset, uint32_t size);
+    void bind_image(uint32_t binding, const bul::Handle<Image>& image);
+    void bind_storage_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer);
+    void bind_uniform_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer, uint32_t offset, uint32_t size);
     VkDescriptorSet get_or_create_vk_set(Device& device);
 };
 } // namespace vk

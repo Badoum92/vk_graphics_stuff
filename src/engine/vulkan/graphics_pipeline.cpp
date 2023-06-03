@@ -7,7 +7,7 @@
 
 namespace vk
 {
-Handle<GraphicsProgram> Device::create_graphics_program(const GraphicsProgramDescription& description)
+bul::Handle<GraphicsProgram> Device::create_graphics_program(const GraphicsProgramDescription& description)
 {
     DescriptorSet set = create_descriptor_set(description.descriptor_types);
 
@@ -29,35 +29,26 @@ Handle<GraphicsProgram> Device::create_graphics_program(const GraphicsProgramDes
     program.renderpass =
         create_renderpass(description.attachment_formats, std::vector<LoadOp>(attachment_count, LoadOp::dont_care()));
 
-    return graphics_programs.insert(program);
+    return graphics_programs.insert(std::move(program));
 }
 
-void Device::destroy_graphics_program(const Handle<GraphicsProgram>& handle)
+void Device::destroy_graphics_program(GraphicsProgram& graphics_program)
 {
-    if (!handle.is_valid())
-    {
-        return;
-    }
+    vkDestroyRenderPass(vk_handle, graphics_program.renderpass.vk_handle, nullptr);
+    graphics_program.renderpass.vk_handle = VK_NULL_HANDLE;
 
-    GraphicsProgram& program = graphics_programs.get(handle);
+    destroy_descriptor_set(graphics_program.descriptor_set);
 
-    vkDestroyRenderPass(vk_handle, program.renderpass.vk_handle, nullptr);
-    program.renderpass.vk_handle = VK_NULL_HANDLE;
-
-    destroy_descriptor_set(program.descriptor_set);
-
-    vkDestroyPipelineLayout(vk_handle, program.layout, nullptr);
-    program.layout = VK_NULL_HANDLE;
-    for (auto& pipeline : program.pipelines)
+    vkDestroyPipelineLayout(vk_handle, graphics_program.layout, nullptr);
+    graphics_program.layout = VK_NULL_HANDLE;
+    for (auto& pipeline : graphics_program.pipelines)
     {
         vkDestroyPipeline(vk_handle, pipeline, nullptr);
     }
-    program.pipelines.clear();
-
-    graphics_programs.remove(handle);
+    graphics_program.pipelines.clear();
 }
 
-VkPipeline Device::compile(const Handle<GraphicsProgram>& handle, const RenderState& render_state)
+VkPipeline Device::compile(const bul::Handle<GraphicsProgram>& handle, const RenderState& render_state)
 {
     GraphicsProgram& program = graphics_programs.get(handle);
 

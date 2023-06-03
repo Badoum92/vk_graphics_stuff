@@ -136,8 +136,16 @@ void PathTracingRenderer::resize()
     p_surface->create_swapchain(*p_device);
 
     {
-        p_device->destroy_image(color);
-        p_device->destroy_image(color_acc);
+        if (color)
+        {
+            p_device->destroy_image(p_device->images.get(color));
+            p_device->images.erase(color);
+        }
+        if (color_acc)
+        {
+            p_device->destroy_image(p_device->images.get(color_acc));
+            p_device->images.erase(color_acc);
+        }
 
         color = p_device->create_image({.width = bul::window::size().x,
                                         .height = bul::window::size().y,

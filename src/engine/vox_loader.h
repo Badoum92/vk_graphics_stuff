@@ -1,8 +1,8 @@
 #pragma once
 
-#include <filesystem>
 #include <vector>
 #include <array>
+#include <string_view>
 
 namespace Vox
 {
@@ -71,10 +71,10 @@ struct Chunk
 class Model
 {
 public:
-    Model(const std::filesystem::path& path);
+    Model(const std::string_view path);
     Model() = default;
 
-    void load(const std::filesystem::path& path);
+    void load(const std::string_view path);
 
     std::vector<Chunk> chunks;
     std::array<RGBA, 256> palette;

@@ -33,13 +33,13 @@ private:
     VkRect2D scissor;
     VkViewport viewport;
 
-    Handle<vk::Image> color;
-    Handle<vk::Image> color_acc;
+    bul::Handle<vk::Image> color;
+    bul::Handle<vk::Image> color_acc;
 
-    Handle<vk::ComputeProgram> raytracing_program;
+    bul::Handle<vk::ComputeProgram> raytracing_program;
 
-    Handle<vk::Image> voxels;
-    Handle<vk::Buffer> voxel_materials;
+    bul::Handle<vk::Image> voxels;
+    bul::Handle<vk::Buffer> voxel_materials;
 
     vk::RingBuffer global_uniform_buffer;
 };

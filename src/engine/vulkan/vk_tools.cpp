@@ -1,6 +1,6 @@
 #include "vk_tools.h"
 
-#include <cassert>
+#include "bul/bul.h"
 
 namespace vk
 {
@@ -60,7 +60,7 @@ ImageAccess get_src_image_access(ImageUsage usage)
         access.layout = VK_IMAGE_LAYOUT_UNDEFINED;
         break;
     default:
-        assert(false);
+        ASSERT(false);
         break;
     };
     return access;
@@ -122,7 +122,7 @@ ImageAccess get_dst_image_access(ImageUsage usage)
         access.layout = VK_IMAGE_LAYOUT_UNDEFINED;
         break;
     default:
-        assert(false);
+        ASSERT(false);
         break;
     };
     return access;

@@ -6,7 +6,7 @@
 #include <volk.h>
 
 #include "fwd.h"
-#include "handle.h"
+#include "bul/containers/handle.h"
 
 namespace vk
 {
@@ -84,8 +84,8 @@ struct FrameBuffer
     FrameBufferDescription description;
     VkFramebuffer vk_handle = VK_NULL_HANDLE;
 
-    std::vector<Handle<Image>> color_attachments;
-    Handle<Image> depth_attachment;
+    std::vector<bul::Handle<Image>> color_attachments;
+    bul::Handle<Image> depth_attachment;
     std::vector<RenderPass> renderpasses;
 };
 } // namespace vk

@@ -5,7 +5,7 @@
 #include <volk.h>
 
 #include "fwd.h"
-#include "handle.h"
+#include "bul/containers/handle.h"
 #include "command.h"
 
 namespace vk
@@ -18,7 +18,7 @@ struct FrameContext
     uint32_t image_index = 0;
     CommandContext command_context;
 
-    Handle<FrameBuffer> framebuffer;
-    Handle<Image> image;
+    bul::Handle<FrameBuffer> framebuffer;
+    bul::Handle<Image> image;
 };
 }

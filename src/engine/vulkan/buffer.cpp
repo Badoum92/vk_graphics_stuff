@@ -5,7 +5,7 @@
 
 namespace vk
 {
-Handle<Buffer> Device::create_buffer(const BufferDescription& description)
+bul::Handle<Buffer> Device::create_buffer(const BufferDescription& description)
 {
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -23,22 +23,18 @@ Handle<Buffer> Device::create_buffer(const BufferDescription& description)
     return buffers.insert({.description = description, .vk_handle = vk_buffer, .allocation = allocation});
 }
 
-void Device::destroy_buffer(const Handle<Buffer>& handle)
+void Device::destroy_buffer(Buffer& buffer)
 {
-    if (!handle.is_valid())
+    if (buffer.mapped_data != nullptr)
     {
-        return;
+        unmap_buffer(buffer);
     }
-
-    Buffer& buffer = buffers.get(handle);
-    unmap_buffer(handle);
     if (buffer.allocation != VK_NULL_HANDLE)
     {
         vmaDestroyBuffer(allocator, buffer.vk_handle, buffer.allocation);
         buffer.allocation = VK_NULL_HANDLE;
         buffer.vk_handle = VK_NULL_HANDLE;
     }
-    buffers.remove(handle);
 }
 
 RingBuffer RingBuffer::create(Device& device, const BufferDescription& description)
@@ -47,7 +43,8 @@ RingBuffer RingBuffer::create(Device& device, const BufferDescription& descripti
     ring_buffer.alignment = device.physical_device.properties.limits.minUniformBufferOffsetAlignment;
     ring_buffer.description = description;
     ring_buffer.buffer_handle = device.create_buffer(ring_buffer.description);
-    ring_buffer.mapped_data = reinterpret_cast<uint8_t*>(device.map_buffer(ring_buffer.buffer_handle));
+    ring_buffer.mapped_data =
+        reinterpret_cast<uint8_t*>(device.map_buffer(device.buffers.get(ring_buffer.buffer_handle)));
     return ring_buffer;
 }
 
@@ -67,9 +64,8 @@ uint32_t RingBuffer::push(const void* data, uint32_t size)
     return ret;
 }
 
-void* Device::map_buffer(const Handle<Buffer>& handle)
+void* Device::map_buffer(Buffer& buffer)
 {
-    Buffer& buffer = buffers.get(handle);
     if (buffer.mapped_data == nullptr)
     {
         vmaMapMemory(allocator, buffer.allocation, &buffer.mapped_data);
@@ -77,9 +73,8 @@ void* Device::map_buffer(const Handle<Buffer>& handle)
     return buffer.mapped_data;
 }
 
-void Device::unmap_buffer(const Handle<Buffer>& handle)
+void Device::unmap_buffer(Buffer& buffer)
 {
-    Buffer& buffer = buffers.get(handle);
     if (buffer.mapped_data != nullptr)
     {
         vmaUnmapMemory(allocator, buffer.allocation);

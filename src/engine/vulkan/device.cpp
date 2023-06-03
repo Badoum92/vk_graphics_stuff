@@ -137,29 +137,29 @@ void Device::destroy()
 
     destroy_frame_contexts();
 
-    for (auto& handle : images.handles())
+    for (auto& image : images)
     {
-        destroy_image(handle);
+        destroy_image(image);
     }
-    for (auto& handle : buffers.handles())
+    for (auto& buffer : buffers)
     {
-        destroy_buffer(handle);
+        destroy_buffer(buffer);
     }
-    for (auto& handle : framebuffers.handles())
+    for (auto& framebuffer : framebuffers)
     {
-        destroy_framebuffer(handle);
+        destroy_framebuffer(framebuffer);
     }
-    for (auto& handle : shaders.handles())
+    for (auto& shader : shaders)
     {
-        destroy_shader(handle);
+        destroy_shader(shader);
     }
-    for (auto& handle : graphics_programs.handles())
+    for (auto& graphics_program : graphics_programs)
     {
-        destroy_graphics_program(handle);
+        destroy_graphics_program(graphics_program);
     }
-    for (auto& handle : compute_programs.handles())
+    for (auto& compute_program : compute_programs)
     {
-        destroy_compute_program(handle);
+        destroy_compute_program(compute_program);
     }
     for (auto& sampler : samplers)
     {

@@ -4,7 +4,7 @@
 #include <volk.h>
 
 #include "fwd.h"
-#include "handle.h"
+#include "bul/containers/handle.h"
 
 namespace vk
 {
@@ -22,7 +22,7 @@ struct Surface
     VkExtent2D extent;
     VkPresentModeKHR present_mode;
     VkSurfaceFormatKHR format;
-    std::vector<Handle<Image>> images;
-    std::vector<Handle<FrameBuffer>> framebuffers;
+    std::vector<bul::Handle<Image>> images;
+    std::vector<bul::Handle<FrameBuffer>> framebuffers;
 };
 } // namespace vk

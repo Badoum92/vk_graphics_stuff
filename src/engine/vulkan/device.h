@@ -4,8 +4,8 @@
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 
-#include "handle.h"
-#include "pool.h"
+#include "bul/containers/handle.h"
+#include "bul/containers/pool.h"
 
 #include "context.h"
 #include "surface.h"
@@ -37,12 +37,12 @@ struct Device
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
     VmaAllocator allocator = VK_NULL_HANDLE;
 
-    Pool<Image> images;
-    Pool<Buffer> buffers;
-    Pool<FrameBuffer> framebuffers;
-    Pool<Shader> shaders;
-    Pool<GraphicsProgram> graphics_programs;
-    Pool<ComputeProgram> compute_programs;
+    bul::Pool<Image> images;
+    bul::Pool<Buffer> buffers;
+    bul::Pool<FrameBuffer> framebuffers;
+    bul::Pool<Shader> shaders;
+    bul::Pool<GraphicsProgram> graphics_programs;
+    bul::Pool<ComputeProgram> compute_programs;
     std::vector<VkSampler> samplers;
     std::vector<FrameContext> frame_contexts;
 
@@ -51,34 +51,34 @@ struct Device
     static Device create(const Context& context);
     void destroy();
 
-    Handle<Image> create_image(const ImageDescription& description, VkImage vk_image = VK_NULL_HANDLE);
-    Handle<Image> create_image(const ImageDescription& description, const std::string& path);
-    void destroy_image(const Handle<Image>& handle);
+    bul::Handle<Image> create_image(const ImageDescription& description, VkImage vk_image = VK_NULL_HANDLE);
+    bul::Handle<Image> create_image(const ImageDescription& description, const std::string& path);
+    void destroy_image(Image& image);
 
-    Handle<Buffer> create_buffer(const BufferDescription& description);
-    void destroy_buffer(const Handle<Buffer>& handle);
-    void* map_buffer(const Handle<Buffer>& handle);
-    void unmap_buffer(const Handle<Buffer>& handle);
+    bul::Handle<Buffer> create_buffer(const BufferDescription& description);
+    void destroy_buffer(Buffer& buffer);
+    void* map_buffer(Buffer& buffer);
+    void unmap_buffer(Buffer& buffer);
 
     RenderPass create_renderpass(const FrameBufferDescription& description, const std::vector<LoadOp>& load_ops);
-    const RenderPass& get_or_create_renderpass(const Handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops);
-    Handle<FrameBuffer> create_framebuffer(const FrameBufferDescription& description,
-                                           const std::vector<Handle<Image>>& color_attachments,
-                                           const Handle<Image>& depth_attachment);
-    void destroy_framebuffer(const Handle<FrameBuffer>& handle);
+    const RenderPass& get_or_create_renderpass(const bul::Handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops);
+    bul::Handle<FrameBuffer> create_framebuffer(const FrameBufferDescription& description,
+                                           const std::vector<bul::Handle<Image>>& color_attachments,
+                                           const bul::Handle<Image>& depth_attachment);
+    void destroy_framebuffer(FrameBuffer& framebuffer);
 
     DescriptorSet create_descriptor_set(const std::vector<DescriptorType>& descriptor_types);
     void destroy_descriptor_set(DescriptorSet& descriptor_set);
 
-    Handle<Shader> create_shader(const std::string& path);
-    void destroy_shader(const Handle<Shader>& handle);
+    bul::Handle<Shader> create_shader(const std::string& path);
+    void destroy_shader(Shader& shader);
 
-    Handle<GraphicsProgram> create_graphics_program(const GraphicsProgramDescription& description);
-    void destroy_graphics_program(const Handle<GraphicsProgram>& handle);
-    VkPipeline compile(const Handle<GraphicsProgram>& handle, const RenderState& render_state);
+    bul::Handle<GraphicsProgram> create_graphics_program(const GraphicsProgramDescription& description);
+    void destroy_graphics_program(GraphicsProgram& graphics_program);
+    VkPipeline compile(const bul::Handle<GraphicsProgram>& handle, const RenderState& render_state);
 
-    Handle<ComputeProgram> create_compute_program(const ComputeProgramDescription& description);
-    void destroy_compute_program(const Handle<ComputeProgram>& handle);
+    bul::Handle<ComputeProgram> create_compute_program(const ComputeProgramDescription& description);
+    void destroy_compute_program(ComputeProgram& compute_program);
 
     void create_frame_contexts();
     void destroy_frame_contexts();

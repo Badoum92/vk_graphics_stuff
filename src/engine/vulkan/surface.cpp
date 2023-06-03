@@ -142,7 +142,7 @@ void Surface::create_swapchain(Device& device)
     for (uint32_t i = 0; i < image_count; ++i)
     {
         images[i] = device.create_image(img_desc, vk_images[i]);
-        framebuffers[i] = device.create_framebuffer(fb_desc, {images[i]}, Handle<Image>::invalid());
+        framebuffers[i] = device.create_framebuffer(fb_desc, {images[i]}, bul::Handle<Image>::invalid);
     }
 }
 
@@ -150,8 +150,10 @@ void Surface::destroy_swapchain(Device& device)
 {
     for (uint32_t i = 0; i < images.size(); ++i)
     {
-        device.destroy_image(images[i]);
-        device.destroy_framebuffer(framebuffers[i]);
+        device.destroy_image(device.images.get(images[i]));
+        device.images.erase(images[i]);
+        device.destroy_framebuffer(device.framebuffers.get(framebuffers[i]));
+        device.framebuffers.erase(framebuffers[i]);
     }
     vkDestroySwapchainKHR(device.vk_handle, swapchain, nullptr);
     swapchain = VK_NULL_HANDLE;

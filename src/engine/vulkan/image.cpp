@@ -31,7 +31,7 @@ static ImageView create_image_view(const Device& device, VkImage image, const Vk
     return view;
 }
 
-Handle<Image> Device::create_image(const ImageDescription& description, VkImage vk_image)
+bul::Handle<Image> Device::create_image(const ImageDescription& description, VkImage vk_image)
 {
     VmaAllocation allocation = VK_NULL_HANDLE;
     if (vk_image == VK_NULL_HANDLE)
@@ -69,15 +69,15 @@ Handle<Image> Device::create_image(const ImageDescription& description, VkImage 
                                             static_cast<VkImageViewType>(description.type));
 
     return images.insert(
-        {.description = description, .vk_handle = vk_image, .allocation = allocation, .full_view = full_view});
+        Image{.description = description, .vk_handle = vk_image, .allocation = allocation, .full_view = full_view});
 }
 
-Handle<Image> Device::create_image(const ImageDescription& description, const std::string& path)
+bul::Handle<Image> Device::create_image(const ImageDescription& description, const std::string& path)
 {
     int width, height, channels;
     if (!stbi_info(path.c_str(), &width, &height, &channels))
     {
-        return Handle<Image>::invalid();
+        return bul::Handle<Image>::invalid;
     }
 
     ImageDescription new_description = description;
@@ -88,14 +88,8 @@ Handle<Image> Device::create_image(const ImageDescription& description, const st
     return create_image(new_description);
 }
 
-void Device::destroy_image(const Handle<Image>& handle)
+void Device::destroy_image(Image& image)
 {
-    if (!handle.is_valid())
-    {
-        return;
-    }
-
-    Image& image = images.get(handle);
     if (image.allocation != VK_NULL_HANDLE)
     {
         vmaDestroyImage(allocator, image.vk_handle, image.allocation);
@@ -104,6 +98,5 @@ void Device::destroy_image(const Handle<Image>& handle)
     }
     vkDestroyImageView(vk_handle, image.full_view.vk_handle, nullptr);
     image.full_view.vk_handle = VK_NULL_HANDLE;
-    images.remove(handle);
 }
 } // namespace vk

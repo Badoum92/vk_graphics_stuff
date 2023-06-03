@@ -7,19 +7,19 @@
 TEST_SUITE_BEGIN("matrix");
 
 // clang-format off
-static float values[16] = {
+static bul::mat4f values{{
     1, 5, 9, 13,
     2, 6, 10, 14,
     3, 7, 11, 15,
     4, 8, 12, 16
-};
+}};
 
-static float identity[16] = {
+static bul::mat4f identity{{
     1, 0, 0, 0,
     0, 1, 0, 0,
     0, 0, 1, 0,
     0, 0, 0, 1
-};
+}};
 // clang-format on
 
 TEST_CASE("default init")
@@ -29,27 +29,15 @@ TEST_CASE("default init")
     CHECK(memcmp(m.data, zero, 16 * sizeof(float)) == 0);
 }
 
-TEST_CASE("value init")
-{
-    bul::mat4f m = bul::mat4f::identity();
-    CHECK(memcmp(m.data, identity, 16 * sizeof(float)) == 0);
-}
-
-TEST_CASE("full init")
-{
-    bul::mat4f m{values};
-    CHECK(memcmp(m.data, values, 16 * sizeof(float)) == 0);
-}
-
-TEST_CASE("identity")
-{
-    bul::mat4f m = bul::mat4f::identity();
-    CHECK(memcmp(m.data, identity, 16 * sizeof(float)) == 0);
-}
-
 TEST_CASE("operator ==")
 {
-    CHECK(bul::mat4f{values} == bul::mat4f{values});
+    bul::mat4f m = bul::mat4f::identity();
+    CHECK(identity == bul::mat4f::identity());
+    CHECK(bul::mat4f{values} == values);
+}
+
+TEST_CASE("operator !=")
+{
     CHECK(bul::mat4f{values} != bul::mat4f{identity});
 }
 
