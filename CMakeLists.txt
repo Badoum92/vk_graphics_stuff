@@ -27,30 +27,30 @@ add_subdirectory(third_party)
 # --- Executable ---
 
 add_executable(main
-    src/main.cc
+    src/main.cpp
 
-    src/util/implems.cc
+    src/util/implems.cpp
 
-    src/engine/camera.cc
-    src/engine/renderer.cc
-    src/engine/path_tracing_renderer.cc
-    src/engine/gltf.cc
-    src/engine/vox_loader.cc
+    src/engine/camera.cpp
+    src/engine/renderer.cpp
+    src/engine/path_tracing_renderer.cpp
+    src/engine/gltf.cpp
+    src/engine/vox_loader.cpp
 
-    src/engine/vulkan/vk_tools.cc
-    src/engine/vulkan/context.cc
-    src/engine/vulkan/device.cc
-    src/engine/vulkan/surface.cc
-    src/engine/vulkan/image.cc
-    src/engine/vulkan/buffer.cc
-    src/engine/vulkan/framebuffer.cc
-    src/engine/vulkan/shader.cc
-    src/engine/vulkan/graphics_pipeline.cc
-    src/engine/vulkan/compute_pipeline.cc
-    src/engine/vulkan/descriptor_set.cc
-    src/engine/vulkan/command.cc
-    src/engine/vulkan/frame_context.cc
-    src/engine/vulkan/imgui.cc
+    src/engine/vulkan/vk_tools.cpp
+    src/engine/vulkan/context.cpp
+    src/engine/vulkan/device.cpp
+    src/engine/vulkan/surface.cpp
+    src/engine/vulkan/image.cpp
+    src/engine/vulkan/buffer.cpp
+    src/engine/vulkan/framebuffer.cpp
+    src/engine/vulkan/shader.cpp
+    src/engine/vulkan/graphics_pipeline.cpp
+    src/engine/vulkan/compute_pipeline.cpp
+    src/engine/vulkan/descriptor_set.cpp
+    src/engine/vulkan/command.cpp
+    src/engine/vulkan/frame_context.cpp
+    src/engine/vulkan/imgui.cpp
 )
 
 target_include_directories(main

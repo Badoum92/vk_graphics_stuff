@@ -22,8 +22,6 @@ target_compile_definitions(volk PUBLIC
 
 file(GLOB IMGUI_SOURCES
     imgui/*.cpp
-    # imgui/backends/imgui_impl_glfw.cpp
-    # imgui/backends/imgui_impl_vulkan.cpp
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PRIVATE
