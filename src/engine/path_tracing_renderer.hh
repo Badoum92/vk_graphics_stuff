@@ -2,17 +2,9 @@
 
 #include <volk.h>
 
+#include "vulkan/fwd.h"
 #include "camera.hh"
 #include "device.hh"
-
-namespace vk
-{
-struct Context;
-struct Device;
-struct Surface;
-} // namespace vk
-
-struct GlobalUniformSet;
 
 class PathTracingRenderer
 {

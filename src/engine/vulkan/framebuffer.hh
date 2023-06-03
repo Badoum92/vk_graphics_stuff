@@ -5,12 +5,11 @@
 
 #include <volk.h>
 
+#include "fwd.h"
 #include "handle.hh"
 
 namespace vk
 {
-struct Image;
-
 struct LoadOp
 {
     static LoadOp load()

@@ -4,14 +4,12 @@
 
 #include <volk.h>
 
+#include "fwd.h"
 #include "handle.hh"
 #include "command.hh"
 
 namespace vk
 {
-struct FrameBuffer;
-struct Image;
-
 struct FrameContext
 {
     VkSemaphore image_acquired_semaphore = VK_NULL_HANDLE;

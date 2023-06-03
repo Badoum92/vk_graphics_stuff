@@ -5,21 +5,12 @@
 
 #include <volk.h>
 
+#include "fwd.h"
 #include "vk_tools.hh"
 #include "handle.hh"
 
 namespace vk
 {
-struct Device;
-struct LoadOp;
-struct FrameBuffer;
-struct Buffer;
-struct Image;
-enum class ImageUsage;
-struct DescriptorSet;
-struct GraphicsProgram;
-struct ComputeProgram;
-
 struct Command
 {
     void begin();

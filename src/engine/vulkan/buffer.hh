@@ -3,12 +3,11 @@
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 
+#include "fwd.h"
 #include "handle.hh"
 
 namespace vk
 {
-struct Device;
-
 struct BufferDescription
 {
     uint32_t size = 0;

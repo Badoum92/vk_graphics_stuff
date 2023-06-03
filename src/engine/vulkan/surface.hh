@@ -3,15 +3,11 @@
 #include <vector>
 #include <volk.h>
 
+#include "fwd.h"
 #include "handle.hh"
 
 namespace vk
 {
-struct Context;
-struct Device;
-struct Image;
-struct FrameBuffer;
-
 struct Surface
 {
     static Surface create(Context& context, Device& device);

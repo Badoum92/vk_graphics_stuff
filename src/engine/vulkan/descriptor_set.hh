@@ -4,14 +4,11 @@
 
 #include <volk.h>
 
+#include "fwd.h"
 #include "handle.hh"
 
 namespace vk
 {
-struct Device;
-struct Image;
-struct Buffer;
-
 struct ImageDescriptor
 {
     Handle<Image> handle;
