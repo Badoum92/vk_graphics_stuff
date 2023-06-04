@@ -44,7 +44,7 @@ struct Device
     bul::Pool<GraphicsProgram> graphics_programs;
     bul::Pool<ComputeProgram> compute_programs;
     std::vector<VkSampler> samplers;
-    std::vector<FrameContext> frame_contexts;
+    FrameContext frame_contexts[MAX_FRAMES];
 
     DescriptorSet global_uniform_set;
 
