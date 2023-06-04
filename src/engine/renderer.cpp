@@ -1,9 +1,10 @@
 #include "renderer.h"
 
 #include <iostream>
-#include <bul/math/matrix.h>
-#include <bul/time.h>
-#include <bul/window.h>
+
+#include "bul/math/matrix.h"
+#include "bul/time.h"
+#include "bul/window.h"
 
 #include "context.h"
 #include "device.h"

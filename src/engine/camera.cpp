@@ -2,9 +2,10 @@
 
 #include <cmath>
 #include <algorithm>
-#include <bul/window.h>
-#include <bul/time.h>
-#include <bul/math/math.h>
+
+#include "bul/window.h"
+#include "bul/time.h"
+#include "bul/math/math.h"
 
 #undef near
 #undef far

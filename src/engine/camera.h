@@ -1,7 +1,7 @@
 #pragma once
 
-#include <bul/math/matrix.h>
-#include <bul/math/vector.h>
+#include "bul/math/matrix.h"
+#include "bul/math/vector.h"
 
 class Camera
 {

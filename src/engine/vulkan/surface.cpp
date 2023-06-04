@@ -1,8 +1,9 @@
 #include "surface.h"
 
 #include <vector>
-#include <bul/bul.h>
-#include <bul/window.h>
+
+#include "bul/bul.h"
+#include "bul/window.h"
 
 #include "vk_tools.h"
 #include "context.h"
