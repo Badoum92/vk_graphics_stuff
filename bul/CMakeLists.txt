@@ -5,14 +5,17 @@ add_library(bul STATIC
     src/bul.cpp
     src/file.cpp
     src/input.cpp
+    src/hash.cpp
     src/platform/util_win32.cpp
     src/platform/window_win32.cpp
     src/platform/time_win32.cpp
+
+    third_party/xxhash/xxhash.c
 )
 
 target_include_directories(bul
     PUBLIC include
-    PRIVATE src
+    PRIVATE src third_party
 )
 
 target_link_libraries(bul PRIVATE default_interface)
