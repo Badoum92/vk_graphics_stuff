@@ -105,20 +105,20 @@ TEST_CASE("inverse")
     const float a[16] = {2, -2, 1, -1, 5, -3, 3, -6, -3, 2, -2, 4, -2, -5, 2, 3};
     bul::mat4f m = bul::inverse(bul::mat4f{a});
     CHECK(m[0][0] == doctest::Approx(0.0f));
-    CHECK(m[0][1] == doctest::Approx(2.0f));
-    CHECK(m[0][2] == doctest::Approx(3.0f));
-    CHECK(m[0][3] == doctest::Approx(0.0f));
-    CHECK(m[1][0] == doctest::Approx(-7.0f / 4.0f));
+    CHECK(m[1][0] == doctest::Approx(2.0f));
+    CHECK(m[2][0] == doctest::Approx(3.0f));
+    CHECK(m[3][0] == doctest::Approx(0.0f));
+    CHECK(m[0][1] == doctest::Approx(-7.0f / 4.0f));
     CHECK(m[1][1] == doctest::Approx(17.0f / 4.0f));
-    CHECK(m[1][2] == doctest::Approx(23.0f / 4.0f));
-    CHECK(m[1][3] == doctest::Approx(1.0f / 4.0f));
-    CHECK(m[2][0] == doctest::Approx(-13.0f / 4.0f));
-    CHECK(m[2][1] == doctest::Approx(31.0f / 4.0f));
+    CHECK(m[2][1] == doctest::Approx(23.0f / 4.0f));
+    CHECK(m[3][1] == doctest::Approx(1.0f / 4.0f));
+    CHECK(m[0][2] == doctest::Approx(-13.0f / 4.0f));
+    CHECK(m[1][2] == doctest::Approx(31.0f / 4.0f));
     CHECK(m[2][2] == doctest::Approx(41.0f / 4.0f));
-    CHECK(m[2][3] == doctest::Approx(3.0f / 4.0f));
-    CHECK(m[3][0] == doctest::Approx(-3.0f / 4.0f));
-    CHECK(m[3][1] == doctest::Approx(13.0f / 4.0f));
-    CHECK(m[3][2] == doctest::Approx(19.0f / 4.0f));
+    CHECK(m[3][2] == doctest::Approx(3.0f / 4.0f));
+    CHECK(m[0][3] == doctest::Approx(-3.0f / 4.0f));
+    CHECK(m[1][3] == doctest::Approx(13.0f / 4.0f));
+    CHECK(m[2][3] == doctest::Approx(19.0f / 4.0f));
     CHECK(m[3][3] == doctest::Approx(1.0f / 4.0f));
 }
 
