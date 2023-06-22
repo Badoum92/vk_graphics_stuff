@@ -6,6 +6,8 @@ add_library(bul STATIC
     src/file.cpp
     src/input.cpp
     src/hash.cpp
+    src/format.cpp
+    src/log.cpp
     src/platform/util_win32.cpp
     src/platform/window_win32.cpp
     src/platform/time_win32.cpp
