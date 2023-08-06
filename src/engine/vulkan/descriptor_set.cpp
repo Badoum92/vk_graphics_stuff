@@ -23,7 +23,7 @@ static VkDescriptorType to_vk(DescriptorType::Type type)
     }
 }
 
-DescriptorSet Device::create_descriptor_set(const std::vector<DescriptorType>& descriptor_types)
+DescriptorSet device::create_descriptor_set(const std::vector<DescriptorType>& descriptor_types)
 {
     DescriptorSet descriptor_set{};
 
@@ -89,7 +89,7 @@ void DescriptorSet::bind_uniform_buffer(uint32_t binding, const bul::Handle<Buff
     }
 }
 
-VkDescriptorSet DescriptorSet::get_or_create_vk_set(Device& device)
+VkDescriptorSet DescriptorSet::get_or_create_vk_set()
 {
     size_t hash = hash_value(descriptors);
     for (size_t i = 0; i < hashes.size(); ++i)
@@ -102,12 +102,12 @@ VkDescriptorSet DescriptorSet::get_or_create_vk_set(Device& device)
 
     VkDescriptorSetAllocateInfo set_info{};
     set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    set_info.descriptorPool = device.descriptor_pool;
+    set_info.descriptorPool = device::descriptor_pool;
     set_info.pSetLayouts = &layout;
     set_info.descriptorSetCount = 1;
 
     VkDescriptorSet vk_set = VK_NULL_HANDLE;
-    VK_CHECK(vkAllocateDescriptorSets(device.vk_handle, &set_info, &vk_set));
+    VK_CHECK(vkAllocateDescriptorSets(device::vk_handle, &set_info, &vk_set));
     vk_sets.push_back(vk_set);
     hashes.push_back(hash);
 
@@ -127,9 +127,9 @@ VkDescriptorSet DescriptorSet::get_or_create_vk_set(Device& device)
 
         if (descriptor_types[i].info.type == DescriptorType::Type::SampledImage)
         {
-            auto& image = device.images.get(descriptors[i].image.handle);
+            auto& image = device::images.get(descriptors[i].image.handle);
             images_info.push_back({
-                .sampler = device.samplers[0],
+                .sampler = device::samplers[0],
                 .imageView = image.full_view.vk_handle,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             });
@@ -137,7 +137,7 @@ VkDescriptorSet DescriptorSet::get_or_create_vk_set(Device& device)
         }
         else if (descriptor_types[i].info.type == DescriptorType::Type::StorageImage)
         {
-            auto& image = device.images.get(descriptors[i].image.handle);
+            auto& image = device::images.get(descriptors[i].image.handle);
             images_info.push_back({
                 .sampler = VK_NULL_HANDLE,
                 .imageView = image.full_view.vk_handle,
@@ -148,7 +148,7 @@ VkDescriptorSet DescriptorSet::get_or_create_vk_set(Device& device)
         else if (descriptor_types[i].info.type == DescriptorType::Type::DynamicBuffer)
         {
             auto& dynamic_descriptor = descriptors[i].dynamic;
-            auto& buffer = device.buffers.get(dynamic_descriptor.handle);
+            auto& buffer = device::buffers.get(dynamic_descriptor.handle);
             buffers_info.push_back({
                 .buffer = buffer.vk_handle,
                 .offset = 0,
@@ -158,7 +158,7 @@ VkDescriptorSet DescriptorSet::get_or_create_vk_set(Device& device)
         }
         else if (descriptor_types[i].info.type == DescriptorType::Type::StorageBuffer)
         {
-            auto& buffer = device.buffers.get(descriptors[i].buffer.handle);
+            auto& buffer = device::buffers.get(descriptors[i].buffer.handle);
             buffers_info.push_back({
                 .buffer = buffer.vk_handle,
                 .offset = 0,
@@ -168,12 +168,12 @@ VkDescriptorSet DescriptorSet::get_or_create_vk_set(Device& device)
         }
     }
 
-    vkUpdateDescriptorSets(device.vk_handle, writes.size(), writes.data(), 0, nullptr);
+    vkUpdateDescriptorSets(device::vk_handle, writes.size(), writes.data(), 0, nullptr);
 
     return vk_set;
 }
 
-void Device::destroy_descriptor_set(DescriptorSet& descriptor_set)
+void device::destroy_descriptor_set(DescriptorSet& descriptor_set)
 {
     vkDestroyDescriptorSetLayout(vk_handle, descriptor_set.layout, nullptr);
     descriptor_set.layout = VK_NULL_HANDLE;

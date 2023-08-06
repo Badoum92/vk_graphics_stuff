@@ -1,17 +1,20 @@
-#include "context.h"
+/* #include "context.h"
 
-#include <iostream>
 #include <vector>
 
 #include "vk_tools.h"
+
+#include "bul/log.h"
 
 namespace vk
 {
 static const bool enable_validation_layers = true;
 static const std::vector<const char*> validation_layers = {"VK_LAYER_KHRONOS_validation"};
+static std::vector<const char*> extensions = {VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME};
 
-static void check_validation_layer_support()
+static bool check_validation_layer_support()
 {
+    bool ret = true;
     uint32_t layer_count;
     vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
     std::vector<VkLayerProperties> available_layers(layer_count);
@@ -30,21 +33,12 @@ static void check_validation_layer_support()
         }
         if (!found)
         {
-            std::string err = "Unsupported validation layer: ";
-            err += layer_name;
-            throw std::runtime_error(err);
+            bul::log_error("Unsupported validation layer: %s\n", layer_name);
+            ret = false;
         }
     }
-}
 
-static std::vector<const char*> get_required_ext()
-{
-    std::vector<const char*> ext = {VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME};
-    if (enable_validation_layers)
-    {
-        ext.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-    return ext;
+    return ret;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
@@ -57,23 +51,23 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         return VK_FALSE;
     }
 
-    auto const severity_str = [msg_severity]() {
+    const auto log_level = [msg_severity]() {
         switch (msg_severity)
         {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            return "VERBOSE";
+            return bul::LogLevel::Debug;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            return "INFO";
+            return bul::LogLevel::Info;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            return "WARNING";
+            return bul::LogLevel::Warning;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            return "ERROR";
+            return bul::LogLevel::Error;
         default:
-            return "UNKNOWN SEVERITY";
+            return bul::LogLevel::Count;
         }
     }();
 
-    auto const type_str = [msg_type]() {
+    const auto msg_type_str = [msg_type]() {
         switch (msg_type)
         {
         case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
@@ -87,7 +81,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         }
     }();
 
-    std::cerr << "VK_DEBUG [" << severity_str << "][" << type_str << "]: " << callback_data->pMessage << "\n";
+    bul::log(log_level, "VULKAN [%s]: %s\n", msg_type_str, callback_data->pMessage);
 
     return VK_FALSE;
 }
@@ -129,31 +123,34 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     }
 }
 
-static void setup_debug_messenger(Context& context)
+static void setup_debug_messenger()
 {
     VkDebugUtilsMessengerCreateInfoEXT create_info;
     populate_debug_messenger_create_info(create_info);
-    VK_CHECK(CreateDebugUtilsMessengerEXT(context.instance, &create_info, nullptr, &context.debug_messenger));
+    VK_CHECK(CreateDebugUtilsMessengerEXT(context::instance, &create_info, nullptr, &context::debug_messenger));
 }
 
-static std::vector<VkPhysicalDevice> get_physical_devices(const Context& context)
+static std::vector<VkPhysicalDevice> get_physical_devices()
 {
     uint32_t physical_device_count;
-    vkEnumeratePhysicalDevices(context.instance, &physical_device_count, nullptr);
+    vkEnumeratePhysicalDevices(context::instance, &physical_device_count, nullptr);
     std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
-    vkEnumeratePhysicalDevices(context.instance, &physical_device_count, physical_devices.data());
+    vkEnumeratePhysicalDevices(context::instance, &physical_device_count, physical_devices.data());
     return physical_devices;
 }
 
-Context Context::create()
+void context::create()
 {
+    if (context::instance != VK_NULL_HANDLE)
+    {
+        return;
+    }
+
     VK_CHECK(volkInitialize());
 
-    Context context;
-
-    if (enable_validation_layers)
+    if (enable_validation_layers && !check_validation_layer_support())
     {
-        check_validation_layer_support();
+        exit(1);
     }
 
     VkApplicationInfo app_info{};
@@ -162,15 +159,18 @@ Context Context::create()
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "vk_engine";
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion = VK_API_VERSION_1_2;
+    app_info.apiVersion = VK_API_VERSION_1_3;
 
-    auto ext = get_required_ext();
+    if (enable_validation_layers)
+    {
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
 
     VkInstanceCreateInfo create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pApplicationInfo = &app_info;
-    create_info.enabledExtensionCount = ext.size();
-    create_info.ppEnabledExtensionNames = ext.data();
+    create_info.enabledExtensionCount = extensions.size();
+    create_info.ppEnabledExtensionNames = extensions.data();
     create_info.enabledLayerCount = 0;
     create_info.pNext = nullptr;
 
@@ -183,43 +183,48 @@ Context Context::create()
         create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
     }
 
-    VK_CHECK(vkCreateInstance(&create_info, nullptr, &context.instance));
-    volkLoadInstance(context.instance);
+    VK_CHECK(vkCreateInstance(&create_info, nullptr, &context::instance));
+    volkLoadInstance(context::instance);
 
     if (enable_validation_layers)
     {
-        setup_debug_messenger(context);
+        setup_debug_messenger();
     }
 
-    auto devices = get_physical_devices(context);
+    auto devices = get_physical_devices();
 
     if (devices.empty())
     {
-        throw std::runtime_error("No physical devices found");
+        bul::log_error("No physical device found\n");
+        exit(1);
     }
 
     for (size_t i = 0; i < devices.size(); ++i)
     {
-        context.physical_device.vk_handle = devices[i];
-        vkGetPhysicalDeviceProperties(context.physical_device.vk_handle, &context.physical_device.properties);
+        context::physical_device.vk_handle = devices[i];
+        vkGetPhysicalDeviceProperties(context::physical_device.vk_handle, &context::physical_device.properties);
 
-        if (context.physical_device.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        if (context::physical_device.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
             break;
         }
     }
 
-    std::cout << "Physical device: " << context.physical_device.properties.deviceName << "\n";
-
-    return context;
+    bul::log_info("Physical device: %s\n", context::physical_device.properties.deviceName);
 }
 
-void Context::destroy()
+void context::destroy()
 {
-    if (debug_messenger != VK_NULL_HANDLE)
+    if (context::instance == VK_NULL_HANDLE)
     {
-        DestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
+        return;
     }
-    vkDestroyInstance(instance, nullptr);
+
+    if (context::debug_messenger != VK_NULL_HANDLE)
+    {
+        DestroyDebugUtilsMessengerEXT(context::instance, context::debug_messenger, nullptr);
+    }
+    vkDestroyInstance(context::instance, nullptr);
 }
 } // namespace vk
+ */

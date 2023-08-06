@@ -23,12 +23,9 @@ struct GlobalUniformSet
     uint32_t frame_number;
 };
 
-Renderer Renderer::create(vk::Context& context, vk::Device& device, vk::Surface& surface)
+Renderer Renderer::create()
 {
     Renderer renderer;
-    renderer.p_context = &context;
-    renderer.p_device = &device;
-    renderer.p_surface = &surface;
     return renderer;
 }
 
@@ -41,32 +38,32 @@ void Renderer::init()
 {
     resize();
 
-    vk::imgui_init(*p_context, *p_device, *p_surface);
+    // vk::imgui_init(*p_context, *p_device, *p_surface);
 
     camera.set_speed(50.0f);
 
-    auto& cmd = p_device->get_graphics_command();
+    auto& cmd = vk::device::get_graphics_command();
     {
-        auto& transfer_cmd = p_device->get_transfer_command();
+        auto& transfer_cmd = vk::device::get_transfer_command();
         model = gltf::load("../models/Sponza/glTF/Sponza.gltf");
         // model = gltf::load("../models/backpack/scene.gltf");
-        model_vertex_buffer =
-            p_device->create_buffer({.size = (uint32_t)(model.vertices.size() * sizeof(gltf::Vertex))});
+        model_vertex_buffer = vk::Buffer::create({.size = (uint32_t)(model.vertices.size() * sizeof(gltf::Vertex))});
         model_index_buffer =
-            p_device->create_buffer({.size = (uint32_t)(model.indices.size() * sizeof(uint32_t)),
-                                     .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT});
+            vk::Buffer::create({.size = (uint32_t)(model.indices.size() * sizeof(uint32_t)),
+                                .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT});
 
-        transfer_cmd.upload_buffer(model_vertex_buffer, model.vertices.data(), model.vertices.size() * sizeof(gltf::Vertex));
+        transfer_cmd.upload_buffer(model_vertex_buffer, model.vertices.data(),
+                                   model.vertices.size() * sizeof(gltf::Vertex));
         transfer_cmd.upload_buffer(model_index_buffer, model.indices.data(), model.indices.size() * sizeof(uint32_t));
 
         model_images.reserve(model.images.size());
         for (const auto& image : model.images)
         {
-            model_images.push_back(p_device->create_image({}, image.uri));
+            model_images.push_back(vk::Image::create({}, image.uri));
             transfer_cmd.upload_image(model_images.back(), image.uri);
         }
 
-        p_device->submit_blocking(transfer_cmd);
+        vk::device::submit_blocking(transfer_cmd);
 
         for (auto& image : model_images)
         {
@@ -75,38 +72,37 @@ void Renderer::init()
     }
     {
         vk::GraphicsProgramDescription prog_desc{};
-        prog_desc.attachment_formats = p_device->framebuffers.get(render_target).description;
+        prog_desc.attachment_formats = vk::device::framebuffers.get(render_target).description;
         prog_desc.descriptor_types = {vk::DescriptorType::create(vk::DescriptorType::Type::StorageBuffer),
                                       vk::DescriptorType::create(vk::DescriptorType::Type::DynamicBuffer),
                                       vk::DescriptorType::create(vk::DescriptorType::Type::SampledImage)};
-        prog_desc.vertex_shader = p_device->create_shader("shaders/test.vert");
-        prog_desc.fragment_shader = p_device->create_shader("shaders/test.frag");
-        graphics_program = p_device->create_graphics_program(prog_desc);
+        prog_desc.vertex_shader = vk::device::create_shader("shaders/test.vert");
+        prog_desc.fragment_shader = vk::device::create_shader("shaders/test.frag");
+        graphics_program = vk::device::create_graphics_program(prog_desc);
 
         vk::RenderState render_state{};
         render_state.depth.test_enable = VK_TRUE;
         render_state.depth.write_enable = VK_TRUE;
 
-        p_device->compile(graphics_program, render_state);
+        vk::device::compile(graphics_program, render_state);
     }
     {
         vk::ComputeProgramDescription prog_desc{};
         prog_desc.descriptor_types = {vk::DescriptorType::create(vk::DescriptorType::Type::SampledImage),
                                       vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage)};
-        prog_desc.shader = p_device->create_shader("shaders/tonemap.comp");
-        tonemap_program = p_device->create_compute_program(prog_desc);
+        prog_desc.shader = vk::device::create_shader("shaders/tonemap.comp");
+        tonemap_program = vk::device::create_compute_program(prog_desc);
     }
     {
         global_uniform_buffer = vk::RingBuffer::create(
-            *p_device,
-            {.size = 4 * MB, .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, .memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU});
+            {.size = 4_MB, .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, .memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU});
     }
-    p_device->submit_blocking(cmd);
+    vk::device::submit_blocking(cmd);
 }
 
 void Renderer::resize()
 {
-    p_device->wait_idle();
+    vk::device::wait_idle();
     frame_number = 0;
 
     scissor.offset = {0, 0};
@@ -118,42 +114,47 @@ void Renderer::resize()
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    p_surface->destroy_swapchain(*p_device);
-    p_surface->create_swapchain(*p_device);
+    vk::surface::destroy_swapchain();
+    vk::surface::create_swapchain();
 
-    const auto& fb_desc = p_device->framebuffers.get(p_surface->framebuffers[0]).description;
+    const auto& fb_desc = vk::device::framebuffers.get(vk::surface::framebuffers[0]).description;
 
     {
-        p_device->destroy_image(p_device->images.get(rt_color));
-        p_device->images.erase(rt_color);
-        p_device->destroy_image(p_device->images.get(rt_depth));
-        p_device->images.erase(rt_depth);
-        p_device->destroy_framebuffer(p_device->framebuffers.get(render_target));
-        p_device->framebuffers.erase(render_target);
+        if (rt_color)
+        {
+            vk::Image::destroy(rt_color);
+        }
+        if (rt_depth)
+        {
+            vk::Image::destroy(rt_depth);
+        }
+        if (render_target)
+        {
+            vk::FrameBuffer::destroy(render_target);
+        }
 
-        rt_color = p_device->create_image({.width = fb_desc.width,
-                                           .height = fb_desc.height,
-                                           .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                                           .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-                                               | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT});
+        rt_color = vk::Image::create({.width = fb_desc.width,
+                                      .height = fb_desc.height,
+                                      .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                                      .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+                                          | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT});
 
-        rt_depth = p_device->create_image({.width = fb_desc.width,
-                                           .height = fb_desc.height,
-                                           .format = VK_FORMAT_D32_SFLOAT,
-                                           .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT});
+        rt_depth = vk::Image::create({.width = fb_desc.width,
+                                      .height = fb_desc.height,
+                                      .format = VK_FORMAT_D32_SFLOAT,
+                                      .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT});
 
-        render_target =
-            p_device->create_framebuffer({.width = fb_desc.width,
-                                          .height = fb_desc.height,
-                                          .color_formats = {p_device->images.get(rt_color).description.format},
-                                          .depth_format = {p_device->images.get(rt_depth).description.format}},
-                                         {rt_color}, rt_depth);
+        render_target = vk::FrameBuffer::create({.width = fb_desc.width,
+                                                 .height = fb_desc.height,
+                                                 .color_formats = {vk::device::images.get(rt_color).description.format},
+                                                 .depth_format = {vk::device::images.get(rt_depth).description.format}},
+                                                {rt_color}, rt_depth);
     }
 }
 
 void Renderer::render()
 {
-    if (!p_device->acquire_next_image(*p_surface))
+    if (!vk::device::acquire_next_image())
     {
         resize();
         return;
@@ -165,8 +166,8 @@ void Renderer::render()
         frame_number = 0;
     }
 
-    auto& fc = p_device->frame_context();
-    auto& cmd = p_device->get_graphics_command();
+    auto& fc = vk::device::frame_context();
+    auto& cmd = vk::device::get_graphics_command();
 
     cmd.set_scissor(scissor);
     cmd.set_viewport(viewport);
@@ -182,14 +183,15 @@ void Renderer::render()
     global_uniform_set.resolution = {bul::window::size().x, bul::window::size().y};
     global_uniform_set.frame_number = frame_number;
     uint32_t uniform_offset = global_uniform_buffer.push(&global_uniform_set, sizeof(GlobalUniformSet));
-    p_device->global_uniform_set.bind_uniform_buffer(0, global_uniform_buffer.buffer_handle, uniform_offset,
-                                                     sizeof(GlobalUniformSet));
-    cmd.bind_descriptor_set(graphics_program, p_device->global_uniform_set, 0);
+    vk::device::global_uniform_set.bind_uniform_buffer(0, global_uniform_buffer.buffer_handle, uniform_offset,
+                                                       sizeof(GlobalUniformSet));
+    cmd.bind_descriptor_set(graphics_program, vk::device::global_uniform_set, 0);
 
     // main renderpass
 
     cmd.barrier(rt_color, vk::ImageUsage::ColorAttachment);
-    cmd.begin_renderpass(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
+    // cmd.begin_renderpass(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
+    cmd.begin_rendering(render_target, {vk::LoadOp::clear_color(), vk::LoadOp::clear_depth()});
     cmd.bind_index_buffer(model_index_buffer, VK_INDEX_TYPE_UINT32, 0);
     cmd.bind_storage_buffer(graphics_program, model_vertex_buffer, 0);
 
@@ -214,7 +216,8 @@ void Renderer::render()
             cmd.draw_indexed(primitive.index_count, primitive.index_start);
         }
     }
-    cmd.end_renderpass();
+    // cmd.end_renderpass();
+    cmd.end_rendering();
 
     // tonemap
 
@@ -238,9 +241,9 @@ void Renderer::render()
     // present
 
     cmd.barrier(fc.image, vk::ImageUsage::Present);
-    p_device->submit(cmd, fc.image_acquired_semaphore, fc.rendering_finished_semaphore, fc.rendering_finished_fence);
+    vk::device::submit(cmd, fc.image_acquired_semaphore, fc.rendering_finished_semaphore, fc.rendering_finished_fence);
 
-    if (!p_device->present(*p_surface))
+    if (!vk::device::present())
     {
         resize();
     }

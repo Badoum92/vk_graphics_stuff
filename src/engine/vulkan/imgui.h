@@ -2,14 +2,11 @@
 
 #include <imgui/imgui.h>
 
+#include "fwd.h"
+
 namespace vk
 {
-struct Context;
-struct Device;
-struct Surface;
-struct Command;
-
-void imgui_init(Context& context, Device& device, Surface& surface);
+void imgui_init();
 void imgui_shutdown();
 void imgui_new_frame();
 void imgui_render();

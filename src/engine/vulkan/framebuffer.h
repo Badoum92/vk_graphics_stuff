@@ -64,12 +64,6 @@ struct LoadOp
     VkClearValue clear_value;
 };
 
-struct RenderPass
-{
-    VkRenderPass vk_handle = VK_NULL_HANDLE;
-    std::vector<LoadOp> load_ops;
-};
-
 struct FrameBufferDescription
 {
     uint32_t width = 0;
@@ -79,8 +73,24 @@ struct FrameBufferDescription
     std::optional<VkFormat> depth_format = std::nullopt;
 };
 
+struct RenderPass
+{
+    static RenderPass create(const FrameBufferDescription& description, const std::vector<LoadOp>& load_ops);
+    static const RenderPass& get_or_create(const bul::Handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops);
+    void destroy();
+
+    VkRenderPass vk_handle = VK_NULL_HANDLE;
+    std::vector<LoadOp> load_ops;
+};
+
 struct FrameBuffer
 {
+    static bul::Handle<FrameBuffer> create(const FrameBufferDescription& description,
+                                           const std::vector<bul::Handle<Image>>& color_attachments,
+                                           const bul::Handle<Image>& depth_attachment);
+    static void destroy(bul::Handle<FrameBuffer> handle);
+    void destroy();
+
     FrameBufferDescription description;
     VkFramebuffer vk_handle = VK_NULL_HANDLE;
 

@@ -7,8 +7,8 @@
 
 namespace vk
 {
-static ImageView create_image_view(const Device& device, VkImage image, const VkImageSubresourceRange& range,
-                                   VkFormat format, VkImageViewType type)
+static ImageView create_image_view(VkImage image, const VkImageSubresourceRange& range, VkFormat format,
+                                   VkImageViewType type)
 {
     ImageView view{};
     view.range = range;
@@ -26,12 +26,12 @@ static ImageView create_image_view(const Device& device, VkImage image, const Vk
     create_info.subresourceRange = range;
     create_info.viewType = type;
 
-    VK_CHECK(vkCreateImageView(device.vk_handle, &create_info, nullptr, &view.vk_handle));
+    VK_CHECK(vkCreateImageView(device::vk_handle, &create_info, nullptr, &view.vk_handle));
 
     return view;
 }
 
-bul::Handle<Image> Device::create_image(const ImageDescription& description, VkImage vk_image)
+bul::Handle<Image> Image::create(const ImageDescription& description, VkImage vk_image)
 {
     VmaAllocation allocation = VK_NULL_HANDLE;
     if (vk_image == VK_NULL_HANDLE)
@@ -55,7 +55,7 @@ bul::Handle<Image> Device::create_image(const ImageDescription& description, VkI
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = description.memory_usage;
 
-        VK_CHECK(vmaCreateImage(allocator, &image_info, &alloc_info, &vk_image, &allocation, nullptr));
+        VK_CHECK(vmaCreateImage(device::allocator, &image_info, &alloc_info, &vk_image, &allocation, nullptr));
     }
 
     VkImageSubresourceRange full_range{};
@@ -65,17 +65,17 @@ bul::Handle<Image> Device::create_image(const ImageDescription& description, VkI
     full_range.baseArrayLayer = 0;
     full_range.layerCount = 1;
 
-    ImageView full_view = create_image_view(*this, vk_image, full_range, description.format,
-                                            static_cast<VkImageViewType>(description.type));
+    ImageView full_view =
+        create_image_view(vk_image, full_range, description.format, static_cast<VkImageViewType>(description.type));
 
-    return images.insert(
+    return device::images.insert(
         Image{.description = description, .vk_handle = vk_image, .allocation = allocation, .full_view = full_view});
 }
 
-bul::Handle<Image> Device::create_image(const ImageDescription& description, const std::string& path)
+bul::Handle<Image> Image::create(const ImageDescription& description, const std::string_view path)
 {
     int width, height, channels;
-    if (!stbi_info(path.c_str(), &width, &height, &channels))
+    if (!stbi_info(path.data(), &width, &height, &channels))
     {
         return bul::Handle<Image>::invalid;
     }
@@ -85,18 +85,24 @@ bul::Handle<Image> Device::create_image(const ImageDescription& description, con
     new_description.height = height;
     new_description.depth = 1;
 
-    return create_image(new_description);
+    return create(new_description);
 }
 
-void Device::destroy_image(Image& image)
+void Image::destroy(bul::Handle<Image> handle)
 {
-    if (image.allocation != VK_NULL_HANDLE)
+    device::images.get(handle).destroy();
+    device::images.erase(handle);
+}
+
+void Image::destroy()
+{
+    if (allocation != VK_NULL_HANDLE)
     {
-        vmaDestroyImage(allocator, image.vk_handle, image.allocation);
-        image.allocation = VK_NULL_HANDLE;
-        image.vk_handle = VK_NULL_HANDLE;
+        vmaDestroyImage(device::allocator, vk_handle, allocation);
+        allocation = VK_NULL_HANDLE;
+        vk_handle = VK_NULL_HANDLE;
     }
-    vkDestroyImageView(vk_handle, image.full_view.vk_handle, nullptr);
-    image.full_view.vk_handle = VK_NULL_HANDLE;
+    vkDestroyImageView(device::vk_handle, full_view.vk_handle, nullptr);
+    full_view.vk_handle = VK_NULL_HANDLE;
 }
 } // namespace vk

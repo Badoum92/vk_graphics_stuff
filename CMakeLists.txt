@@ -37,27 +37,34 @@ add_executable(main
     src/engine/gltf.cpp
     src/engine/vox_loader.cpp
 
-    src/engine/vulkan/vk_tools.cpp
-    src/engine/vulkan/context.cpp
-    src/engine/vulkan/device.cpp
-    src/engine/vulkan/surface.cpp
-    src/engine/vulkan/image.cpp
-    src/engine/vulkan/buffer.cpp
-    src/engine/vulkan/framebuffer.cpp
-    src/engine/vulkan/shader.cpp
-    src/engine/vulkan/graphics_pipeline.cpp
-    src/engine/vulkan/compute_pipeline.cpp
-    src/engine/vulkan/descriptor_set.cpp
-    src/engine/vulkan/command.cpp
-    src/engine/vulkan/frame_context.cpp
-    src/engine/vulkan/imgui.cpp
+    src/vk/vk_tools.cpp
+    src/vk/context.cpp
+    src/vk/surface.cpp
+    src/vk/image.cpp
+    src/vk/buffer.cpp
+    src/vk/shader.cpp
+
+    # src/engine/vulkan/vk_tools.cpp
+    # src/engine/vulkan/context.cpp
+    # src/engine/vulkan/device.cpp
+    # src/engine/vulkan/surface.cpp
+    # src/engine/vulkan/image.cpp
+    # src/engine/vulkan/buffer.cpp
+    # src/engine/vulkan/framebuffer.cpp
+    # src/engine/vulkan/shader.cpp
+    # src/engine/vulkan/graphics_pipeline.cpp
+    # src/engine/vulkan/compute_pipeline.cpp
+    # src/engine/vulkan/descriptor_set.cpp
+    # src/engine/vulkan/command.cpp
+    # src/engine/vulkan/frame_context.cpp
+    # src/engine/vulkan/imgui.cpp
 )
 
 target_include_directories(main
     PRIVATE src
     PRIVATE src/util
     PRIVATE src/engine
-    PRIVATE src/engine/vulkan
+    # PRIVATE src/engine/vulkan
 
     PRIVATE .
 )

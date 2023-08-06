@@ -18,18 +18,21 @@ struct Command
 
     void barrier(const bul::Handle<Image>& image_handle, ImageUsage dst_usage);
 
-    void bind_image(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Image>& image_handle, uint32_t binding);
-    void bind_uniform_buffer(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                             uint32_t binding, uint32_t offset, uint32_t size);
-    void bind_storage_buffer(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                             uint32_t binding);
-    void bind_image(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Image>& image_handle, uint32_t binding);
-    void bind_uniform_buffer(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                             uint32_t binding, uint32_t offset, uint32_t size);
-    void bind_storage_buffer(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                             uint32_t binding);
+    void bind_image(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Image>& image_handle,
+                    uint32_t binding);
+    void bind_uniform_buffer(const bul::Handle<GraphicsProgram>& program_handle,
+                             const bul::Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+                             uint32_t size);
+    void bind_storage_buffer(const bul::Handle<GraphicsProgram>& program_handle,
+                             const bul::Handle<Buffer>& buffer_handle, uint32_t binding);
+    void bind_image(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Image>& image_handle,
+                    uint32_t binding);
+    void bind_uniform_buffer(const bul::Handle<ComputeProgram>& program_handle,
+                             const bul::Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+                             uint32_t size);
+    void bind_storage_buffer(const bul::Handle<ComputeProgram>& program_handle,
+                             const bul::Handle<Buffer>& buffer_handle, uint32_t binding);
 
-    Device* p_device = nullptr;
     VkCommandBuffer vk_handle = VK_NULL_HANDLE;
     VkQueue vk_queue = VK_NULL_HANDLE;
     VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -56,7 +59,8 @@ struct GraphicsCommand : public ComputeCommand
     void set_viewport(const VkViewport& viewport);
 
     void bind_index_buffer(const bul::Handle<Buffer>& buffer_handle, VkIndexType index_type, uint32_t offset);
-    void bind_descriptor_set(const bul::Handle<GraphicsProgram>& program_handle, DescriptorSet& set, uint32_t set_index);
+    void bind_descriptor_set(const bul::Handle<GraphicsProgram>& program_handle, DescriptorSet& set,
+                             uint32_t set_index);
     void bind_pipeline(const bul::Handle<GraphicsProgram>& program_handle, uint32_t pipeline_index = 0);
 
     void begin_renderpass(const bul::Handle<FrameBuffer>& framebuffer_handle, const std::vector<LoadOp>& load_ops);
@@ -65,6 +69,10 @@ struct GraphicsCommand : public ComputeCommand
     void draw(uint32_t vertex_count, uint32_t first_vertex = 0);
     void draw_indexed(uint32_t index_count, uint32_t first_index = 0, uint32_t vertex_offset = 0);
 
+    void begin_rendering(const bul::Handle<FrameBuffer>& framebuffer_handle,
+                                          const std::vector<LoadOp>& load_ops);
+    void end_rendering();
+
     using ComputeCommand::bind_descriptor_set;
     using ComputeCommand::bind_pipeline;
 };
@@ -72,27 +80,26 @@ struct GraphicsCommand : public ComputeCommand
 template <typename T>
 struct CommandPool
 {
-    static CommandPool<T> create(Device& device)
+    static CommandPool<T> create()
     {
         VkCommandPoolCreateInfo pool_info{};
         pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         if constexpr (std::is_same_v<GraphicsCommand, T>)
         {
-            pool_info.queueFamilyIndex = device.graphics_family_index;
+            pool_info.queueFamilyIndex = device::graphics_queue.index;
         }
         else if constexpr (std::is_same_v<ComputeCommand, T>)
         {
-            pool_info.queueFamilyIndex = device.compute_family_index;
+            pool_info.queueFamilyIndex = device::compute_queue.index;
         }
         else if constexpr (std::is_same_v<TransferCommand, T>)
         {
-            pool_info.queueFamilyIndex = device.transfer_family_index;
+            pool_info.queueFamilyIndex = device::transfer_queue.index;
         }
         pool_info.flags = 0;
 
         CommandPool command_pool{};
-        VK_CHECK(vkCreateCommandPool(device.vk_handle, &pool_info, nullptr, &command_pool.vk_handle));
-        command_pool.p_device = &device;
+        VK_CHECK(vkCreateCommandPool(device::vk_handle, &pool_info, nullptr, &command_pool.vk_handle));
 
         return command_pool;
     }
@@ -100,12 +107,12 @@ struct CommandPool
     void destroy()
     {
         reset();
-        vkDestroyCommandPool(p_device->vk_handle, vk_handle, nullptr);
+        vkDestroyCommandPool(device::vk_handle, vk_handle, nullptr);
     }
 
     void reset()
     {
-        VK_CHECK(vkResetCommandPool(p_device->vk_handle, vk_handle, 0));
+        VK_CHECK(vkResetCommandPool(device::vk_handle, vk_handle, 0));
         index = 0;
     }
 
@@ -120,21 +127,20 @@ struct CommandPool
             alloc_info.commandBufferCount = 1;
 
             T command;
-            command.p_device = p_device;
             if constexpr (std::is_same_v<GraphicsCommand, T>)
             {
-                command.vk_queue = p_device->graphics_queue;
+                command.vk_queue = device::graphics_queue.vk_handle;
             }
             else if constexpr (std::is_same_v<ComputeCommand, T>)
             {
-                command.vk_queue = p_device->compute_queue;
+                command.vk_queue = device::compute_queue.vk_handle;
             }
             else if constexpr (std::is_same_v<TransferCommand, T>)
             {
-                command.vk_queue = p_device->transfer_queue;
+                command.vk_queue = device::transfer_queue.vk_handle;
             }
 
-            VK_CHECK(vkAllocateCommandBuffers(p_device->vk_handle, &alloc_info, &command.vk_handle));
+            VK_CHECK(vkAllocateCommandBuffers(device::vk_handle, &alloc_info, &command.vk_handle));
             commands.push_back(command);
         }
         T& cmd = commands[index++];
@@ -145,19 +151,16 @@ struct CommandPool
     VkCommandPool vk_handle = VK_NULL_HANDLE;
     std::vector<T> commands;
     size_t index = 0;
-    Device* p_device = nullptr;
 };
 
 struct CommandContext
 {
-    static CommandContext create(Device& device);
+    static CommandContext create();
     void destroy();
     void reset();
 
     CommandPool<GraphicsCommand> graphics_pool;
     CommandPool<ComputeCommand> compute_pool;
     CommandPool<TransferCommand> transfer_pool;
-
-    Device* p_device = nullptr;
 };
 } // namespace vk

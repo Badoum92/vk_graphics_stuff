@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "bul/bul.h"
 #include "bul/math/matrix.h"
 #include "bul/window.h"
 #include "bul/time.h"
@@ -37,12 +38,9 @@ struct VoxelMaterial
     bul::vec2f padding;
 };
 
-PathTracingRenderer PathTracingRenderer::create(vk::Context& context, vk::Device& device, vk::Surface& surface)
+PathTracingRenderer PathTracingRenderer::create()
 {
     PathTracingRenderer renderer;
-    renderer.p_context = &context;
-    renderer.p_device = &device;
-    renderer.p_surface = &surface;
     return renderer;
 }
 
@@ -56,11 +54,11 @@ void PathTracingRenderer::init()
     resize();
     reload_shaders();
 
-    // vk::imgui_init(*p_context, *p_device, *p_surface);
+    // vk::imgui_init();
 
     camera.set_speed(50.0f);
 
-    auto& cmd = p_device->get_graphics_command();
+    auto& cmd = vk::device::get_graphics_command();
     {
         Vox::Model model;
         // model.load("../models/voxel-model/vox/scan/dragon.vox");
@@ -78,7 +76,7 @@ void PathTracingRenderer::init()
         image_desc.format = VK_FORMAT_R8_UINT;
         image_desc.type = VK_IMAGE_TYPE_3D;
         image_desc.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        voxels = p_device->create_image(image_desc);
+        voxels = vk::Image::create(image_desc);
 
         std::vector<uint8_t> voxels_data(size->x * size->y * size->z);
         for (size_t i = 0; i < model.chunks[0].n_voxels; ++i)
@@ -106,22 +104,21 @@ void PathTracingRenderer::init()
             material.transparency = matl.trans;
         }
 
-        voxel_materials = p_device->create_buffer(
-            {.size = static_cast<uint32_t>(voxel_materials_data.size() * sizeof(VoxelMaterial))});
+        voxel_materials =
+            vk::Buffer::create({.size = static_cast<uint32_t>(voxel_materials_data.size() * sizeof(VoxelMaterial))});
         cmd.upload_buffer(voxel_materials, voxel_materials_data.data(),
                           static_cast<uint32_t>(voxel_materials_data.size() * sizeof(VoxelMaterial)));
     }
     {
         global_uniform_buffer = vk::RingBuffer::create(
-            *p_device,
-            {.size = 4 * MB, .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, .memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU});
+            {.size = 4_MB, .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, .memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU});
     }
-    p_device->submit_blocking(cmd);
+    vk::device::submit_blocking(cmd);
 }
 
 void PathTracingRenderer::resize()
 {
-    p_device->wait_idle();
+    vk::device::wait_idle();
     frame_number = 0;
 
     scissor.offset = {0, 0};
@@ -133,36 +130,34 @@ void PathTracingRenderer::resize()
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    p_surface->destroy_swapchain(*p_device);
-    p_surface->create_swapchain(*p_device);
+    vk::surface::destroy_swapchain();
+    vk::surface::create_swapchain();
 
     {
         if (color)
         {
-            p_device->destroy_image(p_device->images.get(color));
-            p_device->images.erase(color);
+            vk::Image::destroy(color);
         }
         if (color_acc)
         {
-            p_device->destroy_image(p_device->images.get(color_acc));
-            p_device->images.erase(color_acc);
+            vk::Image::destroy(color_acc);
         }
 
-        color = p_device->create_image({.width = bul::window::size().x,
-                                        .height = bul::window::size().y,
-                                        .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                                        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT});
+        color = vk::Image::create({.width = bul::window::size().x,
+                                   .height = bul::window::size().y,
+                                   .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                                   .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT});
 
-        color_acc = p_device->create_image({.width = bul::window::size().x,
-                                            .height = bul::window::size().y,
-                                            .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                                            .usage = VK_IMAGE_USAGE_STORAGE_BIT});
+        color_acc = vk::Image::create({.width = bul::window::size().x,
+                                       .height = bul::window::size().y,
+                                       .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                                       .usage = VK_IMAGE_USAGE_STORAGE_BIT});
     }
 }
 
 void PathTracingRenderer::reload_shaders()
 {
-    p_device->wait_idle();
+    vk::device::wait_idle();
     shaders_need_reload = false;
 
     {
@@ -171,14 +166,14 @@ void PathTracingRenderer::reload_shaders()
                                       vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage),
                                       vk::DescriptorType::create(vk::DescriptorType::Type::StorageImage),
                                       vk::DescriptorType::create(vk::DescriptorType::Type::StorageBuffer)};
-        prog_desc.shader = p_device->create_shader("shaders/voxel_raytrace.comp");
-        raytracing_program = p_device->create_compute_program(prog_desc);
+        prog_desc.shader = vk::device::create_shader("shaders/voxel_raytrace.comp");
+        raytracing_program = vk::device::create_compute_program(prog_desc);
     }
 }
 
 void PathTracingRenderer::render()
 {
-    if (!p_device->acquire_next_image(*p_surface))
+    if (!vk::device::acquire_next_image())
     {
         resize();
         return;
@@ -195,8 +190,8 @@ void PathTracingRenderer::render()
         frame_number = 0;
     }
 
-    auto& fc = p_device->frame_context();
-    auto& cmd = p_device->get_graphics_command();
+    auto& fc = vk::device::frame_context();
+    auto& cmd = vk::device::get_graphics_command();
 
     cmd.set_scissor(scissor);
     cmd.set_viewport(viewport);
@@ -213,14 +208,14 @@ void PathTracingRenderer::render()
     global_uniform_set.exposure = exposure;
     global_uniform_set.frame_number = frame_number;
     uint32_t uniform_offset = global_uniform_buffer.push(&global_uniform_set, sizeof(GlobalUniformSet));
-    p_device->global_uniform_set.bind_uniform_buffer(0, global_uniform_buffer.buffer_handle, uniform_offset,
-                                                     sizeof(GlobalUniformSet));
+    vk::device::global_uniform_set.bind_uniform_buffer(0, global_uniform_buffer.buffer_handle, uniform_offset,
+                                                       sizeof(GlobalUniformSet));
 
     // main renderpass
 
     cmd.barrier(color, vk::ImageUsage::ComputeShaderReadWrite);
     cmd.barrier(color_acc, vk::ImageUsage::ComputeShaderReadWrite);
-    cmd.bind_descriptor_set(raytracing_program, p_device->global_uniform_set, 0);
+    cmd.bind_descriptor_set(raytracing_program, vk::device::global_uniform_set, 0);
     cmd.bind_image(raytracing_program, color, 0);
     cmd.bind_image(raytracing_program, color_acc, 1);
     cmd.bind_image(raytracing_program, voxels, 2);
@@ -245,9 +240,9 @@ void PathTracingRenderer::render()
     // present
 
     cmd.barrier(fc.image, vk::ImageUsage::Present);
-    p_device->submit(cmd, fc.image_acquired_semaphore, fc.rendering_finished_semaphore, fc.rendering_finished_fence);
+    vk::device::submit(cmd, fc.image_acquired_semaphore, fc.rendering_finished_semaphore, fc.rendering_finished_fence);
 
-    if (!p_device->present(*p_surface) && bul::window::resized())
+    if (!vk::device::present() && bul::window::resized())
     {
         resize();
     }

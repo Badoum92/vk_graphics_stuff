@@ -21,51 +21,36 @@
 
 namespace vk
 {
-struct Device
+namespace device
 {
-    static constexpr uint32_t MAX_FRAMES = 2;
-    uint32_t current_frame = 0;
+    struct Queue
+    {
+        VkQueue vk_handle = VK_NULL_HANDLE;
+        uint32_t index = UINT32_MAX;
+    };
 
-    PhysicalDevice physical_device;
-    VkDevice vk_handle = VK_NULL_HANDLE;
-    uint32_t graphics_family_index = UINT32_MAX;
-    uint32_t compute_family_index = UINT32_MAX;
-    uint32_t transfer_family_index = UINT32_MAX;
-    VkQueue graphics_queue = VK_NULL_HANDLE;
-    VkQueue compute_queue = VK_NULL_HANDLE;
-    VkQueue transfer_queue = VK_NULL_HANDLE;
-    VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
-    VmaAllocator allocator = VK_NULL_HANDLE;
+    constexpr uint32_t MAX_FRAMES = 2;
+    inline uint32_t current_frame = 0;
+    inline FrameContext frame_contexts[MAX_FRAMES];
 
-    bul::Pool<Image> images;
-    bul::Pool<Buffer> buffers;
-    bul::Pool<FrameBuffer> framebuffers;
-    bul::Pool<Shader> shaders;
-    bul::Pool<GraphicsProgram> graphics_programs;
-    bul::Pool<ComputeProgram> compute_programs;
-    std::vector<VkSampler> samplers;
-    FrameContext frame_contexts[MAX_FRAMES];
+    inline VkDevice vk_handle = VK_NULL_HANDLE;
+    inline Queue graphics_queue;
+    inline Queue compute_queue;
+    inline Queue transfer_queue;
+    inline VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
+    inline VmaAllocator allocator = VK_NULL_HANDLE;
+    inline DescriptorSet global_uniform_set;
+    inline std::vector<VkSampler> samplers;
 
-    DescriptorSet global_uniform_set;
+    inline bul::Pool<Image> images;
+    inline bul::Pool<Buffer> buffers;
+    inline bul::Pool<FrameBuffer> framebuffers;
+    inline bul::Pool<Shader> shaders;
+    inline bul::Pool<GraphicsProgram> graphics_programs;
+    inline bul::Pool<ComputeProgram> compute_programs;
 
-    static Device create(const Context& context);
+    void create();
     void destroy();
-
-    bul::Handle<Image> create_image(const ImageDescription& description, VkImage vk_image = VK_NULL_HANDLE);
-    bul::Handle<Image> create_image(const ImageDescription& description, const std::string& path);
-    void destroy_image(Image& image);
-
-    bul::Handle<Buffer> create_buffer(const BufferDescription& description);
-    void destroy_buffer(Buffer& buffer);
-    void* map_buffer(Buffer& buffer);
-    void unmap_buffer(Buffer& buffer);
-
-    RenderPass create_renderpass(const FrameBufferDescription& description, const std::vector<LoadOp>& load_ops);
-    const RenderPass& get_or_create_renderpass(const bul::Handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops);
-    bul::Handle<FrameBuffer> create_framebuffer(const FrameBufferDescription& description,
-                                           const std::vector<bul::Handle<Image>>& color_attachments,
-                                           const bul::Handle<Image>& depth_attachment);
-    void destroy_framebuffer(FrameBuffer& framebuffer);
 
     DescriptorSet create_descriptor_set(const std::vector<DescriptorType>& descriptor_types);
     void destroy_descriptor_set(DescriptorSet& descriptor_set);
@@ -92,7 +77,7 @@ struct Device
     void submit_blocking(Command& command);
 
     void wait_idle();
-    bool acquire_next_image(Surface& surface);
-    bool present(Surface& surface);
+    bool acquire_next_image();
+    bool present();
 };
 } // namespace vk

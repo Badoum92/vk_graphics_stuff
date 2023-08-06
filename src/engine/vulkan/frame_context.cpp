@@ -5,7 +5,7 @@
 
 namespace vk
 {
-void Device::create_frame_contexts()
+void device::create_frame_contexts()
 {
     VkSemaphoreCreateInfo semaphore_info{};
     semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -23,11 +23,11 @@ void Device::create_frame_contexts()
         VK_CHECK(vkCreateSemaphore(vk_handle, &semaphore_info, nullptr, &fc.image_acquired_semaphore));
         VK_CHECK(vkCreateSemaphore(vk_handle, &semaphore_info, nullptr, &fc.rendering_finished_semaphore));
         VK_CHECK(vkCreateFence(vk_handle, &fence_info, nullptr, &fc.rendering_finished_fence));
-        fc.command_context = CommandContext::create(*this);
+        fc.command_context = CommandContext::create();
     }
 }
 
-void Device::destroy_frame_contexts()
+void device::destroy_frame_contexts()
 {
     for (auto& fc : frame_contexts)
     {
@@ -38,7 +38,7 @@ void Device::destroy_frame_contexts()
     }
 }
 
-FrameContext& Device::frame_context()
+FrameContext& device::frame_context()
 {
     return frame_contexts[current_frame];
 }

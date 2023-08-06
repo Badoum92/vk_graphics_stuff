@@ -1,7 +1,10 @@
 #pragma once
 
+#include <string_view>
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
+
+#include "bul/containers/handle.h"
 
 namespace vk
 {
@@ -49,6 +52,11 @@ struct ImageDescription
 
 struct Image
 {
+    static bul::Handle<Image> create(const ImageDescription& description, VkImage vk_image = VK_NULL_HANDLE);
+    static bul::Handle<Image> create(const ImageDescription& description, const std::string_view path);
+    static void destroy(bul::Handle<Image> handle);
+    void destroy();
+
     ImageDescription description;
     VkImage vk_handle = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;

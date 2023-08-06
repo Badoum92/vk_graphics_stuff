@@ -2,29 +2,39 @@
 
 #include "bul/bul.h"
 
+#include <type_traits>
+
 namespace bul
 {
-template <typename E>
-concept CountEnum = requires(E e)
+template <typename Enum>
+    requires std::is_enum_v<Enum>
+constexpr auto operator+(Enum e)
 {
-    E::Count;
+    return static_cast<std::underlying_type_t<Enum>>(e);
+}
+
+template <typename Enum>
+concept CountEnum = requires(Enum e)
+{
+    std::is_enum_v<Enum>;
+    Enum::Count;
 };
 
-template <CountEnum E, typename T>
+template <CountEnum Enum, typename T>
 struct EnumArray
 {
-    static constexpr size_t SIZE = static_cast<size_t>(E::Count);
+    static constexpr size_t SIZE = static_cast<size_t>(Enum::Count);
 
-    constexpr T& operator[](E e)
+    constexpr T& operator[](Enum e)
     {
-        ASSERT(static_cast<size_t>(e) < SIZE);
-        return data[static_cast<size_t>(e)];
+        ASSERT(+e < SIZE);
+        return data[+e];
     }
 
-    constexpr const T& operator[](E e) const
+    constexpr const T& operator[](Enum e) const
     {
-        ASSERT(static_cast<size_t>(e) < SIZE);
-        return data[static_cast<size_t>(e)];
+        ASSERT(+e < SIZE);
+        return data[+e];
     }
 
     T data[SIZE];

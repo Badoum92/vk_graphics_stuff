@@ -3,6 +3,8 @@
 #include <type_traits>
 #include <initializer_list>
 
+#include "bul/bul.h"
+
 namespace bul
 {
 template <typename T, size_t CAPACITY>
@@ -58,26 +60,23 @@ public:
         return true;
     }
 
-    constexpr bool push_back(const T& val)
+    constexpr T& push_back(const T& val)
     {
         return emplace_back(val);
     }
 
-    constexpr bool push_back(T&& val)
+    constexpr T& push_back(T&& val)
     {
         return emplace_back(std::move(val));
     }
 
     template <typename... Args>
-    constexpr bool emplace_back(Args&&... args)
+    constexpr T& emplace_back(Args&&... args)
     {
-        if (size_ == CAPACITY)
-        {
-            return false;
-        }
-        new (data_ + size_) T(std::forward<Args>(args)...);
+        ASSERT(size_ < CAPACITY);
+        T* ret = new (data_ + size_) T(std::forward<Args>(args)...);
         ++size_;
-        return true;
+        return *ret;
     }
 
     constexpr bool pop_back()
@@ -86,11 +85,11 @@ public:
         {
             return false;
         }
+        --size_;
         if constexpr (!std::is_trivially_destructible_v<T>)
         {
-            data_[size_ - 1].~T();
+            data_[size_].~T();
         }
-        --size_;
         return true;
     }
 

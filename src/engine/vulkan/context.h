@@ -1,4 +1,4 @@
-#pragma once
+/* #pragma once
 
 #include <volk.h>
 
@@ -10,13 +10,14 @@ struct PhysicalDevice
     VkPhysicalDeviceProperties properties;
 };
 
-struct Context
+namespace context
 {
-    static Context create();
+    void create();
     void destroy();
 
-    VkInstance instance = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
-    PhysicalDevice physical_device;
+    inline VkInstance instance = VK_NULL_HANDLE;
+    inline VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
+    inline PhysicalDevice physical_device;
 };
 } // namespace vk
+ */

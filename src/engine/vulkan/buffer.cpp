@@ -1,11 +1,14 @@
 #include "buffer.h"
 
 #include "vk_tools.h"
+#include "context.h"
 #include "device.h"
+
+#include "bul/bul.h"
 
 namespace vk
 {
-bul::Handle<Buffer> Device::create_buffer(const BufferDescription& description)
+bul::Handle<Buffer> Buffer::create(const BufferDescription& description)
 {
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -18,67 +21,85 @@ bul::Handle<Buffer> Device::create_buffer(const BufferDescription& description)
 
     VkBuffer vk_buffer = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;
-    VK_CHECK(vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr));
+    VK_CHECK(vmaCreateBuffer(device::allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr));
 
-    return buffers.insert({.description = description, .vk_handle = vk_buffer, .allocation = allocation});
+    return device::buffers.insert({.description = description, .vk_handle = vk_buffer, .allocation = allocation});
 }
 
-void Device::destroy_buffer(Buffer& buffer)
+void Buffer::destroy(bul::Handle<Buffer> handle)
 {
-    if (buffer.mapped_data != nullptr)
+    device::buffers.get(handle).destroy();
+    device::buffers.erase(handle);
+}
+
+void Buffer::destroy()
+{
+    unmap();
+    if (allocation != VK_NULL_HANDLE)
     {
-        unmap_buffer(buffer);
-    }
-    if (buffer.allocation != VK_NULL_HANDLE)
-    {
-        vmaDestroyBuffer(allocator, buffer.vk_handle, buffer.allocation);
-        buffer.allocation = VK_NULL_HANDLE;
-        buffer.vk_handle = VK_NULL_HANDLE;
+        vmaDestroyBuffer(device::allocator, vk_handle, allocation);
+        allocation = VK_NULL_HANDLE;
+        vk_handle = VK_NULL_HANDLE;
     }
 }
 
-RingBuffer RingBuffer::create(Device& device, const BufferDescription& description)
+void* Buffer::map()
+{
+    if (mapped_data == nullptr)
+    {
+        vmaMapMemory(device::allocator, allocation, &mapped_data);
+    }
+    return mapped_data;
+}
+
+void Buffer::unmap()
+{
+    if (mapped_data != nullptr)
+    {
+        vmaUnmapMemory(device::allocator, allocation);
+        mapped_data = nullptr;
+    }
+}
+
+RingBuffer RingBuffer::create(const BufferDescription& description)
 {
     RingBuffer ring_buffer{};
-    ring_buffer.alignment = device.physical_device.properties.limits.minUniformBufferOffsetAlignment;
-    ring_buffer.description = description;
-    ring_buffer.buffer_handle = device.create_buffer(ring_buffer.description);
-    ring_buffer.mapped_data =
-        reinterpret_cast<uint8_t*>(device.map_buffer(device.buffers.get(ring_buffer.buffer_handle)));
+    ring_buffer.alignment = context::physical_device.properties.limits.minUniformBufferOffsetAlignment;
+    ring_buffer.size = description.size;
+    ring_buffer.buffer_handle = Buffer::create(description);
+    ring_buffer.mapped_data = device::buffers.get(ring_buffer.buffer_handle).map();
     return ring_buffer;
+}
+
+void RingBuffer::destroy()
+{
+    Buffer::destroy(buffer_handle);
+}
+
+void* RingBuffer::map()
+{
+    mapped_data = device::buffers.get(buffer_handle).map();
+    return mapped_data;
+}
+
+void RingBuffer::unmap()
+{
+    device::buffers.get(buffer_handle).unmap();
 }
 
 uint32_t RingBuffer::push(const void* data, uint32_t size)
 {
     uint32_t aligned_size = size + alignment - size % alignment;
 
-    if (offset + size > description.size)
+    if (offset + size > this->size)
     {
         offset = 0;
     }
 
-    std::memcpy(mapped_data + offset, data, size);
+    memcpy(bul::ptr_offset(mapped_data, offset), data, size);
 
     uint32_t ret = offset;
     offset += aligned_size;
     return ret;
-}
-
-void* Device::map_buffer(Buffer& buffer)
-{
-    if (buffer.mapped_data == nullptr)
-    {
-        vmaMapMemory(allocator, buffer.allocation, &buffer.mapped_data);
-    }
-    return buffer.mapped_data;
-}
-
-void Device::unmap_buffer(Buffer& buffer)
-{
-    if (buffer.mapped_data != nullptr)
-    {
-        vmaUnmapMemory(allocator, buffer.allocation);
-        buffer.mapped_data = nullptr;
-    }
 }
 } // namespace vk

@@ -7,7 +7,7 @@
 
 namespace vk
 {
-bul::Handle<GraphicsProgram> Device::create_graphics_program(const GraphicsProgramDescription& description)
+bul::Handle<GraphicsProgram> device::create_graphics_program(const GraphicsProgramDescription& description)
 {
     DescriptorSet set = create_descriptor_set(description.descriptor_types);
 
@@ -24,21 +24,12 @@ bul::Handle<GraphicsProgram> Device::create_graphics_program(const GraphicsProgr
 
     VK_CHECK(vkCreatePipelineLayout(vk_handle, &layout_info, nullptr, &program.layout));
 
-    size_t attachment_count =
-        description.attachment_formats.color_formats.size() + description.attachment_formats.depth_format.has_value();
-    program.renderpass =
-        create_renderpass(description.attachment_formats, std::vector<LoadOp>(attachment_count, LoadOp::dont_care()));
-
     return graphics_programs.insert(std::move(program));
 }
 
-void Device::destroy_graphics_program(GraphicsProgram& graphics_program)
+void device::destroy_graphics_program(GraphicsProgram& graphics_program)
 {
-    vkDestroyRenderPass(vk_handle, graphics_program.renderpass.vk_handle, nullptr);
-    graphics_program.renderpass.vk_handle = VK_NULL_HANDLE;
-
     destroy_descriptor_set(graphics_program.descriptor_set);
-
     vkDestroyPipelineLayout(vk_handle, graphics_program.layout, nullptr);
     graphics_program.layout = VK_NULL_HANDLE;
     for (auto& pipeline : graphics_program.pipelines)
@@ -48,7 +39,7 @@ void Device::destroy_graphics_program(GraphicsProgram& graphics_program)
     graphics_program.pipelines.clear();
 }
 
-VkPipeline Device::compile(const bul::Handle<GraphicsProgram>& handle, const RenderState& render_state)
+VkPipeline device::compile(const bul::Handle<GraphicsProgram>& handle, const RenderState& render_state)
 {
     GraphicsProgram& program = graphics_programs.get(handle);
 
@@ -171,8 +162,16 @@ VkPipeline Device::compile(const bul::Handle<GraphicsProgram>& handle, const Ren
         shader_stages.push_back(shader_stage_info);
     }
 
+    VkPipelineRenderingCreateInfo rendering_create_info{};
+    rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    rendering_create_info.colorAttachmentCount = program.description.attachment_formats.color_formats.size();
+    rendering_create_info.pColorAttachmentFormats = program.description.attachment_formats.color_formats.data();
+    rendering_create_info.depthAttachmentFormat =
+        program.description.attachment_formats.depth_format.value_or(VK_FORMAT_UNDEFINED);
+
     VkGraphicsPipelineCreateInfo pipeline_info{};
     pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipeline_info.pNext = &rendering_create_info;
     pipeline_info.layout = program.layout;
     pipeline_info.basePipelineHandle = nullptr;
     pipeline_info.basePipelineIndex = 0;
@@ -187,7 +186,6 @@ VkPipeline Device::compile(const bul::Handle<GraphicsProgram>& handle, const Ren
     pipeline_info.pDepthStencilState = &depth_state_info;
     pipeline_info.pStages = shader_stages.data();
     pipeline_info.stageCount = shader_stages.size();
-    pipeline_info.renderPass = program.renderpass.vk_handle;
     pipeline_info.subpass = 0;
 
     VkPipeline vk_pipeline = VK_NULL_HANDLE;

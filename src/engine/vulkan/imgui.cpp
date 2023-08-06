@@ -12,7 +12,7 @@
 
 namespace vk
 {
-void imgui_init(Context&, Device&, Surface&)
+void imgui_init()
 {
     /* ImGui::CreateContext();
     ImGui::StyleColorsDark();

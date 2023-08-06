@@ -18,7 +18,7 @@ static constexpr EnumArray<LogLevel, const char*> log_level_str = {
 static void log(LogLevel level, const char* fmt, va_list args)
 {
     const char* text = format(fmt, args);
-    printf("%s %s\n", log_level_str[level], text);
+    printf("%s %s", log_level_str[level], text);
 }
 
 void log_debug(const char* fmt, ...)

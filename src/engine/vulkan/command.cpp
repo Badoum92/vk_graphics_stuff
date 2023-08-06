@@ -12,25 +12,25 @@
 
 namespace vk
 {
-GraphicsCommand& Device::get_graphics_command()
+GraphicsCommand& device::get_graphics_command()
 {
     auto& fc = frame_contexts[current_frame];
     return fc.command_context.graphics_pool.get_command();
 }
 
-ComputeCommand& Device::get_compute_command()
+ComputeCommand& device::get_compute_command()
 {
     auto& fc = frame_contexts[current_frame];
     return fc.command_context.compute_pool.get_command();
 }
 
-TransferCommand& Device::get_transfer_command()
+TransferCommand& device::get_transfer_command()
 {
     auto& fc = frame_contexts[current_frame];
     return fc.command_context.transfer_pool.get_command();
 }
 
-void Device::submit(Command& command, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence)
+void device::submit(Command& command, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence)
 {
     command.end();
     VkSubmitInfo submit_info{};
@@ -55,12 +55,12 @@ void Device::submit(Command& command, VkSemaphore wait_semaphore, VkSemaphore si
     vkQueueSubmit(command.vk_queue, 1, &submit_info, fence);
 }
 
-void Device::submit(Command& command)
+void device::submit(Command& command)
 {
     submit(command, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
 }
 
-void Device::submit_blocking(Command& command)
+void device::submit_blocking(Command& command)
 {
     submit(command, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
     wait_idle();
@@ -68,13 +68,12 @@ void Device::submit_blocking(Command& command)
 
 /* CommandContext */
 
-CommandContext CommandContext::create(Device& device)
+CommandContext CommandContext::create()
 {
     CommandContext command_context;
-    command_context.p_device = &device;
-    command_context.graphics_pool = CommandPool<GraphicsCommand>::create(device);
-    command_context.compute_pool = CommandPool<ComputeCommand>::create(device);
-    command_context.transfer_pool = CommandPool<TransferCommand>::create(device);
+    command_context.graphics_pool = CommandPool<GraphicsCommand>::create();
+    command_context.compute_pool = CommandPool<ComputeCommand>::create();
+    command_context.transfer_pool = CommandPool<TransferCommand>::create();
     return command_context;
 }
 
@@ -83,7 +82,6 @@ void CommandContext::destroy()
     graphics_pool.destroy();
     compute_pool.destroy();
     transfer_pool.destroy();
-    p_device = nullptr;
 }
 
 void CommandContext::reset()
@@ -110,7 +108,7 @@ void Command::end()
 
 void Command::barrier(const bul::Handle<Image>& image_handle, ImageUsage dst_usage)
 {
-    auto& image = p_device->images.get(image_handle);
+    auto& image = device::images.get(image_handle);
     const auto& src_access = get_src_image_access(image.usage);
     const auto& dst_access = get_dst_image_access(dst_usage);
     auto barrier = get_image_barrier(image, src_access, dst_access);
@@ -121,42 +119,44 @@ void Command::barrier(const bul::Handle<Image>& image_handle, ImageUsage dst_usa
 void Command::bind_image(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Image>& image_handle,
                          uint32_t binding)
 {
-    auto& program = p_device->graphics_programs.get(program_handle);
+    auto& program = device::graphics_programs.get(program_handle);
     program.descriptor_set.bind_image(binding, image_handle);
 }
 
-void Command::bind_uniform_buffer(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                                  uint32_t binding, uint32_t offset, uint32_t size)
+void Command::bind_uniform_buffer(const bul::Handle<GraphicsProgram>& program_handle,
+                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+                                  uint32_t size)
 {
-    auto& program = p_device->graphics_programs.get(program_handle);
+    auto& program = device::graphics_programs.get(program_handle);
     program.descriptor_set.bind_uniform_buffer(binding, buffer_handle, offset, size);
 }
 
-void Command::bind_storage_buffer(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                                  uint32_t binding)
+void Command::bind_storage_buffer(const bul::Handle<GraphicsProgram>& program_handle,
+                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding)
 {
-    auto& program = p_device->graphics_programs.get(program_handle);
+    auto& program = device::graphics_programs.get(program_handle);
     program.descriptor_set.bind_storage_buffer(binding, buffer_handle);
 }
 
 void Command::bind_image(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Image>& image_handle,
                          uint32_t binding)
 {
-    auto& program = p_device->compute_programs.get(program_handle);
+    auto& program = device::compute_programs.get(program_handle);
     program.descriptor_set.bind_image(binding, image_handle);
 }
 
-void Command::bind_uniform_buffer(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                                  uint32_t binding, uint32_t offset, uint32_t size)
+void Command::bind_uniform_buffer(const bul::Handle<ComputeProgram>& program_handle,
+                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+                                  uint32_t size)
 {
-    auto& program = p_device->compute_programs.get(program_handle);
+    auto& program = device::compute_programs.get(program_handle);
     program.descriptor_set.bind_uniform_buffer(binding, buffer_handle, offset, size);
 }
 
-void Command::bind_storage_buffer(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Buffer>& buffer_handle,
-                                  uint32_t binding)
+void Command::bind_storage_buffer(const bul::Handle<ComputeProgram>& program_handle,
+                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding)
 {
-    auto& program = p_device->compute_programs.get(program_handle);
+    auto& program = device::compute_programs.get(program_handle);
     program.descriptor_set.bind_storage_buffer(binding, buffer_handle);
 }
 
@@ -172,24 +172,25 @@ void GraphicsCommand::set_viewport(const VkViewport& viewport)
     vkCmdSetViewport(vk_handle, 0, 1, &viewport);
 }
 
-void GraphicsCommand::bind_index_buffer(const bul::Handle<Buffer>& buffer_handle, VkIndexType index_type, uint32_t offset)
+void GraphicsCommand::bind_index_buffer(const bul::Handle<Buffer>& buffer_handle, VkIndexType index_type,
+                                        uint32_t offset)
 {
-    auto& buffer = p_device->buffers.get(buffer_handle);
+    auto& buffer = device::buffers.get(buffer_handle);
     vkCmdBindIndexBuffer(vk_handle, buffer.vk_handle, offset, index_type);
 }
 
 void GraphicsCommand::bind_descriptor_set(const bul::Handle<GraphicsProgram>& program_handle, DescriptorSet& set,
                                           uint32_t set_index)
 {
-    auto& program = p_device->graphics_programs.get(program_handle);
-    auto vk_set = set.get_or_create_vk_set(*p_device);
+    auto& program = device::graphics_programs.get(program_handle);
+    auto vk_set = set.get_or_create_vk_set();
     vkCmdBindDescriptorSets(vk_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, program.layout, set_index, 1, &vk_set,
                             set.dynamic_offsets.size(), set.dynamic_offsets.data());
 }
 
 void GraphicsCommand::bind_pipeline(const bul::Handle<GraphicsProgram>& program_handle, uint32_t pipeline_index)
 {
-    auto& program = p_device->graphics_programs.get(program_handle);
+    auto& program = device::graphics_programs.get(program_handle);
     if (program.description.descriptor_types.size() > 0)
     {
         bind_descriptor_set(program_handle, program.descriptor_set, 1);
@@ -200,8 +201,8 @@ void GraphicsCommand::bind_pipeline(const bul::Handle<GraphicsProgram>& program_
 void GraphicsCommand::begin_renderpass(const bul::Handle<FrameBuffer>& framebuffer_handle,
                                        const std::vector<LoadOp>& load_ops)
 {
-    auto& framebuffer = p_device->framebuffers.get(framebuffer_handle);
-    const auto& renderpass = p_device->get_or_create_renderpass(framebuffer_handle, load_ops);
+    auto& framebuffer = device::framebuffers.get(framebuffer_handle);
+    const auto& renderpass = RenderPass::get_or_create(framebuffer_handle, load_ops);
 
     static std::vector<VkClearValue> clear_values;
     clear_values.clear();
@@ -228,6 +229,54 @@ void GraphicsCommand::end_renderpass()
     vkCmdEndRenderPass(vk_handle);
 }
 
+void GraphicsCommand::begin_rendering(const bul::Handle<FrameBuffer>& framebuffer_handle,
+                                      const std::vector<LoadOp>& load_ops)
+{
+    auto& framebuffer = device::framebuffers.get(framebuffer_handle);
+
+    std::vector<VkRenderingAttachmentInfo> color_attachment_infos;
+    for (const auto& color_attachment : framebuffer.color_attachments)
+    {
+        const auto& image = device::images.get(color_attachment);
+        auto& attachment_info = color_attachment_infos.emplace_back();
+        attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        attachment_info.imageView = image.full_view.vk_handle;
+        attachment_info.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
+    }
+
+    VkRenderingAttachmentInfo depth_attachment_info{};
+    depth_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    if (framebuffer.depth_attachment)
+    {
+        const auto& image = device::images.get(framebuffer.depth_attachment);
+        depth_attachment_info.imageView = image.full_view.vk_handle;
+        depth_attachment_info.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        depth_attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depth_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_NONE;
+    }
+
+    VkRenderingInfo rendering_info{};
+    rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    rendering_info.renderArea.extent.width = framebuffer.description.width;
+    rendering_info.renderArea.extent.height = framebuffer.description.height;
+    rendering_info.layerCount = 1;
+    rendering_info.colorAttachmentCount = color_attachment_infos.size();
+    rendering_info.pColorAttachments = color_attachment_infos.data();
+    if (framebuffer.depth_attachment)
+    {
+        rendering_info.pDepthAttachment = &depth_attachment_info;
+    }
+
+    vkCmdBeginRendering(vk_handle, &rendering_info);
+}
+
+void GraphicsCommand::end_rendering()
+{
+    vkCmdEndRendering(vk_handle);
+}
+
 void GraphicsCommand::draw(uint32_t vertex_count, uint32_t first_vertex)
 {
     vkCmdDraw(vk_handle, vertex_count, 1, first_vertex, 0);
@@ -243,15 +292,15 @@ void GraphicsCommand::draw_indexed(uint32_t index_count, uint32_t first_index, u
 void ComputeCommand::bind_descriptor_set(const bul::Handle<ComputeProgram>& program_handle, DescriptorSet& set,
                                          uint32_t set_index)
 {
-    auto& program = p_device->compute_programs.get(program_handle);
-    auto vk_set = set.get_or_create_vk_set(*p_device);
+    auto& program = device::compute_programs.get(program_handle);
+    auto vk_set = set.get_or_create_vk_set();
     vkCmdBindDescriptorSets(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, program.layout, set_index, 1, &vk_set,
                             set.dynamic_offsets.size(), set.dynamic_offsets.data());
 }
 
 void ComputeCommand::bind_pipeline(const bul::Handle<ComputeProgram>& program_handle)
 {
-    auto& program = p_device->compute_programs.get(program_handle);
+    auto& program = device::compute_programs.get(program_handle);
     if (program.description.descriptor_types.size() > 0)
     {
         bind_descriptor_set(program_handle, program.descriptor_set, 1);
@@ -269,15 +318,15 @@ void ComputeCommand::dispatch(uint32_t x, uint32_t y, uint32_t z)
 void TransferCommand::upload_buffer(const bul::Handle<Buffer>& buffer_handle, void* data, uint32_t size)
 {
     // FIXME delete buffer after use
-    auto staging_handle = p_device->create_buffer(
+    auto staging_handle = Buffer::create(
         {.size = size, .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, .memory_usage = VMA_MEMORY_USAGE_CPU_ONLY});
 
-    void* staging_area = p_device->map_buffer(p_device->buffers.get(staging_handle));
+    void* staging_area = device::buffers.get(staging_handle).map();
     std::memcpy(staging_area, data, size);
-    p_device->unmap_buffer(p_device->buffers.get(staging_handle));
+    device::buffers.get(staging_handle).unmap();
 
-    auto& buffer = p_device->buffers.get(buffer_handle);
-    auto& staging_buffer = p_device->buffers.get(staging_handle);
+    auto& buffer = device::buffers.get(buffer_handle);
+    auto& staging_buffer = device::buffers.get(staging_handle);
 
     ASSERT(buffer.description.size == size);
 
@@ -291,15 +340,15 @@ void TransferCommand::upload_buffer(const bul::Handle<Buffer>& buffer_handle, vo
 void TransferCommand::upload_image(const bul::Handle<Image>& image_handle, void* data, uint32_t size)
 {
     // FIXME delete buffer after use
-    auto staging_handle = p_device->create_buffer(
+    auto staging_handle = Buffer::create(
         {.size = size, .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT, .memory_usage = VMA_MEMORY_USAGE_CPU_ONLY});
 
-    void* staging_area = p_device->map_buffer(p_device->buffers.get(staging_handle));
+    void* staging_area = device::buffers.get(staging_handle).map();
     std::memcpy(staging_area, data, size);
-    p_device->unmap_buffer(p_device->buffers.get(staging_handle));
+    device::buffers.get(staging_handle).unmap();
 
-    auto& image = p_device->images.get(image_handle);
-    auto& staging_buffer = p_device->buffers.get(staging_handle);
+    auto& image = device::images.get(image_handle);
+    auto& staging_buffer = device::buffers.get(staging_handle);
 
     VkBufferImageCopy buffer_image_copy{};
     buffer_image_copy.bufferOffset = 0;
@@ -333,8 +382,8 @@ void TransferCommand::upload_image(const bul::Handle<Image>& image_handle, const
 
 void TransferCommand::blit_image(const bul::Handle<Image>& src, const bul::Handle<Image>& dst)
 {
-    auto& src_image = p_device->images.get(src);
-    auto& dst_image = p_device->images.get(dst);
+    auto& src_image = device::images.get(src);
+    auto& dst_image = device::images.get(dst);
 
     VkImageBlit blit{};
     blit.srcSubresource.aspectMask = src_image.full_view.range.aspectMask;

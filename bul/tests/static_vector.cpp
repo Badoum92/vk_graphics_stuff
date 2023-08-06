@@ -30,6 +30,11 @@ struct TestInt
         val = -1;
     }
 
+    bool operator==(int i) const
+    {
+        return val == i;
+    }
+
     int val;
 };
 
@@ -40,7 +45,7 @@ TEST_CASE("simple valid")
     bul::StaticVector<int, 4> a;
     CHECK(a.capacity() == 4);
     CHECK(a.empty());
-    CHECK(a.push_back(1));
+    CHECK(a.push_back(1) == 1);
     REQUIRE(a.size() == 1);
     CHECK(a[0] == 1);
     CHECK(a.back() == 1);
@@ -53,35 +58,33 @@ TEST_CASE("simple invalid")
     bul::StaticVector<int, 1> a;
     CHECK(!a.pop_back());
     CHECK(a.size() == 0);
-    CHECK(a.push_back(1));
-    CHECK(a.size() == 1);
-    CHECK(!a.push_back(2));
+    CHECK(a.push_back(1) == 1);
     CHECK(a.size() == 1);
 }
 
 TEST_CASE("check values")
 {
     bul::StaticVector<TestInt, 4> a;
-    CHECK(a.push_back({1}));
-    CHECK(a.emplace_back(2));
-    CHECK(a.emplace_back());
+    CHECK(a.push_back({1}) == 1);
+    CHECK(a.emplace_back(2) == 2);
+    CHECK(a.emplace_back() == 42);
     REQUIRE(a.size() == 3);
-    CHECK(a[0].val == 1);
-    CHECK(a[1].val == 2);
-    CHECK(a[2].val == 42);
+    CHECK(a[0] == 1);
+    CHECK(a[1] == 2);
+    CHECK(a[2] == 42);
 }
 
 TEST_CASE("check destructor")
 {
     bul::StaticVector<TestInt, 4> a;
-    CHECK(a.push_back({1}));
-    CHECK(a.emplace_back(2));
+    CHECK(a.push_back({1}) == 1);
+    CHECK(a.emplace_back(2) == 2);
     REQUIRE(a.size() == 2);
-    CHECK(a[0].val == 1);
-    CHECK(a[1].val == 2);
+    CHECK(a[0] == 1);
+    CHECK(a[1] == 2);
     CHECK(a.pop_back());
     REQUIRE(a.size() == 1);
-    CHECK(a[1].val == -1);
+    CHECK(a[1] == -1);
 }
 
 TEST_CASE("resize")
@@ -91,11 +94,11 @@ TEST_CASE("resize")
     CHECK(a.empty());
     CHECK(a.resize(2));
     REQUIRE(a.size() == 2);
-    CHECK(a[0].val == 42);
-    CHECK(a[1].val == 42);
+    CHECK(a[0] == 42);
+    CHECK(a[1] == 42);
     CHECK(a.resize(1));
     REQUIRE(a.size() == 1);
-    CHECK(a[1].val == -1);
+    CHECK(a[1] == -1);
 }
 
 TEST_CASE("initializer list")
@@ -123,7 +126,7 @@ TEST_CASE("element copy")
     TestInt test_int;
     a.push_back(test_int);
     REQUIRE(a.size() == 1);
-    CHECK(a[0].val == 42);
+    CHECK(a[0] == 42);
 }
 
 TEST_CASE("element move")
@@ -132,8 +135,8 @@ TEST_CASE("element move")
     TestInt test_int;
     a.push_back(std::move(test_int));
     REQUIRE(a.size() == 1);
-    CHECK(a[0].val == 42);
-    CHECK(test_int.val == 0);
+    CHECK(a[0] == 42);
+    CHECK(test_int == 0);
 }
 
 TEST_CASE("vector copy")

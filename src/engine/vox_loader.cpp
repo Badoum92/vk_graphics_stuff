@@ -43,12 +43,12 @@ static size_t chunk_size(const ChunkId* chunk)
 
 static const ChunkId* next_chunk(const ChunkId* chunk)
 {
-    return bul::offset_ptr<ChunkId*>(chunk, chunk_size(chunk));
+    return bul::ptr_offset<ChunkId*>(chunk, chunk_size(chunk));
 }
 
 static const void* chunk_data(const ChunkId* chunk)
 {
-    return bul::offset_ptr(chunk, sizeof(ChunkId));
+    return bul::ptr_offset(chunk, sizeof(ChunkId));
 }
 
 static bool end_of_data(const ChunkId* chunk, const std::vector<uint8_t>& bytes)
@@ -59,20 +59,20 @@ static bool end_of_data(const ChunkId* chunk, const std::vector<uint8_t>& bytes)
 static std::string parse_string(const void* data)
 {
     uint32_t size = *(uint32_t*)data;
-    return std::string(bul::offset_ptr<char*>(data, sizeof(uint32_t)), size);
+    return std::string(bul::ptr_offset<char*>(data, sizeof(uint32_t)), size);
 }
 
 static std::unordered_map<std::string, std::string> parse_dict(const void* data)
 {
     uint32_t n_pairs = *(uint32_t*)data;
     std::unordered_map<std::string, std::string> dict(n_pairs);
-    data = bul::offset_ptr(data, sizeof(uint32_t));
+    data = bul::ptr_offset(data, sizeof(uint32_t));
     for (size_t i = 0; i < n_pairs; ++i)
     {
         std::string key = parse_string(data);
-        data = bul::offset_ptr(data, sizeof(uint32_t) + key.size());
+        data = bul::ptr_offset(data, sizeof(uint32_t) + key.size());
         std::string val = parse_string(data);
-        data = bul::offset_ptr(data, sizeof(uint32_t) + val.size());
+        data = bul::ptr_offset(data, sizeof(uint32_t) + val.size());
         dict.emplace(key, val);
     }
     return dict;
@@ -98,8 +98,8 @@ void Model::load(const std::string_view path)
 
     std::memcpy(palette.data(), default_palette, 256 * sizeof(uint32_t));
 
-    const ChunkId* main_chunk = (ChunkId*)bul::offset_ptr(vox_header, sizeof(Header));
-    const ChunkId* chunk = (ChunkId*)bul::offset_ptr(main_chunk, sizeof(ChunkId));
+    const ChunkId* main_chunk = (ChunkId*)bul::ptr_offset(vox_header, sizeof(Header));
+    const ChunkId* chunk = (ChunkId*)bul::ptr_offset(main_chunk, sizeof(ChunkId));
 
     for (; !end_of_data(chunk, bytes_); chunk = next_chunk(chunk))
     {
@@ -140,7 +140,7 @@ void Model::parse_size(const ChunkId* chunk)
 void Model::parse_xyzi(const ChunkId* chunk)
 {
     uint32_t n_voxels = *(uint32_t*)chunk_data(chunk);
-    XYZI* xyzi = bul::offset_ptr<XYZI*>(chunk_data(chunk), sizeof(uint32_t));
+    XYZI* xyzi = bul::ptr_offset<XYZI*>(chunk_data(chunk), sizeof(uint32_t));
     auto& c = chunks.back();
     c.n_voxels = n_voxels;
     c.xyzi = xyzi;
@@ -171,7 +171,7 @@ void Model::parse_matl(const ChunkId* chunk)
     {
         return;
     }
-    const auto& dict = parse_dict(bul::offset_ptr(chunk_data(chunk), sizeof(uint32_t)));
+    const auto& dict = parse_dict(bul::ptr_offset(chunk_data(chunk), sizeof(uint32_t)));
 
     /* std::cout << "MATL: " << id << "\n";
     for (const auto& [key, val] : dict)

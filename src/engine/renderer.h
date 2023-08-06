@@ -6,17 +6,12 @@
 #include "gltf.h"
 #include "device.h"
 
-namespace vk
-{
-struct Context;
-struct Device;
-struct Surface;
-} // namespace vk
+#include "fwd.h"
 
 class Renderer
 {
 public:
-    static Renderer create(vk::Context& context, vk::Device& device, vk::Surface& surface);
+    static Renderer create();
     void destroy();
 
     void init();
@@ -25,10 +20,6 @@ public:
     void render_gui();
 
 private:
-    vk::Context* p_context = nullptr;
-    vk::Device* p_device = nullptr;
-    vk::Surface* p_surface = nullptr;
-
     uint32_t frame_number = 0;
 
     gltf::Model model;

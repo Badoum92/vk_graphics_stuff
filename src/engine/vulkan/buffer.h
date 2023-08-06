@@ -17,6 +17,12 @@ struct BufferDescription
 
 struct Buffer
 {
+    static bul::Handle<Buffer> create(const BufferDescription& description);
+    static void destroy(bul::Handle<Buffer> handle);
+    void destroy();
+    void* map();
+    void unmap();
+
     BufferDescription description;
     VkBuffer vk_handle;
     VmaAllocation allocation = VK_NULL_HANDLE;
@@ -25,12 +31,15 @@ struct Buffer
 
 struct RingBuffer
 {
-    static RingBuffer create(Device& device, const BufferDescription& description);
+    static RingBuffer create(const BufferDescription& description);
+    void destroy();
+    void* map();
+    void unmap();
     uint32_t push(const void* data, uint32_t size);
 
     bul::Handle<Buffer> buffer_handle;
-    BufferDescription description;
-    uint8_t* mapped_data = nullptr;
+    void* mapped_data = nullptr;
+    uint32_t size = 0;
     uint32_t alignment = 0;
     uint32_t offset = 0;
 };

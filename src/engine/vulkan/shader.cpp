@@ -7,7 +7,7 @@
 
 namespace vk
 {
-bul::Handle<Shader> Device::create_shader(const std::string& path)
+bul::Handle<Shader> device::create_shader(const std::string& path)
 {
     std::vector<uint8_t> shader_code;
     bul::read_file((path + ".spv").c_str(), shader_code);
@@ -23,7 +23,7 @@ bul::Handle<Shader> Device::create_shader(const std::string& path)
     return shaders.insert({.path = std::string(path), .vk_handle = vk_shader});
 }
 
-void Device::destroy_shader(Shader& shader)
+void device::destroy_shader(Shader& shader)
 {
     vkDestroyShaderModule(vk_handle, shader.vk_handle, nullptr);
     shader.vk_handle = VK_NULL_HANDLE;

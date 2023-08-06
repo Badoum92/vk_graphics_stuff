@@ -9,7 +9,7 @@
 class PathTracingRenderer
 {
 public:
-    static PathTracingRenderer create(vk::Context& context, vk::Device& device, vk::Surface& surface);
+    static PathTracingRenderer create();
     void destroy();
 
     void init();
@@ -19,10 +19,6 @@ public:
     void render_gui();
 
 private:
-    vk::Context* p_context = nullptr;
-    vk::Device* p_device = nullptr;
-    vk::Surface* p_surface = nullptr;
-
     bool shaders_need_reload = true;
 
     uint32_t frame_number = 0;

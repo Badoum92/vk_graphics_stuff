@@ -84,7 +84,7 @@ struct DescriptorSet
     void bind_image(uint32_t binding, const bul::Handle<Image>& image);
     void bind_storage_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer);
     void bind_uniform_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer, uint32_t offset, uint32_t size);
-    VkDescriptorSet get_or_create_vk_set(Device& device);
+    VkDescriptorSet get_or_create_vk_set();
 };
 } // namespace vk
 

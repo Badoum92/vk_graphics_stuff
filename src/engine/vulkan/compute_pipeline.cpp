@@ -6,7 +6,7 @@
 
 namespace vk
 {
-bul::Handle<ComputeProgram> Device::create_compute_program(const ComputeProgramDescription& description)
+bul::Handle<ComputeProgram> device::create_compute_program(const ComputeProgramDescription& description)
 {
     DescriptorSet set = create_descriptor_set(description.descriptor_types);
 
@@ -36,7 +36,7 @@ bul::Handle<ComputeProgram> Device::create_compute_program(const ComputeProgramD
     return compute_programs.insert(std::move(program));
 }
 
-void Device::destroy_compute_program(ComputeProgram& compute_program)
+void device::destroy_compute_program(ComputeProgram& compute_program)
 {
     vkDestroyPipeline(vk_handle, compute_program.pipeline, nullptr);
     vkDestroyPipelineLayout(vk_handle, compute_program.layout, nullptr);

@@ -50,7 +50,6 @@ struct GraphicsProgram
     VkPipelineLayout layout = VK_NULL_HANDLE;
     std::vector<VkPipeline> pipelines;
     std::vector<RenderState> render_states;
-    RenderPass renderpass;
     DescriptorSet descriptor_set;
 };
 } // namespace vk

@@ -8,21 +8,21 @@
 
 namespace vk
 {
-struct Surface
+namespace surface
 {
-    static Surface create(Context& context, Device& device);
-    void destroy(Context& context, Device& device);
+    void create();
+    void destroy();
 
-    void create_swapchain(Device& device);
-    void destroy_swapchain(Device& device);
+    void create_swapchain();
+    void destroy_swapchain();
 
-    VkSurfaceKHR vk_handle = VK_NULL_HANDLE;
-    VkQueue present_queue = VK_NULL_HANDLE;
-    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-    VkExtent2D extent;
-    VkPresentModeKHR present_mode;
-    VkSurfaceFormatKHR format;
-    std::vector<bul::Handle<Image>> images;
-    std::vector<bul::Handle<FrameBuffer>> framebuffers;
+    inline VkSurfaceKHR vk_handle = VK_NULL_HANDLE;
+    inline VkQueue present_queue = VK_NULL_HANDLE;
+    inline VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    inline VkExtent2D extent;
+    inline VkPresentModeKHR present_mode;
+    inline VkSurfaceFormatKHR format;
+    inline std::vector<bul::Handle<Image>> images;
+    inline std::vector<bul::Handle<FrameBuffer>> framebuffers;
 };
 } // namespace vk

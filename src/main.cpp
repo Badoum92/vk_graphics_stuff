@@ -12,17 +12,18 @@
 #include "bul/containers/pool.h"
 #include "bul/math/vector.h"
 #include "bul/util.h"
+#include "bul/log.h"
 
 int main(int, char**)
 {
     try
     {
         bul::window::create("Window");
-        auto context = vk::Context::create();
-        auto device = vk::Device::create(context);
-        auto surface = vk::Surface::create(context, device);
-        // auto renderer = Renderer::create(context, device, surface);
-        auto renderer = PathTracingRenderer::create(context, device, surface);
+        vk::context::create();
+        vk::device::create();
+        vk::surface::create();
+        auto renderer = Renderer::create();
+        // auto renderer = PathTracingRenderer::create();
         renderer.init();
 
         while (!bul::window::should_close())
@@ -43,16 +44,16 @@ int main(int, char**)
             renderer.render();
         }
 
-        device.wait_idle();
+        vk::device::wait_idle();
 
         renderer.destroy();
-        surface.destroy(context, device);
-        device.destroy();
-        context.destroy();
+        vk::surface::destroy();
+        vk::device::destroy();
+        vk::context::destroy();
         bul::window::destroy();
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Uncaught exception: " << e.what() << "\n";
+        bul::log_error("Uncaught exception: %s\n", e.what());
     }
 }

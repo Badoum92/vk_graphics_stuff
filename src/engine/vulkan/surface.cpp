@@ -12,60 +12,58 @@
 
 namespace vk
 {
-static VkQueue get_present_queue(Device& device, const Surface& surface)
+static VkQueue get_present_queue()
 {
     VkQueue queue = VK_NULL_HANDLE;
     VkBool32 supported = false;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device.physical_device.vk_handle, device.graphics_family_index,
-                                                  surface.vk_handle, &supported));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(context::physical_device.vk_handle, device::graphics_queue.index,
+                                                  surface::vk_handle, &supported));
     if (supported)
     {
-        vkGetDeviceQueue(device.vk_handle, device.graphics_family_index, 0, &queue);
+        vkGetDeviceQueue(device::vk_handle, device::graphics_queue.index, 0, &queue);
         return queue;
     }
-    VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(device.physical_device.vk_handle, device.compute_family_index,
-                                                  surface.vk_handle, &supported));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(context::physical_device.vk_handle, device::compute_queue.index,
+                                                  surface::vk_handle, &supported));
     if (supported)
     {
-        vkGetDeviceQueue(device.vk_handle, device.compute_family_index, 0, &queue);
+        vkGetDeviceQueue(device::vk_handle, device::compute_queue.index, 0, &queue);
         return queue;
     }
     ASSERT_MSG(false, "Could not find a present queue");
     return queue;
 }
 
-Surface Surface::create(Context& context, Device& device)
+void surface::create()
 {
-    Surface surface = {};
     VkWin32SurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     create_info.hwnd = reinterpret_cast<HWND>(bul::window::handle());
     create_info.hinstance = GetModuleHandle(nullptr);
-    vkCreateWin32SurfaceKHR(context.instance, &create_info, nullptr, &surface.vk_handle);
-    surface.present_queue = get_present_queue(device, surface);
-    surface.create_swapchain(device);
-    return surface;
+    vkCreateWin32SurfaceKHR(context::instance, &create_info, nullptr, &vk_handle);
+    present_queue = get_present_queue();
+    create_swapchain();
 }
 
-void Surface::destroy(Context& context, Device& device)
+void surface::destroy()
 {
-    destroy_swapchain(device);
-    vkDestroySurfaceKHR(context.instance, vk_handle, nullptr);
+    destroy_swapchain();
+    vkDestroySurfaceKHR(context::instance, vk_handle, nullptr);
     vk_handle = VK_NULL_HANDLE;
 }
 
-void Surface::create_swapchain(Device& device)
+void surface::create_swapchain()
 {
     VkSurfaceCapabilitiesKHR capabilities;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physical_device.vk_handle, vk_handle, &capabilities));
+    VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context::physical_device.vk_handle, vk_handle, &capabilities));
     extent = capabilities.currentExtent;
 
     uint32_t present_mode_count = 0;
-    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device.physical_device.vk_handle, vk_handle, &present_mode_count,
-                                                       nullptr));
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(context::physical_device.vk_handle, vk_handle,
+                                                       &present_mode_count, nullptr));
     std::vector<VkPresentModeKHR> present_modes(present_mode_count);
-    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device.physical_device.vk_handle, vk_handle, &present_mode_count,
-                                                       present_modes.data()));
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(context::physical_device.vk_handle, vk_handle,
+                                                       &present_mode_count, present_modes.data()));
 
     present_mode = VK_PRESENT_MODE_FIFO_KHR;
     for (const auto& mode : present_modes)
@@ -79,9 +77,10 @@ void Surface::create_swapchain(Device& device)
 
     uint32_t format_count = 0;
     std::vector<VkSurfaceFormatKHR> formats;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device.physical_device.vk_handle, vk_handle, &format_count, nullptr));
+    VK_CHECK(
+        vkGetPhysicalDeviceSurfaceFormatsKHR(context::physical_device.vk_handle, vk_handle, &format_count, nullptr));
     formats.resize(format_count);
-    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device.physical_device.vk_handle, vk_handle, &format_count,
+    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(context::physical_device.vk_handle, vk_handle, &format_count,
                                                   formats.data()));
 
     format = formats[0];
@@ -119,12 +118,12 @@ void Surface::create_swapchain(Device& device)
     create_info.clipped = VK_TRUE;
     create_info.oldSwapchain = VK_NULL_HANDLE;
 
-    VK_CHECK(vkCreateSwapchainKHR(device.vk_handle, &create_info, nullptr, &swapchain));
+    VK_CHECK(vkCreateSwapchainKHR(device::vk_handle, &create_info, nullptr, &swapchain));
 
     image_count = 0;
-    VK_CHECK(vkGetSwapchainImagesKHR(device.vk_handle, swapchain, &image_count, nullptr));
+    VK_CHECK(vkGetSwapchainImagesKHR(device::vk_handle, swapchain, &image_count, nullptr));
     std::vector<VkImage> vk_images(image_count);
-    VK_CHECK(vkGetSwapchainImagesKHR(device.vk_handle, swapchain, &image_count, vk_images.data()));
+    VK_CHECK(vkGetSwapchainImagesKHR(device::vk_handle, swapchain, &image_count, vk_images.data()));
 
     images.resize(image_count);
     framebuffers.resize(image_count);
@@ -142,21 +141,19 @@ void Surface::create_swapchain(Device& device)
 
     for (uint32_t i = 0; i < image_count; ++i)
     {
-        images[i] = device.create_image(img_desc, vk_images[i]);
-        framebuffers[i] = device.create_framebuffer(fb_desc, {images[i]}, bul::Handle<Image>::invalid);
+        images[i] = Image::create(img_desc, vk_images[i]);
+        framebuffers[i] = FrameBuffer::create(fb_desc, {images[i]}, bul::Handle<Image>::invalid);
     }
 }
 
-void Surface::destroy_swapchain(Device& device)
+void surface::destroy_swapchain()
 {
     for (uint32_t i = 0; i < images.size(); ++i)
     {
-        device.destroy_image(device.images.get(images[i]));
-        device.images.erase(images[i]);
-        device.destroy_framebuffer(device.framebuffers.get(framebuffers[i]));
-        device.framebuffers.erase(framebuffers[i]);
+        Image::destroy(images[i]);
+        FrameBuffer::destroy(framebuffers[i]);
     }
-    vkDestroySwapchainKHR(device.vk_handle, swapchain, nullptr);
+    vkDestroySwapchainKHR(device::vk_handle, swapchain, nullptr);
     swapchain = VK_NULL_HANDLE;
 }
 } // namespace vk
