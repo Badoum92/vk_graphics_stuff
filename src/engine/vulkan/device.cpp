@@ -38,17 +38,13 @@ Device Device::create(const Context& context)
         {
             device.graphics_family_index = i;
         }
-        else if (queue_families[i].queueFlags & VK_QUEUE_COMPUTE_BIT && device.compute_family_index == UINT32_MAX)
+        if (queue_families[i].queueFlags & VK_QUEUE_COMPUTE_BIT && device.compute_family_index == UINT32_MAX)
         {
             device.compute_family_index = i;
         }
-        else if (queue_families[i].queueFlags & VK_QUEUE_TRANSFER_BIT && device.transfer_family_index == UINT32_MAX)
+        if (queue_families[i].queueFlags & VK_QUEUE_TRANSFER_BIT && device.transfer_family_index == UINT32_MAX)
         {
             device.transfer_family_index = i;
-        }
-        else
-        {
-            continue;
         }
         queue_create_infos.push_back(queue_info);
     }

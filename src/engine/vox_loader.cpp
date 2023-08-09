@@ -86,7 +86,7 @@ Model::Model(const std::string_view path)
 void Model::load(const std::string_view path)
 {
     chunks.clear();
-    bul::read_file(path.data(), bytes_);
+    ENSURE(bul::read_file(path.data(), bytes_));
 
     auto vox_header = (Header*)(bytes_.data());
     if (strncmp(vox_header->magic, "VOX ", 4) != 0)
