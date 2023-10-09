@@ -57,6 +57,9 @@ namespace input::_private
 void new_frame();
 }
 
+extern EnumArray<MouseButton, bool> mouse_buttons;
+extern EnumArray<Key, bool> keys;
+
 bool button_down(MouseButton button);
 bool button_pressed(MouseButton button);
 bool button_released(MouseButton button);

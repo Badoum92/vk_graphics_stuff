@@ -12,36 +12,34 @@ struct Handle
         , version(UINT32_MAX)
     {}
 
-    explicit constexpr Handle(uint32_t val, uint32_t ver = 0)
-        : value(val)
-        , version(ver)
+    explicit constexpr Handle(uint32_t value_, uint32_t version_ = 0)
+        : value(value_)
+        , version(version_)
     {
-        ASSERT(val != UINT32_MAX);
+        ASSERT(value != UINT32_MAX && version != UINT32_MAX);
     }
 
-    inline bool is_valid() const
+    constexpr bool is_valid() const
     {
         return value != UINT32_MAX;
     }
 
-    inline bool operator==(const Handle& other) const
+    constexpr bool operator==(const Handle& other) const
     {
         return value == other.value && version == other.version;
     }
 
-    inline bool operator<(const Handle& other) const
+    constexpr bool operator<(const Handle& other) const
     {
         return value < other.value;
     }
 
-    explicit operator bool() const
+    constexpr operator bool() const
     {
         return is_valid();
     }
 
     uint32_t value = 0;
     uint32_t version = 0;
-
-    inline static const Handle<T> invalid;
 };
 } // namespace bul

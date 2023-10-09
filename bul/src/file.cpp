@@ -11,7 +11,7 @@ static size_t file_size(FILE* file)
         return 0;
     }
     int64_t size = _ftelli64(file);
-    return size != -1 ? size : 0;
+    return size != -1 ? size : 0ull;
 }
 
 size_t file_size(const char* path)

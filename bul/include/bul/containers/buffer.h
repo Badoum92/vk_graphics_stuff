@@ -1,88 +1,46 @@
 #pragma once
 
-#include "bul/bul.h"
-
-#include <cstdlib>
+#include "bul/types.h"
+#include "bul/containers/span.h"
 
 namespace bul
 {
-template <typename T>
-class Buffer
+struct buffer : public non_copyable
 {
-public:
-    Buffer() = default;
+    buffer() = default;
+    explicit buffer(size_t size);
+    ~buffer();
 
-    Buffer(size_t size)
+    buffer(buffer&& other);
+    buffer& operator=(buffer&& other);
+
+    void resize(size_t size);
+
+    template <typename T>
+    T as()
     {
-        data_ = (T*)malloc(1, size * sizeof(T));
-        ASSERT(data_ != nullptr);
-        size_ = size;
+        return reinterpret_cast<T>(data);
     }
 
-    Buffer(const Buffer<T>&) = delete;
-    Buffer<T>& operator=(const Buffer<T>&) = delete;
-
-    Buffer(Buffer<T>&& other)
+    template <typename T>
+    const T as() const
     {
-        *this = std::move(other);
+        return reinterpret_cast<T>(data);
     }
 
-    Buffer<T>& operator=(Buffer<T>&& other)
+    template <typename T>
+    operator span<T>()
     {
-        free(data_);
-        data_ = other.data_;
-        size_ = other.size_;
-        other.data_ = nullptr;
-        other.size_ = 0;
-        return *this;
+        return span<T>{as<T>(), size / sizeof(T)};
     }
 
-    ~Buffer()
+    template <typename T>
+    operator span<const T>() const
     {
-        free(data_);
-        data_ = nullptr;
-        size_ = 0;
+        return span<const T>{as<T>(), size / sizeof(T)};
     }
 
-    void resize(size_t size)
-    {
-        data_ = (T*)realloc(data_, size * sizeof(T));
-        ASSERT(data_ != nullptr);
-        size_ = size;
-    }
-
-    size_t size() const
-    {
-        return size_;
-    }
-
-    size_t size_bytes() const
-    {
-        return size_ * sizeof(T);
-    }
-
-    const T* data() const
-    {
-        return data_;
-    }
-
-    T* data()
-    {
-        return data_;
-    }
-
-    T& operator[](size_t i)
-    {
-        return data_[i];
-    }
-
-    const T& operator[](size_t i) const
-    {
-        return data_[i];
-    }
-
-private:
-    T* data_ = nullptr;
-    size_t size_ = 0;
+    uint8_t* data = nullptr;
+    size_t size = 0;
 };
 } // namespace bul

@@ -1,198 +1,288 @@
 #pragma once
 
+#include <cstdlib>
+#include <utility>
 #include <type_traits>
+#include <initializer_list>
 
 #include "bul/bul.h"
-#include "bul/containers/buffer.h"
+#include "bul/containers/span.h"
 
 namespace bul
 {
 template <typename T>
-class Vector
+struct vector
 {
-public:
-    Vector() = default;
+    static_assert(std::is_default_constructible_v<T>, "Type must be default constructible");
+    static_assert(std::is_move_constructible_v<T>, "Type must be move constructible");
 
-    Vector(size_t size)
+    vector() = default;
+
+    explicit vector(size_t size)
     {
         resize(size);
     }
 
-    Vector(const Vector<T>& other)
+    vector(std::initializer_list<T> init_list)
+    {
+        reserve(init_list.size());
+        for (const auto& element : init_list)
+        {
+            emplace_back(element);
+        }
+    }
+
+    vector(size_t size, const T& default_value)
+    {
+        reserve(size);
+        for (size_t i = 0; i < size; ++i)
+        {
+            emplace_back(default_value);
+        }
+    }
+
+    ~vector()
+    {
+        clear();
+        free(_begin);
+        _begin = nullptr;
+        _current = nullptr;
+        _end = nullptr;
+    }
+
+    vector(const vector<T>& other)
     {
         *this = other;
     }
 
-    Vector<T>& operator=(const Vector<T>& other)
+    vector<T>& operator=(const vector<T>& other)
     {
-        Buffer<T> new_buffer(other.size_);
+        free(_begin);
+        _begin = reinterpret_cast<T*>(malloc(other.size_bytes()));
+        _current = _begin + other.size();
+        _end = _current;
         for (size_t i = 0; i < other.size(); ++i)
         {
-            new_buffer[i] = other[i];
+            new (&_begin[i]) T(other[i]);
         }
-        buffer_ = std::move(new_buffer);
-        size_ = other.size();
+        return *this;
     }
 
-    Vector(Vector<T>&&) = default;
-    Vector<T>& operator=(Vector<T>&&) = default;
-
-    void resize(size_t size)
+    vector(vector<T>&& other)
     {
-        if (size < size_)
+        *this = std::move(other);
+    }
+
+    vector<T>& operator=(vector<T>&& other)
+    {
+        free(_begin);
+        _begin = other._begin;
+        _current = other._current;
+        _end = other._end;
+        other._begin = nullptr;
+        other._current = nullptr;
+        other._end = nullptr;
+        return *this;
+    }
+
+    void resize(size_t size_)
+    {
+        if (size_ < size())
         {
-            shrink(size);
+            if constexpr (!std::is_trivially_destructible_v<T>)
+            {
+                for (T* cur = _begin + size_; cur < _current; ++cur)
+                {
+                    cur->~T();
+                }
+            }
+            _current = _begin + size_;
+        }
+        else
+        {
+            reserve(size_);
+            for (T* cur = _current; cur < _end; ++cur)
+            {
+                new (cur) T();
+            }
+            _current = _end;
+        }
+    }
+
+    void reserve(size_t size_)
+    {
+        if (size_ <= capacity())
+        {
             return;
         }
 
-        reserve(size);
-        for (size_t i = size_; i < size; ++i)
+        T* new_begin = reinterpret_cast<T*>(malloc(size_ * sizeof(T)));
+        T* new_end = new_begin + size_;
+        T* new_current = new_begin + size();
+        for (T* cur = new_begin; cur < new_current; ++cur)
         {
-            new (&buffer_[i]) T();
+            new (cur) T(std::move(_begin[i]));
         }
-        size_ = size;
-    }
-
-    void reserve(size_t size)
-    {
-        if (size < capacity())
-        {
-            return;
-        }
-
-        size_t new_capacity = capacity() == 0 ? 2 : capacity() * 2;
-        Buffer<T> new_buffer(new_capacity);
-        for (size_t i = 0; i < buffer_.size(); ++i)
-        {
-            if constexpr (std::is_move_constructible_v<T>)
-            {
-                new_buffer[i] = std::move(buffer_[i]);
-            }
-            else
-            {
-                new_buffer[i] = buffer_[i];
-            }
-        }
-        buffer_ = std::move(new_buffer);
-    }
-
-    T& push_back(const T& value)
-    {
-        return emplace_back(value);
-    }
-
-    T& push_back(T&& value)
-    {
-        return emplace_back(std::move(value));
+        free(_begin);
+        _begin = new_begin;
+        _current = new_current;
+        _end new_end;
     }
 
     template <typename... Args>
     T& emplace_back(Args&&... args)
     {
-        if (size() == capacity())
+        if (_current == _end)
         {
-            reserve(capacity() == 0 ? 2 : capacity() * 2);
+            reserve(capacity() == 0 ? 1 : capacity() * 2);
         }
-        T* ret = new (&buffer_[size_]) T(std::forward<Args>(args)...);
-        ++size_;
+        T* ret = new (_current) T(std::forward<Args>(args)...);
+        ++_current;
         return *ret;
     }
 
     T&& pop_back()
     {
-        --size_;
-        return std::move(buffer_[size_]);
+        ASSERT(size() > 0);
+        --_current;
+        return std::move(*_current);
     }
 
     void clear()
     {
-        shrink(0);
+        resize(0);
     }
 
     size_t size() const
     {
-        return size_;
+        return _current - _begin;
+    }
+
+    size_t size_bytes() const
+    {
+        return size() * sizeof(T);
     }
 
     size_t capacity() const
     {
-        return buffer_.size();
+        return _end - _begin;
     }
 
     bool empty() const
     {
-        return size_ == 0;
+        return _current == _begin;
     }
 
     T* data()
     {
-        return buffer_.data();
+        return _begin;
     }
 
     const T* data() const
     {
-        return buffer_.data();
+        return _begin;
     }
 
-    T& operator[](size_t i)
+    T& operator[](size_t index)
     {
-        return buffer_[i];
+        ASSERT(index < size());
+        return _begin[index];
     }
 
-    const T& operator[](size_t i) const
+    const T& operator[](size_t index) const
     {
-        return buffer_[i];
+        ASSERT(index < size());
+        return _begin[index];
     }
 
     T& front()
     {
-        return buffer_[0];
+        ASSERT(size() > 0);
+        return *_begin;
     }
 
     const T& front() const
     {
-        return buffer_[0];
+        ASSERT(size() > 0);
+        return *_begin;
     }
 
     T& back()
     {
-        return buffer_[size_ - 1];
+        ASSERT(size() > 0);
+        return *(_current - 1);
     }
 
     const T& back() const
     {
-        return buffer_[size_ - 1];
+        ASSERT(size() > 0);
+        return *(_current - 1);
     }
 
     T* begin()
     {
-        return &buffer_[0];
+        return _begin;
+    }
+
+    const T* begin() const
+    {
+        return _begin;
     }
 
     T* end()
     {
-        return begin() + size_;
+        return _end;
     }
 
-private:
-    Buffer<T> buffer_;
-    size_t size_ = 0;
-
-    void shrink(size_t size)
+    const T* end() const
     {
-        if (size >= size_)
-        {
-            return;
-        }
+        return _end;
+    }
 
-        if constexpr (!std::is_trivially_destructible_v<T>)
+    size_t find(const T& to_find) const
+    {
+        for (T* cur = _begin; cur < _current; ++cur)
         {
-            for (size_t i = size; i < size_; ++i)
+            if (*cur == to_find)
             {
-                buffer_[i].~T();
+                return cur - _begin;
             }
         }
-        size_ = size;
+        return size_t(-1);
     }
+
+    void erase(size_t index)
+    {
+        ASSERT(index < size());
+        std::swap(_begin[index], back());
+        pop_back();
+    }
+
+    void erase_stable(size_t index)
+    {
+        ASSERT(index < size());
+        for (T* cur = _begin + index; cur < _current - 1; ++cur)
+        {
+            new (cur) T(std::move(*(cur + 1)));
+        }
+        if (!std::is_trivially_default_constructible_v<T>)
+        {
+            _current->~T();
+        }
+    }
+
+    operator span<T>()
+    {
+        return span<T>{_begin, _current};
+    }
+
+    operator span<const T>() const
+    {
+        return span<const T>{_begin, _current};
+    }
+
+    T* _begin = nullptr;
+    T* _current = nullptr;
+    T* _end = nullptr;
 };
 } // namespace bul

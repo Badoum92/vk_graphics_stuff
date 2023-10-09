@@ -1,104 +1,114 @@
 #pragma once
 
+#include <new>
+#include <utility>
 #include <type_traits>
 #include <initializer_list>
 
 #include "bul/bul.h"
+#include "bul/containers/span.h"
 
 namespace bul
 {
 template <typename T, size_t CAPACITY>
-class StaticVector
+struct static_vector
 {
     static_assert(std::is_default_constructible_v<T>, "Type must be default constructible");
+    static_assert(std::is_move_constructible_v<T>, "Type must be move constructible");
 
-public:
-    constexpr StaticVector() = default;
+    constexpr static_vector() = default;
 
-    constexpr StaticVector(std::initializer_list<T> vals)
+    constexpr static_vector(std::initializer_list<T> init_list)
     {
-        for (const auto& val : vals)
+        for (const auto& element : init_list)
         {
-            push_back(val);
+            emplace_back(element);
         }
     }
 
-    constexpr ~StaticVector()
+    constexpr ~static_vector()
     {
-        if constexpr (!std::is_trivially_destructible_v<T>)
+        clear();
+    }
+
+    constexpr static_vector(const static_vector<T, CAPACITY>& other)
+    {
+        *this = other;
+    }
+
+    constexpr static_vector& operator=(const static_vector<T, CAPACITY>& other)
+    {
+        for (size_t i = 0; i < _size; ++i)
         {
-            for (size_t i = 0; i < size_; ++i)
+            new (&_data[i]) T(other._data[i]);
+        }
+        for (size_t i = other._size; i < _size; ++i)
+        {
+            _data[i].~T();
+        }
+        other._size = 0;
+    }
+
+    constexpr static_vector(static_vector<T, CAPACITY>&& other)
+    {
+        *this = std::move(other);
+    }
+
+    constexpr static_vector& operator=(static_vector<T, CAPACITY>&& other)
+    {
+        for (size_t i = 0; i < _size; ++i)
+        {
+            new (&_data[i]) T(std::move(other._data[i]));
+        }
+        for (size_t i = other._size; i < _size; ++i)
+        {
+            _data[i].~T();
+        }
+        other._size = 0;
+    }
+
+    constexpr void resize(size_t size_)
+    {
+        ASSERT(size_ <= CAPACITY)
+        if (size_ < _size)
+        {
+            if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                data_[i].~T();
+                for (size_t i = size_; i < _size; ++i)
+                {
+                    _data[i].~T();
+                }
             }
         }
-    }
-
-    constexpr StaticVector(const StaticVector&) = default;
-    constexpr StaticVector& operator=(const StaticVector&) = default;
-    constexpr StaticVector(StaticVector&&) = default;
-    constexpr StaticVector& operator=(StaticVector&&) = default;
-
-    constexpr bool resize(size_t new_size)
-    {
-        if (new_size > CAPACITY)
+        else
         {
-            return false;
-        }
-        for (size_t i = size_; i < new_size; ++i)
-        {
-            new (data_ + i) T();
-        }
-        if constexpr (!std::is_trivially_destructible_v<T>)
-        {
-            for (size_t i = new_size; i < size_; ++i)
+            for (size_t i = _size; i < size_; ++i)
             {
-                data_[i].~T();
+                new (&_data[i]) T();
             }
         }
-        size_ = new_size;
-        return true;
-    }
-
-    constexpr T& push_back(const T& val)
-    {
-        return emplace_back(val);
-    }
-
-    constexpr T& push_back(T&& val)
-    {
-        return emplace_back(std::move(val));
+        _size = size_;
     }
 
     template <typename... Args>
     constexpr T& emplace_back(Args&&... args)
     {
-        ASSERT(size_ < CAPACITY);
-        T* ret = new (data_ + size_) T(std::forward<Args>(args)...);
-        ++size_;
+        ASSERT(_size < CAPACITY);
+        T* ret = new (&_data[_size]) T(std::forward<Args>(args)...);
+        ++_size;
         return *ret;
     }
 
-    constexpr bool pop_back()
+    constexpr T&& pop_back()
     {
-        if (size_ == 0)
-        {
-            return false;
-        }
-        --size_;
-        if constexpr (!std::is_trivially_destructible_v<T>)
-        {
-            data_[size_].~T();
-        }
-        return true;
+        ASSERT(_size > 0);
+        --_size;
+        return std::move(_data[_size]);
     }
 
     constexpr void clear()
     {
-        while (pop_back())
-        {
-            continue;
-        }
+        resize(0);
     }
 
     constexpr size_t capacity() const
@@ -108,56 +118,80 @@ public:
 
     constexpr size_t size() const
     {
-        return size_;
+        return _size;
+    }
+
+    constexpr size_t size_bytes() const
+    {
+        return _size * sizeof(T);
     }
 
     constexpr bool empty() const
     {
-        return size() == 0;
+        return _size == 0;
     }
 
     constexpr T* begin()
     {
-        return data_;
+        return _data;
+    }
+
+    constexpr const T* begin() const
+    {
+        return _data;
     }
 
     constexpr T* end()
     {
-        return data_ + size_;
+        return _data + _size;
     }
 
-    constexpr const T* data() const
+    constexpr const T* end() const
     {
-        return data_;
+        return _data + _size;
     }
 
     constexpr T* data()
     {
-        return data_;
+        return _data;
     }
 
-    constexpr const T& back() const
+    constexpr const T* data() const
     {
-        return data_[size_ - 1];
+        return _data;
     }
 
     constexpr T& back()
     {
-        return data_[size_ - 1];
+        return _data[_size - 1];
     }
 
-    constexpr const T& operator[](size_t index) const
+    constexpr const T& back() const
     {
-        return data_[index];
+        return _data[_size - 1];
     }
 
     constexpr T& operator[](size_t index)
     {
-        return data_[index];
+        return _data[index];
     }
 
-private:
-    size_t size_ = 0;
-    alignas(T) T data_[CAPACITY] = {};
+    constexpr const T& operator[](size_t index) const
+    {
+        return _data[index];
+    }
+
+    operator span<T>()
+    {
+        return span<T>{_data, _size};
+    }
+
+    operator span<const T>() const
+    {
+        return span<const T>{_data, _size};
+    }
+
+    size_t _size = 0;
+    alignas(T) T _data[CAPACITY] = {};
 };
 } // namespace bul

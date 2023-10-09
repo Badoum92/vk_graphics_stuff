@@ -6,7 +6,7 @@
 
 namespace bul
 {
-static thread_local Buffer<char> log_buffer;
+static thread_local buffer log_buffer;
 
 const char* format(const char* fmt, ...)
 {
@@ -21,12 +21,13 @@ const char* format(const char* fmt, va_list args)
 {
     va_list args_copy;
     va_copy(args_copy, args);
-    size_t size = vsnprintf(nullptr, 0, fmt, args);
-    if (size >= log_buffer.size())
+    int size = vsnprintf(nullptr, 0, fmt, args);
+    ASSERT(size > 0);
+    if (size_t(size) >= log_buffer.size)
     {
-        log_buffer.resize(size + 1);
+        log_buffer.resize(size_t(size) + 1);
     }
-    vsnprintf(log_buffer.data(), log_buffer.size(), fmt, args_copy);
-    return log_buffer.data();
+    vsnprintf(log_buffer.as<char*>(), log_buffer.size, fmt, args_copy);
+    return log_buffer.as<char*>();
 }
 } // namespace bul

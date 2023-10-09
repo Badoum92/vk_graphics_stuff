@@ -4,26 +4,38 @@
 
 namespace bul
 {
-class LinearAllocator
+struct linear_allocator : public non_copyable
 {
-public:
-    LinearAllocator(size_t capacity);
-    ~LinearAllocator();
+    using free_t = void (*)(void*);
 
-    LinearAllocator(const LinearAllocator&) = delete;
-    LinearAllocator& operator=(const LinearAllocator&) = delete;
+    explicit linear_allocator(size_t capacity);
+    linear_allocator(void* buffer, size_t size, free_t free_function = nullptr);
+    ~linear_allocator();
 
-    LinearAllocator(LinearAllocator&& other);
-    LinearAllocator& operator=(LinearAllocator&& other);
+    linear_allocator(linear_allocator&& other);
+    linear_allocator& operator=(linear_allocator&& other);
 
     void* allocate(size_t size, size_t alignment = 8);
-    void free(void*) {}
 
-    void clear() { current_ = begin_; }
+    template <typename T>
+    T* allocate()
+    {
+        return allocate(sizeof(T), alignof(T));
+    }
 
-private:
-    uint8_t* begin_ = nullptr;
-    uint8_t* end_ = nullptr;
-    uint8_t* current_ = nullptr;
+    void free(void* ptr)
+    {
+        current = ptr;
+    }
+
+    void clear()
+    {
+        current = begin;
+    }
+
+    uint8_t* begin = nullptr;
+    uint8_t* end = nullptr;
+    uint8_t* current = nullptr;
+    free_t free_function = nullptr;
 };
-}
+} // namespace bul

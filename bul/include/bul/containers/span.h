@@ -5,75 +5,111 @@
 namespace bul
 {
 template <typename T>
-class Span
+struct span
 {
-public:
-    Span(T* data, size_t size)
-        : data_(data)
-        , size_(size)
+    constexpr span(T* begin, T* end)
+        : _begin(begin)
+        , _end(end)
     {}
 
-    Span(T* begin, T* end)
-        : data_(begin)
-        , size_(end - begin)
+    constexpr span(T* data, size_t size)
+        : _begin(data)
+        , _end(data + size)
     {}
 
-    Span(Span<T> other, size_t offset)
+    constexpr span(span<T> other, size_t offset)
     {
         ASSERT(offset <= other.size_);
-        return Span<T>(other.data_ + offset, other.size_ - offset);
+        return span<T>(other._begin + offset, other.size_ - offset);
     }
 
-    Span(Span<T> other, size_t offset, size_t size)
+    constexpr span(span<T> other, size_t offset, size_t size)
     {
         ASSERT(offset + size <= other.size_);
-        return Span<T>(other.data_ + offset, size);
+        return span<T>(other._begin + offset, size);
     }
 
-    size_t size() const
+    constexpr span(const span<T>& other)
     {
-        return size_;
+        *this = other;
     }
 
-    size_t size_btyes() const
+    constexpr span<T>& operator=(const span<T>& other)
     {
-        return size_ * sizeof(T);
+        _begin = other._begin;
+        _end = other._end;
+        return *this;
     }
 
-    T& operator[](size_t i) const
+    constexpr size_t size() const
     {
-        ASSERT(i < size_);
+        return _end - _begin;
+    }
+
+    constexpr size_t size_bytes() const
+    {
+        return size() * sizeof(T);
+    }
+
+    constexpr T& operator[](size_t i)
+    {
+        ASSERT(i < size());
         return data[i];
     }
 
-    T* begin() const
+    constexpr const T& operator[](size_t i) const
     {
-        return data_;
+        ASSERT(i < size());
+        return data[i];
     }
 
-    T* end() const
+    constexpr T* begin()
     {
-        return data_ + size_;
+        return _begin;
     }
 
-    T* data() const
+    constexpr T* end()
     {
-        return data_;
+        return _end;
     }
 
-    bool empty() const
+    constexpr const T* begin() const
     {
-        return size_ == 0;
+        return _begin;
+    }
+
+    constexpr const T* end() const
+    {
+        return _end;
+    }
+
+    constexpr T* data()
+    {
+        return _begin;
+    }
+
+    constexpr T* data() const
+    {
+        return _begin;
+    }
+
+    constexpr bool empty() const
+    {
+        return _begin == _end;
     }
 
     template <typename U>
-    Span<U> as() const
+    constexpr span<U> as() const
     {
-        return Span((U*)data, size_bytes() / sizeof(U));
+        return span(reinterpret_cast<U*>(data), size_bytes() / sizeof(U));
     }
 
-private:
-    T* data_ = nullptr;
-    size_t size_ = 0;
+    constexpr operator span<const T>() const
+    {
+        return span<const T>{_begin, _end};
+    }
+
+    T* _begin = nullptr;
+    T* _end = nullptr;
 };
 } // namespace bul

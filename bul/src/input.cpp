@@ -6,10 +6,10 @@
 
 namespace bul
 {
-static EnumArray<MouseButton, bool> mouse_buttons = {false};
+EnumArray<MouseButton, bool> mouse_buttons = {false};
 static EnumArray<MouseButton, bool> mouse_buttons_prev = {false};
 
-static EnumArray<Key, bool> keys = {false};
+EnumArray<Key, bool> keys = {false};
 static EnumArray<Key, bool> keys_prev = {false};
 
 namespace input::_private

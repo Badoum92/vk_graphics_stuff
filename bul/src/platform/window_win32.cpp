@@ -9,7 +9,7 @@
 
 namespace bul::window
 {
-std::vector<Event> events;
+static std::vector<Event> events;
 static vec2u size_ = {0, 0};
 static HWND handle_ = nullptr;
 static bool should_close_ = false;
@@ -21,7 +21,7 @@ static bul::vec2i save_visible_cursor_pos_ = cursor_pos_;
 static bul::vec2i save_invisible_cursor_pos_ = cursor_pos_;
 
 static RAWINPUT* raw_input_ = nullptr;
-static size_t raw_input_size_ = 0;
+static UINT raw_input_size_ = 0;
 
 // clang-format off
 static EnumArray<Key, int> key_to_win32_key = {
@@ -47,8 +47,8 @@ void create(const std::string_view title, vec2u size)
 
     RECT rect = {0, 0, static_cast<LONG>(size_.x), static_cast<LONG>(size_.y)};
     AdjustWindowRectEx(&rect, WS_BORDER | WS_OVERLAPPEDWINDOW, false, 0);
-    size_.x = rect.right - rect.left;
-    size_.y = rect.bottom - rect.top;
+    size_.x = uint32_t(rect.right - rect.left);
+    size_.y = uint32_t(rect.bottom - rect.top);
     handle_ = CreateWindowEx(0, wc.lpszClassName, title.data(), WS_BORDER | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
                              CW_USEDEFAULT, size_.x, size_.y, nullptr, nullptr, wc.hInstance, nullptr);
 
@@ -57,7 +57,7 @@ void create(const std::string_view title, vec2u size)
     ShowWindow(handle_, SW_SHOW);
     resized_ = false;
 
-    RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, NULL};
+    RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
     ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
 }
 
@@ -120,7 +120,7 @@ void show_cursor(bool show)
         cursor_pos_ = save_invisible_cursor_pos_;
 
         ClipCursor(&rect);
-        SetCursor(NULL);
+        SetCursor(nullptr);
 
         RAWINPUTDEVICE rid = {0x01, 0x02, 0, static_cast<HWND>(window::handle())};
         ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
@@ -130,11 +130,11 @@ void show_cursor(bool show)
         save_invisible_cursor_pos_ = cursor_pos_;
         cursor_pos_ = save_visible_cursor_pos_;
 
-        ClipCursor(NULL);
+        ClipCursor(nullptr);
         SetCursorPos(rect.left + cursor_pos_.x, rect.top + cursor_pos_.y);
-        SetCursor(LoadCursor(NULL, IDC_ARROW));
+        SetCursor(LoadCursor(nullptr, IDC_ARROW));
 
-        RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, NULL};
+        RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
         ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
     }
 }
@@ -157,7 +157,7 @@ const std::vector<Event>& poll_events()
     return events;
 }
 
-WPARAM handle_left_right_special_keys(WPARAM wParam, LPARAM lParam)
+static WPARAM handle_left_right_special_keys(WPARAM wParam, LPARAM lParam)
 {
     switch (wParam)
     {
@@ -173,8 +173,8 @@ WPARAM handle_left_right_special_keys(WPARAM wParam, LPARAM lParam)
 
 static Key handle_key_msg(WPARAM wParam, LPARAM)
 {
-    size_t count = to_underlying(Key::Count);
-    for (size_t i = 0; i < count; ++i)
+    int count = to_underlying(Key::Count);
+    for (int i = 0; i < count; ++i)
     {
         Key key = to_enum<Key>(i);
         int win32_key = key_to_win32_key[key];
@@ -195,7 +195,7 @@ static bool is_right_alt(MSG m)
 static bool is_right_alt()
 {
     MSG next;
-    DWORD time = GetMessageTime();
+    LONG time = GetMessageTime();
     if (PeekMessage(&next, nullptr, 0, 0, PM_NOREMOVE) && is_right_alt(next) && next.time == time)
     {
         PeekMessage(&next, nullptr, 0, 0, PM_REMOVE);
@@ -253,45 +253,45 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     }
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
-        mouse_buttons[MouseButton::Mouse_1] = true;
+        bul::mouse_buttons[MouseButton::Mouse_1] = true;
         events.emplace_back(MouseButton::Mouse_1, ButtonState::Down);
         return 0;
     }
     case WM_LBUTTONUP: {
-        mouse_buttons[MouseButton::Mouse_1] = false;
+        bul::mouse_buttons[MouseButton::Mouse_1] = false;
         events.emplace_back(MouseButton::Mouse_1, ButtonState::Up);
         return 0;
     }
     case WM_RBUTTONDOWN:
     case WM_RBUTTONDBLCLK: {
-        mouse_buttons[MouseButton::Mouse_2] = true;
+        bul::mouse_buttons[MouseButton::Mouse_2] = true;
         events.emplace_back(MouseButton::Mouse_2, ButtonState::Down);
         return 0;
     }
     case WM_RBUTTONUP: {
-        mouse_buttons[MouseButton::Mouse_2] = false;
+        bul::mouse_buttons[MouseButton::Mouse_2] = false;
         events.emplace_back(MouseButton::Mouse_2, ButtonState::Up);
         return 0;
     }
     case WM_MBUTTONDOWN: {
-        mouse_buttons[MouseButton::Mouse_3] = true;
+        bul::mouse_buttons[MouseButton::Mouse_3] = true;
         events.emplace_back(MouseButton::Mouse_3, ButtonState::Down);
         return 0;
     }
     case WM_MBUTTONUP: {
-        mouse_buttons[MouseButton::Mouse_3] = false;
+        bul::mouse_buttons[MouseButton::Mouse_3] = false;
         events.emplace_back(MouseButton::Mouse_3, ButtonState::Up);
         return 0;
     }
     case WM_XBUTTONDOWN: {
         if (lParam & MK_XBUTTON1)
         {
-            mouse_buttons[MouseButton::Mouse_4] = true;
+            bul::mouse_buttons[MouseButton::Mouse_4] = true;
             events.emplace_back(MouseButton::Mouse_4, ButtonState::Down);
         }
         else
         {
-            mouse_buttons[MouseButton::Mouse_5] = true;
+            bul::mouse_buttons[MouseButton::Mouse_5] = true;
             events.emplace_back(MouseButton::Mouse_5, ButtonState::Down);
         }
         return 0;
@@ -299,12 +299,12 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     case WM_XBUTTONUP: {
         if (lParam & MK_XBUTTON1)
         {
-            mouse_buttons[MouseButton::Mouse_4] = false;
+            bul::mouse_buttons[MouseButton::Mouse_4] = false;
             events.emplace_back(MouseButton::Mouse_4, ButtonState::Up);
         }
         else
         {
-            mouse_buttons[MouseButton::Mouse_5] = false;
+            bul::mouse_buttons[MouseButton::Mouse_5] = false;
             events.emplace_back(MouseButton::Mouse_5, ButtonState::Up);
         }
         return 0;
@@ -316,7 +316,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         UINT size = 0;
         HRAWINPUT ri = reinterpret_cast<HRAWINPUT>(lParam);
 
-        GetRawInputData(ri, RID_INPUT, NULL, &size, sizeof(RAWINPUTHEADER));
+        GetRawInputData(ri, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER));
         if (size > raw_input_size_)
         {
             raw_input_size_ = size;
@@ -324,8 +324,8 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         }
 
         size = raw_input_size_;
-        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != (UINT)-1);
-        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != (UINT)-1);
+        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != UINT(-1));
+        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != UINT(-1));
 
         bul::vec2i delta;
         if (raw_input_->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
