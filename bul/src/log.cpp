@@ -4,26 +4,25 @@
 #include <cstdarg>
 
 #include "bul/format.h"
-#include "bul/containers/enum_array.h"
+#include "bul/containers/vector.h"
 
 namespace bul
 {
-static constexpr EnumArray<LogLevel, const char*> log_level_str = {
-    "[DEBUG]",
-    "[INFO]",
-    "[WARNING]",
-    "[ERROR]",
-};
+static vector<log_callback> callbacks;
 
 static void log(LogLevel level, const char* fmt, va_list args)
 {
     const char* text = format(fmt, args);
-    printf("%s %s", log_level_str[level], text);
+    printf("%s %s\n", log_level_str[level], text);
+    for (log_callback callback : callbacks)
+    {
+        callback(level, text);
+    }
 }
 
 void log_debug(const char* fmt, ...)
 {
-    std::va_list args;
+    va_list args;
     va_start(args, fmt);
     log(LogLevel::Debug, fmt, args);
     va_end(args);
@@ -31,7 +30,7 @@ void log_debug(const char* fmt, ...)
 
 void log_info(const char* fmt, ...)
 {
-    std::va_list args;
+    va_list args;
     va_start(args, fmt);
     log(LogLevel::Info, fmt, args);
     va_end(args);
@@ -39,7 +38,7 @@ void log_info(const char* fmt, ...)
 
 void log_warning(const char* fmt, ...)
 {
-    std::va_list args;
+    va_list args;
     va_start(args, fmt);
     log(LogLevel::Warning, fmt, args);
     va_end(args);
@@ -47,7 +46,7 @@ void log_warning(const char* fmt, ...)
 
 void log_error(const char* fmt, ...)
 {
-    std::va_list args;
+    va_list args;
     va_start(args, fmt);
     log(LogLevel::Error, fmt, args);
     va_end(args);
@@ -55,9 +54,19 @@ void log_error(const char* fmt, ...)
 
 void log(LogLevel level, const char* fmt, ...)
 {
-    std::va_list args;
+    va_list args;
     va_start(args, fmt);
     log(level, fmt, args);
     va_end(args);
+}
+
+void add_log_callback(log_callback callback)
+{
+    callbacks.emplace_back(callback);
+}
+
+void remove_log_callback(log_callback callback)
+{
+    callbacks.erase(callbacks.find(callback));
 }
 } // namespace bul

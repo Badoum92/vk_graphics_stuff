@@ -5,14 +5,14 @@
 namespace bul
 {
 template <typename T>
-struct Handle
+struct handle
 {
-    Handle()
+    handle()
         : value(UINT32_MAX)
         , version(UINT32_MAX)
     {}
 
-    explicit constexpr Handle(uint32_t value_, uint32_t version_ = 0)
+    explicit constexpr handle(uint32_t value_, uint32_t version_ = 0)
         : value(value_)
         , version(version_)
     {
@@ -24,12 +24,12 @@ struct Handle
         return value != UINT32_MAX;
     }
 
-    constexpr bool operator==(const Handle& other) const
+    constexpr bool operator==(const handle& other) const
     {
         return value == other.value && version == other.version;
     }
 
-    constexpr bool operator<(const Handle& other) const
+    constexpr bool operator<(const handle& other) const
     {
         return value < other.value;
     }

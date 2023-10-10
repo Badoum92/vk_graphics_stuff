@@ -1,4 +1,4 @@
-#include "bul/buffer.h"
+#include "bul/containers/buffer.h"
 
 #include <cstdlib>
 #include <utility>
@@ -9,7 +9,7 @@ namespace bul
 {
 buffer::buffer(size_t size_)
 {
-    data = static_cast<T*>(malloc(size_));
+    data = reinterpret_cast<uint8_t*>(malloc(size_));
     ASSERT(data != nullptr);
     size = size_;
 }
@@ -18,7 +18,7 @@ buffer::~buffer()
 {
     free(data);
     data = nullptr;
-    size_ = 0;
+    size = 0;
 }
 
 buffer::buffer(buffer&& other)
@@ -43,7 +43,7 @@ void buffer::resize(size_t size_)
         return;
     }
 
-    data = static_cast<T*>(realloc(data, size_));
+    data = reinterpret_cast<uint8_t*>(realloc(data, size_));
     ASSERT(data != nullptr);
     size = size_;
 }

@@ -114,4 +114,4 @@ TEST_CASE("string key")
     CHECK(m["4"]->val == 4);
 }
 
-TEST_SUITE_END();
+TEST_SUITE_END;

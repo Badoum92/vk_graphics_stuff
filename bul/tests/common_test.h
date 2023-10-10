@@ -1,48 +1,94 @@
 #pragma once
 
-#include <cstdio>
+#include <utility>
 
-struct St
+struct test_struct
 {
-    St(int val_)
-        : val{val_}
+    enum class state
     {
-        printf("ctor\n");
+        default_constructed,
+        user_constructed,
+        copy_constructed,
+        move_constructed,
+        moved_from,
+        destroyed,
+    };
+
+    test_struct()
+        : value{0}
+        , state{state::default_constructed}
+    {}
+
+    test_struct(int val)
+        : value{val}
+        , state{state::user_constructed}
+    {}
+
+    ~test_struct()
+    {
+        state = state::destroyed;
     }
 
-    ~St()
+    test_struct(const test_struct& other)
     {
-        printf("dtor\n");
-        val = -1;
+        *this = other;
     }
 
-    St(const St& other)
+    test_struct& operator=(const test_struct& other)
     {
-        printf("copy\n");
-        val = other.val;
-    }
-
-    St(St&& other)
-    {
-        printf("move\n");
-        val = other.val;
-        other.val = 0xdeadbeef;
-    }
-
-    St& operator=(const St& other)
-    {
-        printf("assign\n");
-        val = other.val;
+        value = other.value;
+        state = state::copy_constructed;
         return *this;
     }
 
-    St& operator=(St&& other)
+    test_struct(test_struct&& other) noexcept
     {
-        printf("move assign\n");
-        val = other.val;
-        other.val = -2;
+        *this = std::move(other);
+    }
+
+    test_struct& operator=(test_struct&& other) noexcept
+    {
+        value = other.value;
+        state = state::move_constructed;
+        other.state = state::moved_from;
         return *this;
     }
 
-    int val = 0;
+    bool default_constructed() const
+    {
+        return state == state::default_constructed;
+    }
+
+    bool user_constructed() const
+    {
+        return state == state::user_constructed;
+    }
+
+    bool copy_constructed() const
+    {
+        return state == state::copy_constructed;
+    }
+
+    bool move_constructed() const
+    {
+        return state == state::move_constructed;
+    }
+
+    bool moved_from() const
+    {
+        return state == state::moved_from;
+    }
+
+    bool destroyed() const
+    {
+        return state == state::destroyed;
+    }
+
+    operator int() const
+    {
+        return value;
+    }
+
+    int value = 0;
+    state state = state::default_constructed;
 };

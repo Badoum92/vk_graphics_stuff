@@ -48,7 +48,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         }
     }();
 
-    bul::log(log_level, "VULKAN [%s]: %s\n", msg_type_str, callback_data->pMessage);
+    bul::log(log_level, "VULKAN [%s]: %s", msg_type_str, callback_data->pMessage);
 
     return VK_FALSE;
 }
@@ -99,7 +99,7 @@ static void create_physical_device(Context* context)
 
     if (physical_devices.empty())
     {
-        bul::log_error("No physical device found\n");
+        bul::log_error("No physical device found");
         abort();
     }
 
@@ -113,7 +113,7 @@ static void create_physical_device(Context* context)
         }
     }
 
-    bul::log_info("Physical device: %s\n", context->physical_device_properties.deviceName);
+    bul::log_info("Physical device: %s", context->physical_device_properties.deviceName);
 }
 
 static void create_device(Context* context)

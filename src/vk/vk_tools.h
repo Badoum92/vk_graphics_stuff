@@ -7,6 +7,7 @@
 #include "vk/image.h"
 
 #include "bul/log.h"
+#include "bul/bul.h"
 
 namespace vk
 {
@@ -24,15 +25,6 @@ const char* vk_result_to_str(VkResult result);
 void set_resource_name(Context* context, uint64_t vk_handle, VkDebugReportObjectTypeEXT objectType,
                        std::string_view name);
 
-#define VK_CHECK(RESULT)                                                                                               \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        VkResult result__ = (RESULT);                                                                                  \
-        if (result__ != VK_SUCCESS)                                                                                    \
-        {                                                                                                              \
-            bul::log_error("VK_CHECK failed: %s (%d): %s\n", __func__, __LINE__, vk_result_to_str(result__));          \
-            exit(1);                                                                                                   \
-        }                                                                                                              \
-    } while (0)
+#define VK_CHECK(RESULT) ASSERT_FMT((RESULT) == VK_SUCCESS, "%s", vk_result_to_str(result__))
 
 } // namespace vk

@@ -1,128 +1,147 @@
 #pragma once
 
+#include <cstdlib>
 #include <iterator>
+#include <type_traits>
 
 #include "bul/bul.h"
-#include "bul/containers/buffer.h"
+#include "bul/types.h"
 #include "bul/containers/handle.h"
 
 namespace bul
 {
 template <typename T>
-class Pool
+struct pool : public non_copyable
 {
-private:
-    struct Data
+    static_assert(std::is_move_constructible_v<T>, "Type must be move constructible");
+
+    struct data
     {
-        uint32_t full : 1;
+        uint32_t free : 1;
         uint32_t version : 31;
         union
         {
             T value;
-            uint32_t next;
+            uint32_t next_free;
         };
     };
 
-public:
-    Pool()
-        : Pool(1)
+    pool()
+        : pool(1)
     {}
 
-    explicit Pool(size_t capacity)
+    explicit pool(uint32_t capacity_)
     {
-        data_.resize(capacity);
-        free_ = 0;
-        for (uint32_t i = 0; i < data_.size(); ++i)
+        _data = reinterpret_cast<data*>(malloc(capacity_ * sizeof(data)));
+        _capacity = capacity_;
+        _first_free = 0;
+        for (uint32_t i = 0; i < _capacity; ++i)
         {
-            data_[i].full = 0;
-            data_[i].version = 0;
-            data_[i].next = i + 1;
+            _data[i].free = 1;
+            _data[i].version = 0;
+            _data[i].next_free = i + 1;
         }
-        data_[data_.size() - 1].next = UINT32_MAX;
+        _data[_capacity - 1].next_free = UINT32_MAX;
     }
 
-    ~Pool()
+    ~pool()
     {
         clear();
+        free(_data);
+        _data = nullptr;
+        _capacity = 0;
+        _first_free = UINT32_MAX;
     }
 
-    Pool(const Pool<T>&) = delete;
-    Pool<T>& operator=(const Pool<T>&) = delete;
-
-    Pool(Pool<T>&& other)
+    pool(pool<T>&& other)
     {
-        *this = std::move(other);
+        clear();
+        free(_data);
+        _data = other._data;
+        _capacity = other._capacity;
+        _first_free = other._first_free;
+        other._data = nullptr;
+        other._capacity = 0;
+        other._first_free = UINT32_MAX;
     }
 
-    Pool<T>& operator=(Pool<T>&& other)
+    pool<T>& operator=(pool<T>&& other)
     {
-        data_ = std::move(other.data_);
-        free_ = other.free_;
+        clear();
+        free(_data);
+        _data = other._data;
+        _capacity = other._capacity;
+        _first_free = other._first_free;
+        other._data = nullptr;
+        other._capacity = 0;
+        other._first_free = UINT32_MAX;
         return *this;
     }
 
-    Handle<T> insert(T&& val)
+    template <typename... Args>
+    handle<T> insert(Args&&... args)
     {
-        Data* free_data = nullptr;
-        uint32_t free_index = get_next_free_slot(free_data);
-        memset(&free_data->value, 0, sizeof(T));
-        free_data->value = std::move(val);
-        return Handle<T>{free_index, free_data->version};
+        uint32_t free_slot = get_next_free_slot();
+        data& data = _data[free_slot];
+        _first_free = data.next_free;
+        data.free = 0;
+        new (&data.value) T(std::forward<Args>(args)...);
+        return handle<T>{free_slot, data.version};
     }
 
-    void erase(Handle<T> handle)
+    void erase(handle<T> handle)
     {
         ASSERT(is_valid(handle));
-        uint32_t free_index = free_;
-        free_ = handle.value;
-        Data& data = data_[free_];
+        uint32_t next_free = _first_free;
+        _first_free = handle.value;
+        data& data = _data[handle.value];
         if constexpr (!std::is_trivially_destructible_v<T>)
         {
             data.value.~T();
         }
-        data.next = free_index;
+        data.next_free = next_free;
         ++data.version;
-        data.full = 0;
+        data.free = 1;
     }
 
-    bool is_valid(Handle<T> handle) const
+    bool is_valid(handle<T> handle) const
     {
-        return handle.value < data_.size() && handle.version == data_[handle.value].version
-            && data_[handle.value].full == 1;
+        return handle.value < _capacity && handle.version == _data[handle.value].version
+            && !_data[handle.value].free;
     }
 
-    const T& get(Handle<T> handle) const
-    {
-        ASSERT(is_valid(handle));
-        return data_[handle.value].value;
-    }
-
-    T& get(Handle<T> handle)
+    const T& get(handle<T> handle) const
     {
         ASSERT(is_valid(handle));
-        return data_[handle.value].value;
+        return _data[handle.value].value;
+    }
+
+    T& get(handle<T> handle)
+    {
+        ASSERT(is_valid(handle));
+        return _data[handle.value].value;
     }
 
     void clear()
     {
-        free_ = 0;
-        for (size_t i = 0; i < data_.size(); ++i)
+        _first_free = 0;
+        for (size_t i = 0; i < _capacity; ++i)
         {
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                if (data_[i].full)
+                if (!_data[i].free)
                 {
-                    data_[i].value.~T();
+                    _data[i].value.~T();
                 }
             }
-            data_[i].full = 0;
-            data_[i].version = 0;
-            data_[i].next = i + 1;
+            _data[i].free = 1;
+            _data[i].version = 0;
+            _data[i].next_free = i + 1;
         }
-        data_[data_.size() - 1].next = UINT32_MAX;
+        _data[_capacity - 1].next_free = UINT32_MAX;
     }
 
-    struct Iterator
+    struct iterator
     {
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
@@ -130,96 +149,105 @@ public:
         using pointer = T*;
         using reference = T&;
 
-        Iterator(size_t index, Buffer<Data>& data)
-            : index_(index)
-            , data_(data)
+        iterator(uint32_t index, uint32_t capacity, data* data)
+            : _index(index)
+            , _capacity(capacity)
+            , _data(data)
         {}
 
         reference operator*() const
         {
-            return data_[index_].value;
+            return _data[_index].value;
         }
 
         pointer operator->()
         {
-            return &data_[index_].value;
+            return &_data[_index].value;
         }
 
-        Iterator& operator++()
+        iterator& operator++()
         {
-            ++index_;
-            while (index_ < data_.size() && data_[index_].full == 0)
+            if (_index == _capacity)
             {
-                ++index_;
+                return *this;
             }
+            do
+            {
+                ++_index;
+            } while (_index < _capacity && _data[_index].free);
             return *this;
         }
 
-        Iterator operator++(int)
+        iterator operator++(int)
         {
-            Iterator tmp = *this;
+            iterator tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        friend bool operator==(const Iterator& a, const Iterator& b)
+        friend bool operator==(const iterator& a, const iterator& b)
         {
-            return a.data_.data() == b.data_.data() && a.index_ == b.index_;
+            return a._data == b._data && a._index == b._index;
         }
 
-        friend bool operator!=(const Iterator& a, const Iterator& b)
+        friend bool operator!=(const iterator& a, const iterator& b)
         {
             return !(a == b);
         }
 
-    private:
-        size_t index_;
-        Buffer<Data>& data_;
+        uint32_t _index = 0;
+        uint32_t _capacity = 0;
+        data* _data = nullptr;
     };
 
-    Iterator begin()
+    iterator begin()
     {
-        size_t i = 0;
-        for (; i < data_.size(); ++i)
+        uint32_t index = 0;
+        while (index < _capacity && _data[index].free)
         {
-            if (data_[i].full)
-            {
-                break;
-            }
+            ++index;
         }
-        return Iterator{i, data_};
+        return iterator{index, _capacity, _data};
     }
 
-    Iterator end()
+    iterator end()
     {
-        return Iterator{data_.size(), data_};
+        return iterator{_capacity, _capacity, _data};
     }
 
-private:
-    uint32_t get_next_free_slot(Data*& free_data)
+    uint32_t get_next_free_slot()
     {
-        if (free_ == UINT32_MAX)
+        if (_first_free == UINT32_MAX)
         {
-            size_t current_size = data_.size();
-            data_.resize(current_size * 2);
-            free_ = current_size;
-            for (uint32_t i = current_size; i < data_.size(); ++i)
-            {
-                data_[i].full = 0;
-                data_[i].version = 0;
-                data_[i].next = i + 1;
-            }
-            data_[data_.size() - 1].next = UINT32_MAX;
-        }
+            uint32_t current_capacity = _capacity;
+            uint32_t new_capacity = _capacity * 2;
+            data* new_data = reinterpret_cast<data*>(malloc(new_capacity * sizeof(data)));
 
-        free_data = &data_[free_];
-        uint32_t free_index = free_;
-        free_ = free_data->next;
-        free_data->full = 1;
-        return free_index;
+            for (uint32_t i = 0; i < _capacity; ++i)
+            {
+                new_data[i].free = 0;
+                new_data[i].version = _data[i].version;
+                new_data[i].value = std::move(_data[i].value);
+            }
+
+            for (uint32_t i = _capacity; i < new_capacity; ++i)
+            {
+                new_data[i].free = 1;
+                new_data[i].version = 0;
+                new_data[i].next_free = i + 1;
+            }
+            new_data[new_capacity - 1].next_free = UINT32_MAX;
+
+            free(_data);
+            _data = new_data;
+            _capacity = new_capacity;
+            _first_free = current_capacity;
+        }
+        return _first_free;
     }
 
-    Buffer<Data> data_;
-    uint32_t free_ = UINT32_MAX;
+    data* _data = nullptr;
+    uint32_t _capacity = 0;
+    uint32_t _first_free = UINT32_MAX;
 };
 } // namespace bul

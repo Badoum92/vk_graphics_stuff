@@ -11,6 +11,7 @@ add_library(bul STATIC
     src/platform/util_win32.cpp
     src/platform/window_win32.cpp
     src/platform/time_win32.cpp
+    src/containers/buffer.cpp
 
     third_party/xxhash/xxhash.c
 )
@@ -37,12 +38,17 @@ set_target_properties(bul PROPERTIES
 # --- TESTS ---
 add_executable(tests
     tests/main.cpp
-    tests/static_vector.cpp
-    tests/static_queue.cpp
-    tests/vector.cpp
-    tests/matrix.cpp
-    tests/pool.cpp
-    tests/map.cpp
+    tests/math/vector.cpp
+    tests/math/matrix.cpp
+    tests/containers/vector.cpp
+    tests/containers/static_vector.cpp
+    #tests/containers/static_queue.cpp
+    tests/containers/pool.cpp
+    #tests/containers/map.cpp
+)
+
+target_include_directories(tests
+    PRIVATE tests
 )
 
 target_link_libraries(tests

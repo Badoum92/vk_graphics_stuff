@@ -54,6 +54,6 @@ int main(int, char**)
     }
     catch (const std::exception& e)
     {
-        bul::log_error("Uncaught exception: %s\n", e.what());
+        bul::log_error("Uncaught exception: %s", e.what());
     }
 }

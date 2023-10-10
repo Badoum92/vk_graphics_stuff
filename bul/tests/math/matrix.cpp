@@ -122,4 +122,4 @@ TEST_CASE("inverse")
     CHECK(m[3][3] == doctest::Approx(1.0f / 4.0f));
 }
 
-TEST_SUITE_END();
+TEST_SUITE_END;

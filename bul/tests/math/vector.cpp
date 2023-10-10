@@ -2,7 +2,7 @@
 
 #include "bul/math/vector.h"
 
-TEST_SUITE_BEGIN("vector");
+TEST_SUITE_BEGIN("math vector");
 
 TEST_CASE("default init")
 {
@@ -286,4 +286,4 @@ TEST_CASE("normalize")
     CHECK(bul::length(bul::normalize(bul::vec4f{1, 2, 3, 4})) == doctest::Approx(1.0f));
 }
 
-TEST_SUITE_END();
+TEST_SUITE_END;

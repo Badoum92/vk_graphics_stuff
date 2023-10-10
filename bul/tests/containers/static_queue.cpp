@@ -94,4 +94,4 @@ TEST_CASE("iterator")
     }
 }
 
-TEST_SUITE_END();
+TEST_SUITE_END;

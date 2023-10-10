@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string_view>
-#include <concepts>
+#include <type_traits>
 
 namespace bul
 {

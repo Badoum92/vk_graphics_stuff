@@ -6,8 +6,8 @@ TEST_SUITE_BEGIN("pool");
 
 TEST_CASE("simple insert get")
 {
-    bul::Pool<int> pool(1);
-    bul::Handle<int> h1 = pool.insert(1);
+    bul::pool<int> pool(1);
+    bul::handle<int> h1 = pool.insert(1);
     CHECK(h1.version == 0);
     CHECK(h1.value == 0);
     CHECK(pool.get(h1) == 1);
@@ -15,11 +15,11 @@ TEST_CASE("simple insert get")
 
 TEST_CASE("multiple insert get")
 {
-    bul::Pool<int> pool(1);
-    bul::Handle<int> h1 = pool.insert(1);
-    bul::Handle<int> h2 = pool.insert(2);
-    bul::Handle<int> h3 = pool.insert(3);
-    bul::Handle<int> h4 = pool.insert(4);
+    bul::pool<int> pool(1);
+    bul::handle<int> h1 = pool.insert(1);
+    bul::handle<int> h2 = pool.insert(2);
+    bul::handle<int> h3 = pool.insert(3);
+    bul::handle<int> h4 = pool.insert(4);
 
     CHECK(h1.version == 0);
     CHECK(h1.value == 0);
@@ -37,8 +37,8 @@ TEST_CASE("multiple insert get")
 
 TEST_CASE("simple erase")
 {
-    bul::Pool<int> pool(1);
-    bul::Handle<int> h1 = pool.insert(1);
+    bul::pool<int> pool(1);
+    bul::handle<int> h1 = pool.insert(1);
     CHECK(pool.is_valid(h1));
     pool.erase(h1);
     CHECK(!pool.is_valid(h1));
@@ -50,17 +50,17 @@ TEST_CASE("simple erase")
 
 TEST_CASE("multiple erase")
 {
-    bul::Pool<int> pool(1);
-    bul::Handle<int> h1 = pool.insert(1);
-    bul::Handle<int> h2 = pool.insert(2);
-    bul::Handle<int> h3 = pool.insert(3);
-    bul::Handle<int> h4 = pool.insert(4);
+    bul::pool<int> pool(1);
+    bul::handle<int> h1 = pool.insert(1);
+    bul::handle<int> h2 = pool.insert(2);
+    bul::handle<int> h3 = pool.insert(3);
+    bul::handle<int> h4 = pool.insert(4);
     pool.erase(h2);
     pool.erase(h4);
-    bul::Handle<int> h5 = pool.insert(5);
-    bul::Handle<int> h6 = pool.insert(6);
+    bul::handle<int> h5 = pool.insert(5);
+    bul::handle<int> h6 = pool.insert(6);
     pool.erase(h5);
-    bul::Handle<int> h7 = pool.insert(7);
+    bul::handle<int> h7 = pool.insert(7);
 
     CHECK(h6.value == 1);
     CHECK(h6.version == 1);
@@ -72,7 +72,7 @@ TEST_CASE("multiple erase")
 
 TEST_CASE("clear")
 {
-    bul::Pool<int> pool(1);
+    bul::pool<int> pool(1);
     pool.insert(1);
     pool.insert(2);
     pool.insert(3);
@@ -83,7 +83,7 @@ TEST_CASE("clear")
 
 TEST_CASE("iterator")
 {
-    bul::Pool<int> pool;
+    bul::pool<int> pool;
     pool.insert(0);
     pool.insert(1);
     pool.insert(2);
@@ -102,10 +102,10 @@ TEST_CASE("iterator")
 
 TEST_CASE("iterator erase")
 {
-    bul::Pool<int> pool;
+    bul::pool<int> pool;
     pool.insert(0);
     pool.insert(1);
-    bul::Handle<int> h = pool.insert(2);
+    bul::handle<int> h = pool.insert(2);
     pool.insert(3);
     pool.insert(4);
 
@@ -121,4 +121,4 @@ TEST_CASE("iterator erase")
     CHECK(count == 4);
 }
 
-TEST_SUITE_END();
+TEST_SUITE_END;

@@ -3,15 +3,15 @@
 #include "bul/types.h"
 
 #define _BUL_CONCAT(a, b) a##b
-#define BUL_CONCAT(a, b) _BUL_CONCAT(a, b)
+#define BUL_CONCAT(a, b)  _BUL_CONCAT(a, b)
 
 #if defined(_DEBUG)
-#define ASSERT(COND)          bul::_assert((COND), #COND, nullptr, __FILE__, __LINE__)
-#define ASSERT_MSG(COND, MSG) bul::_assert((COND), #COND, (MSG), __FILE__, __LINE__)
-#define ENSURE(EXPR)          bul::_assert((EXPR), #EXPR, nullptr, __FILE__, __LINE__)
+#define ASSERT(CONDITION)          bul::_assert((CONDITION), #CONDITION, __FILE__, __LINE__, nullptr)
+#define ASSERT_FMT(CONDITION, ...) bul::_assert((CONDITION), #CONDITION, __FILE__, __LINE__, __VA_ARGS__)
+#define ENSURE(EXPR)               bul::_assert((EXPR), #EXPR, __FILE__, __LINE__, nullptr)
 #else
-#define ASSERT(COND)
-#define ASSERT_MSG(COND, MSG)
+#define ASSERT(CONDITION)
+#define ASSERT_MSG(CONDITION, MSG)
 #define ENSURE(EXPR) [[maybe_unused]] bool BUL_CONCAT(_, __COUNTER__) = (EXPR)
 #endif
 
@@ -39,7 +39,7 @@ inline constexpr uint64_t operator"" _TB(uint64_t bytes)
 
 namespace bul
 {
-void _assert(bool cond, const char* cond_str, const char* msg, const char* file, unsigned line);
+void _assert(bool condition, const char* str, const char* file, unsigned line, const char* fmt, ...);
 
 template <typename Dst = void*>
 const Dst ptr_offset(const void* ptr, size_t offset)

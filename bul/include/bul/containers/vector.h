@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cstdlib>
-#include <utility>
 #include <type_traits>
 #include <initializer_list>
 
 #include "bul/bul.h"
 #include "bul/containers/span.h"
+#include "bul/memory_util.h"
 
 namespace bul
 {
@@ -26,18 +26,17 @@ struct vector
     vector(std::initializer_list<T> init_list)
     {
         reserve(init_list.size());
-        for (const auto& element : init_list)
-        {
-            emplace_back(element);
-        }
+        _current = _end;
+        copy_range(init_list.begin(), init_list.end(), _begin);
     }
 
     vector(size_t size, const T& default_value)
     {
         reserve(size);
-        for (size_t i = 0; i < size; ++i)
+        _current = _end;
+        for (T* cur = _begin; cur != _end; ++cur)
         {
-            emplace_back(default_value);
+            *cur = default_value;
         }
     }
 
@@ -52,28 +51,31 @@ struct vector
 
     vector(const vector<T>& other)
     {
-        *this = other;
-    }
-
-    vector<T>& operator=(const vector<T>& other)
-    {
+        clear();
         free(_begin);
         _begin = reinterpret_cast<T*>(malloc(other.size_bytes()));
         _current = _begin + other.size();
         _end = _current;
-        for (size_t i = 0; i < other.size(); ++i)
-        {
-            new (&_begin[i]) T(other[i]);
-        }
+        copy_range(other._begin, other._end, _begin);
+    }
+
+    vector<T>& operator=(const vector<T>& other)
+    {
+        clear();
+        free(_begin);
+        _begin = reinterpret_cast<T*>(malloc(other.size_bytes()));
+        _current = _begin + other.size();
+        _end = _current;
+        copy_range(other._begin, other._end, _begin);
         return *this;
     }
 
-    vector(vector<T>&& other)
+    vector(vector<T>&& other) noexcept
     {
         *this = std::move(other);
     }
 
-    vector<T>& operator=(vector<T>&& other)
+    vector<T>& operator=(vector<T>&& other) noexcept
     {
         free(_begin);
         _begin = other._begin;
@@ -91,22 +93,15 @@ struct vector
         {
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
-                for (T* cur = _begin + size_; cur < _current; ++cur)
-                {
-                    cur->~T();
-                }
+                delete_range(_begin + size_, _current);
             }
-            _current = _begin + size_;
         }
         else
         {
             reserve(size_);
-            for (T* cur = _current; cur < _end; ++cur)
-            {
-                new (cur) T();
-            }
-            _current = _end;
+            default_construct_range(_current, _end);
         }
+        _current = _begin + size_;
     }
 
     void reserve(size_t size_)
@@ -119,14 +114,11 @@ struct vector
         T* new_begin = reinterpret_cast<T*>(malloc(size_ * sizeof(T)));
         T* new_end = new_begin + size_;
         T* new_current = new_begin + size();
-        for (T* cur = new_begin; cur < new_current; ++cur)
-        {
-            new (cur) T(std::move(_begin[i]));
-        }
+        move_range(_begin, _current, new_begin);
         free(_begin);
         _begin = new_begin;
         _current = new_current;
-        _end new_end;
+        _end = new_end;
     }
 
     template <typename... Args>
@@ -143,7 +135,7 @@ struct vector
 
     T&& pop_back()
     {
-        ASSERT(size() > 0);
+        ASSERT(_current != _begin);
         --_current;
         return std::move(*_current);
     }
@@ -151,6 +143,50 @@ struct vector
     void clear()
     {
         resize(0);
+    }
+
+    size_t find(const T& to_find) const
+    {
+        for (const T* cur = _begin; cur != _current; ++cur)
+        {
+            if (*cur == to_find)
+            {
+                return cur - _begin;
+            }
+        }
+        return size_t(-1);
+    }
+
+    void erase(size_t index)
+    {
+        if (index == size_t(-1))
+        {
+            return;
+        }
+
+        ASSERT(index < size());
+        std::swap(_begin[index], back());
+        --_current;
+        if (!std::is_trivially_default_constructible_v<T>)
+        {
+            _current->~T();
+        }
+    }
+
+    void erase_stable(size_t index)
+    {
+        if (index == size_t(-1))
+        {
+            return;
+        }
+
+        ASSERT(index < size());
+        move_range(_begin + index + 1, _current, _begin + index);
+        --_current;
+        if (!std::is_trivially_default_constructible_v<T>)
+        {
+            _current->~T();
+        }
     }
 
     size_t size() const
@@ -237,38 +273,6 @@ struct vector
     const T* end() const
     {
         return _end;
-    }
-
-    size_t find(const T& to_find) const
-    {
-        for (T* cur = _begin; cur < _current; ++cur)
-        {
-            if (*cur == to_find)
-            {
-                return cur - _begin;
-            }
-        }
-        return size_t(-1);
-    }
-
-    void erase(size_t index)
-    {
-        ASSERT(index < size());
-        std::swap(_begin[index], back());
-        pop_back();
-    }
-
-    void erase_stable(size_t index)
-    {
-        ASSERT(index < size());
-        for (T* cur = _begin + index; cur < _current - 1; ++cur)
-        {
-            new (cur) T(std::move(*(cur + 1)));
-        }
-        if (!std::is_trivially_default_constructible_v<T>)
-        {
-            _current->~T();
-        }
     }
 
     operator span<T>()

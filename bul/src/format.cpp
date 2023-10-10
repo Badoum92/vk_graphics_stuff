@@ -10,7 +10,7 @@ static thread_local buffer log_buffer;
 
 const char* format(const char* fmt, ...)
 {
-    std::va_list args;
+    va_list args;
     va_start(args, fmt);
     const char* text = format(fmt, args);
     va_end(args);
