@@ -53,8 +53,8 @@ Dst ptr_offset(void* ptr, size_t offset)
     return (Dst)((uint8_t*)ptr + offset);
 }
 
-template <typename T>
-T align_pow2(T n, T alignment)
+template <typename T, typename U>
+T align_pow2(T n, U alignment)
 {
     ASSERT(alignment && !(alignment & (alignment - 1)));
     return (n + alignment - 1) & -alignment;

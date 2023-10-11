@@ -4,84 +4,60 @@
 #include "bul/hash.h"
 
 #include <utility>
-#include <concepts>
+#include <type_traits>
 #include <vector>
-#include <bit>
 
 namespace bul
 {
-template <typename KEY_T, typename VAL_T>
-requires std::equality_comparable<KEY_T>
-class Map
+template <typename Key, typename Val>
+class map
 {
 public:
-    struct Entry
+    using this_t = map<Key, Val>;
+
+    explicit map(size_t capacity_ = 2)
     {
-        template <typename... Args>
-        Entry(const KEY_T& k, Args&&... args)
-            : key{k}
-            , val{std::forward<Args>(args)...}
-        {}
-
-        template <typename... Args>
-        Entry(KEY_T&& k, Args&&... args)
-            : key{std::move(k)}
-            , val{std::forward<Args>(args)...}
-        {}
-
-        KEY_T key;
-        VAL_T val;
-    };
-
-    explicit Map(size_t capacity_ = 4)
-    {
-        ASSERT(std::has_single_bit(capacity_));
+        capacity_ = align_pow2(capacity_, 2);
         slots_.resize(capacity_);
-        entries_.reserve(capacity_);
-    }
-
-    template <typename K, typename V>
-    requires std::constructible_from<KEY_T, K> && std::constructible_from<VAL_T, V>
-    Entry* insert(K&& key, V&& val)
-    {
-        return emplace(std::forward<K>(key), std::forward<V>(val));
+        keys_.reserve(capacity_);
+        values_.reserve(capacity_);
     }
 
     template <typename K, typename... Args>
-    requires std::constructible_from<KEY_T, K> && std::constructible_from<VAL_T, Args...>
-    Entry* emplace(K&& key, Args&&... args)
+    Val* emplace(K&& key_, Args&&... args)
     {
         if (should_grow())
         {
             grow();
         }
 
+        Key key = std::forward<K>(key_);
         size_t cap = capacity();
         uint32_t hash = bul::hash(key);
-        Slot slot{hash & 0xff, 0, 1, uint32_t(entries_.size())};
-        Entry& entry = entries_.emplace_back(std::forward<K>(key), std::forward<Args>(args)...);
+        slot slot{hash & 0xff, 0, 1, uint32_t(values_.size())};
+        const Key& new_key = keys_.emplace_back(std::move(key));
+        values_.emplace_back(std::forward<Args>(args)...);
 
         for (size_t i_slot = mod_pow2(hash, cap);; i_slot = mod_pow2(i_slot + 1, cap))
         {
-            Slot& cur_slot = slots_[i_slot];
-            Entry& cur_entry = entries_[cur_slot.index];
+            this_t::slot& cur_slot = slots_[i_slot];
 
             if (!cur_slot.full)
             {
                 std::swap(cur_slot, slot);
-                return &entries_.back();
+                return &values_.back();
             }
 
-            if (cur_slot.hash == slot.hash && cur_entry.key == entry.key)
+            if (cur_slot.hash == slot.hash && keys_[cur_slot.index] == new_key)
             {
-                entries_.pop_back();
+                keys_.pop_back();
+                values_.pop_back();
                 return nullptr;
             }
 
             if (slot.psl > cur_slot.psl)
             {
                 std::swap(cur_slot, slot);
-                continue;
             }
 
             slot.psl += 1;
@@ -90,29 +66,31 @@ public:
         return nullptr;
     }
 
-    bool erase(const KEY_T& key)
+    bool erase(const Key& key_)
     {
-        Slot* found_slot = find(key);
+        slot* found_slot = find_slot(key_);
         if (found_slot == nullptr)
         {
             return false;
         }
 
-        Entry& entry = entries_[found_slot->index];
-        uint32_t last_index = entries_.size() - 1;
+        Val& value = values_[found_slot->index];
+        Key& key = keys_[found_slot->index];
+        uint32_t last_index = values_.size() - 1;
 
         if (found_slot->index != last_index)
         {
-            entry = std::move(entries_.back());
+            key = std::move(keys_.back());
+            value = std::move(values_.back());
         }
 
         size_t cap = capacity();
-        uint32_t hash = bul::hash(entry.key);
+        uint32_t hash = bul::hash(key);
         size_t i_slot = mod_pow2(hash, cap);
 
         for (;; i_slot = mod_pow2(i_slot + 1, cap))
         {
-            Slot& slot = slots_[i_slot];
+            slot& slot = slots_[i_slot];
             if (slot.index == last_index)
             {
                 slot.index = found_slot->index;
@@ -120,7 +98,8 @@ public:
             }
         }
 
-        entries_.pop_back();
+        keys_.pop_back();
+        values_.pop_back();
 
         found_slot->full = 0;
         found_slot->hash = 0;
@@ -130,8 +109,8 @@ public:
         for (size_t i_slot = found_slot - slots_.data();;)
         {
             size_t i_next_slot = mod_pow2(i_slot + 1, cap);
-            Slot& slot = slots_[i_slot];
-            Slot& next_slot = slots_[i_next_slot];
+            this_t::slot& slot = slots_[i_slot];
+            this_t::slot& next_slot = slots_[i_next_slot];
 
             if (!next_slot.full || next_slot.psl == 0)
             {
@@ -146,24 +125,29 @@ public:
         return true;
     }
 
-    Entry* operator[](const KEY_T& key)
+    Val* operator[](const Key& key)
     {
-        Slot* slot = find(key);
+        slot* slot = find_slot(key);
         if (slot != nullptr)
         {
-            return &entries_[slot->index];
+            return &values_[slot->index];
         }
         return nullptr;
     }
 
-    const Entry* operator[](const KEY_T& key) const
+    const Val* operator[](const Key& key) const
     {
-        return const_cast<Map<KEY_T, VAL_T>*>(this)->find_(key);
+        slot* slot = const_cast<map<Key, Val>*>(this)->find_slot(key);
+        if (slot != nullptr)
+        {
+            return &values_[slot->index];
+        }
+        return nullptr;
     }
 
     size_t size() const
     {
-        return entries_.size();
+        return values_.size();
     }
 
     size_t capacity() const
@@ -171,58 +155,130 @@ public:
         return slots_.size();
     }
 
-    const auto begin() const
+    struct entry
     {
-        return entries_.begin();
+        const Key* key = nullptr;
+        Val* val = nullptr;
+    };
+
+    template <typename T>
+    struct map_iterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = T;
+        using pointer = T*;
+        using reference = T&;
+        using this_t = map_iterator<T>;
+
+        map_iterator(uint32_t index, uint32_t size, const Key* keys, Val* values)
+            : _index(index)
+            , _size(size)
+            , _keys(keys)
+            , _values(values)
+            , _entry(keys, values)
+        {}
+
+        reference operator*()
+        {
+            return _entry;
+        }
+
+        pointer operator->()
+        {
+            return &_entry;
+        }
+
+        this_t& operator++()
+        {
+            if (_index >= _size)
+            {
+                return *this;
+            }
+            ++_index;
+            _entry.key = &_keys[_index];
+            _entry.val = &_values[_index];
+            return *this;
+        }
+
+        this_t operator++(int)
+        {
+            this_t tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        friend bool operator==(const this_t& a, const this_t& b)
+        {
+            return a._index == b._index && a._keys == b._keys;
+        }
+
+        friend bool operator!=(const this_t& a, const this_t& b)
+        {
+            return !(a == b);
+        }
+
+        uint32_t _index = 0;
+        uint32_t _size = 0;
+        const Key* _keys = nullptr;
+        Val* _values = nullptr;
+        entry _entry;
+    };
+
+    using iterator = map_iterator<entry>;
+    using const_iterator = map_iterator<const entry>;
+
+    const_iterator begin() const
+    {
+        return iterator{0, uint32_t(keys_.size()), keys_.data(), values_.data()};
     }
 
-    auto begin()
+    iterator begin()
     {
-        return entries_.begin();
+        return iterator{0, uint32_t(keys_.size()), keys_.data(), values_.data()};
     }
 
-    const auto end() const
+    const_iterator end() const
     {
-        return entries_.end();
+        return iterator{uint32_t(keys_.size()), uint32_t(keys_.size()), keys_.data(), values_.data()};
     }
 
-    auto end()
+    iterator end()
     {
-        return entries_.end();
+        return iterator{uint32_t(keys_.size()), uint32_t(keys_.size()), keys_.data(), values_.data()};
     }
 
 private:
-    struct Slot
+    struct slot
     {
-        uint32_t hash : 8;
-        uint32_t psl : 24;
-        uint32_t full : 1;
-        uint32_t index : 31;
+        uint64_t hash : 8;
+        uint64_t psl : 24;
+        uint64_t full : 1;
+        uint64_t index : 31;
     };
-    static_assert(sizeof(Slot) == sizeof(uint64_t));
+    static_assert(sizeof(slot) == sizeof(uint64_t));
 
     static size_t mod_pow2(size_t x, size_t y)
     {
         return x & (y - 1);
     }
 
-    Slot* find(const KEY_T& key)
+    slot* find_slot(const Key& key)
     {
         size_t cap = capacity();
         uint32_t hash = bul::hash(key);
-        Slot slot{hash & 0xff, 0, 1, 0};
+        slot slot{hash & 0xff, 0, 1, 0};
 
         for (size_t i_slot = mod_pow2(hash, cap);; i_slot = mod_pow2(i_slot + 1, cap))
         {
-            Slot& cur_slot = slots_[i_slot];
-            Entry& cur_entry = entries_[cur_slot.index];
+            this_t::slot& cur_slot = slots_[i_slot];
 
             if (!cur_slot.full || slot.psl > cur_slot.psl)
             {
                 return nullptr;
             }
 
-            if (cur_slot.hash == slot.hash && cur_entry.key == key)
+            if (cur_slot.hash == slot.hash && keys_[cur_slot.index] == key)
             {
                 return &cur_slot;
             }
@@ -233,24 +289,23 @@ private:
 
     bool should_grow()
     {
-        return entries_.size() >= capacity() * load_factor;
+        return values_.size() >= capacity() * load_factor;
     }
 
     void grow()
     {
         slots_.resize(capacity() * 2);
-        memset(slots_.data(), 0, sizeof(Slot) * slots_.size());
+        memset(slots_.data(), 0, sizeof(slot) * slots_.size());
 
         size_t cap = capacity();
-        for (size_t i_entry = 0; i_entry < entries_.size(); ++i_entry)
+        for (uint32_t i_key = 0; i_key < keys_.size(); ++i_key)
         {
-            const Entry& entry = entries_[i_entry];
-            uint32_t hash = bul::hash(entry.key);
-            Slot slot{hash & 0xff, 0, 1, uint32_t(i_entry)};
+            uint32_t hash = bul::hash(keys_[i_key]);
+            slot slot{hash & 0xff, 0, 1, i_key};
 
             for (size_t i_slot = mod_pow2(hash, cap);; i_slot = mod_pow2(i_slot + 1, cap))
             {
-                Slot& cur_slot = slots_[i_slot];
+                this_t::slot& cur_slot = slots_[i_slot];
 
                 if (!cur_slot.full)
                 {
@@ -269,9 +324,10 @@ private:
         }
     }
 
-    std::vector<Slot> slots_;
-    std::vector<Entry> entries_;
+    std::vector<slot> slots_;
+    std::vector<Key> keys_;
+    std::vector<Val> values_;
 
-    static inline constexpr float load_factor = 0.75;
+    static inline constexpr float load_factor = 0.75f;
 };
 } // namespace bul

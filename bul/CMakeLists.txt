@@ -44,7 +44,7 @@ add_executable(tests
     tests/containers/static_vector.cpp
     #tests/containers/static_queue.cpp
     tests/containers/pool.cpp
-    #tests/containers/map.cpp
+    tests/containers/map.cpp
 )
 
 target_include_directories(tests
