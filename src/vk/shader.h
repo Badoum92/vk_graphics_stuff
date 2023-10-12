@@ -5,7 +5,7 @@
 
 namespace vk
 {
-struct Shader
+struct shader
 {
     std::string path;
     VkShaderModule vk_handle = VK_NULL_HANDLE;

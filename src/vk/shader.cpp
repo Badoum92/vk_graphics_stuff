@@ -9,7 +9,7 @@
 
 namespace vk
 {
-bul::Handle<Shader> Context::create_shader(const std::string_view path)
+bul::handle<shader> context::create_shader(const std::string_view path)
 {
     std::vector<uint8_t> shader_code;
     std::string spirv_path{path.data(), path.size()};
@@ -24,12 +24,12 @@ bul::Handle<Shader> Context::create_shader(const std::string_view path)
     VkShaderModule vk_shader = VK_NULL_HANDLE;
     VK_CHECK(vkCreateShaderModule(device, &shader_info, nullptr, &vk_shader));
 
-    return shaders.insert({.path = std::move(spirv_path), .vk_handle = vk_shader});
+    return shaders.insert(shader{.path = std::move(spirv_path), .vk_handle = vk_shader});
 }
 
-void Context::destroy_shader(bul::Handle<Shader> handle)
+void context::destroy_shader(bul::handle<shader> handle)
 {
-    Shader& shader = shaders.get(handle);
+    shader& shader = shaders.get(handle);
     vkDestroyShaderModule(device, shader.vk_handle, nullptr);
     shader.vk_handle = VK_NULL_HANDLE;
 }

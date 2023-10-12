@@ -6,11 +6,11 @@
 
 namespace bul
 {
-EnumArray<MouseButton, bool> mouse_buttons = {false};
-static EnumArray<MouseButton, bool> mouse_buttons_prev = {false};
+enum_array<mouse_button, bool> mouse_buttons = {false};
+static enum_array<mouse_button, bool> mouse_buttons_prev = {false};
 
-EnumArray<Key, bool> keys = {false};
-static EnumArray<Key, bool> keys_prev = {false};
+enum_array<key, bool> keys = {false};
+static enum_array<key, bool> keys_prev = {false};
 
 namespace input::_private
 {
@@ -21,28 +21,28 @@ void new_frame()
 }
 } // namespace _private
 
-bool button_down(MouseButton button)
+bool button_down(mouse_button button)
 {
     return mouse_buttons[button];
 }
-bool button_pressed(MouseButton button)
+bool button_pressed(mouse_button button)
 {
     return mouse_buttons[button] && !mouse_buttons_prev[button];
 }
-bool button_released(MouseButton button)
+bool button_released(mouse_button button)
 {
     return !mouse_buttons[button] && mouse_buttons_prev[button];
 }
 
-bool key_down(Key key)
+bool key_down(key key)
 {
     return keys[key];
 }
-bool key_pressed(Key key)
+bool key_pressed(key key)
 {
     return keys[key] && !keys_prev[key];
 }
-bool key_released(Key key)
+bool key_released(key key)
 {
     return !keys[key] && keys_prev[key];
 }

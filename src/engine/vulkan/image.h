@@ -52,9 +52,9 @@ struct ImageDescription
 
 struct Image
 {
-    static bul::Handle<Image> create(const ImageDescription& description, VkImage vk_image = VK_NULL_HANDLE);
-    static bul::Handle<Image> create(const ImageDescription& description, const std::string_view path);
-    static void destroy(bul::Handle<Image> handle);
+    static bul::handle<Image> create(const ImageDescription& description, VkImage vk_image = VK_NULL_HANDLE);
+    static bul::handle<Image> create(const ImageDescription& description, const std::string_view path);
+    static void destroy(bul::handle<Image> handle);
     void destroy();
 
     ImageDescription description;

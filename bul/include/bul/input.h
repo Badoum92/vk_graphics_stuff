@@ -4,51 +4,51 @@
 
 namespace bul
 {
-enum class MouseButton
+enum class mouse_button
 {
-    Mouse_1,
-    Mouse_2,
-    Mouse_3,
-    Mouse_4,
-    Mouse_5,
-    Count
+    mouse_1,
+    mouse_2,
+    mouse_3,
+    mouse_4,
+    mouse_5,
+    _count
 };
 
 // clang-format off
-constexpr inline EnumArray<MouseButton, const char*> mouse_button_str = {
-    "Mouse_1",
-    "Mouse_2",
-    "Mouse_3",
-    "Mouse_4",
-    "Mouse_5"
+constexpr inline enum_array<mouse_button, const char*> mouse_button_str = {
+    "mouse_1",
+    "mouse_2",
+    "mouse_3",
+    "mouse_4",
+    "mouse_5"
 };
 // clang-format on
 
-enum class Key
+enum class key
 {
 #define X(KEY, WIN32_KEY) KEY,
 #include "bul/virtual_keys.def"
 #undef X
-    Count
+    _count
 };
 
-constexpr inline EnumArray<Key, const char*> keys_str = {
+constexpr inline enum_array<key, const char*> keys_str = {
 #define X(KEY, WIN32_KEY) #KEY,
 #include "bul/virtual_keys.def"
 #undef X
 };
 
-enum class ButtonState
+enum class button_state
 {
-    Down,
-    Up,
-    Count
+    down,
+    up,
+    _count
 };
 
 // clang-format off
-constexpr inline EnumArray<ButtonState, const char*> button_states_str = {
-    "Down",
-    "Up"
+constexpr inline enum_array<button_state, const char*> button_states_str = {
+    "down",
+    "up"
 };
 // clang-format on
 
@@ -57,14 +57,14 @@ namespace input::_private
 void new_frame();
 }
 
-extern EnumArray<MouseButton, bool> mouse_buttons;
-extern EnumArray<Key, bool> keys;
+extern enum_array<mouse_button, bool> mouse_buttons;
+extern enum_array<key, bool> keys;
 
-bool button_down(MouseButton button);
-bool button_pressed(MouseButton button);
-bool button_released(MouseButton button);
+bool button_down(mouse_button button);
+bool button_pressed(mouse_button button);
+bool button_released(mouse_button button);
 
-bool key_down(Key key);
-bool key_pressed(Key key);
-bool key_released(Key key);
+bool key_down(key key);
+bool key_pressed(key key);
+bool key_released(key key);
 } // namespace bul

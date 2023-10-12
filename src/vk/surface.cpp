@@ -12,7 +12,7 @@
 
 namespace vk
 {
-static VkQueue get_present_queue(Context* context, Surface* surface)
+static VkQueue get_present_queue(context* context, surface* surface)
 {
     VkQueue queue = VK_NULL_HANDLE;
     VkBool32 supported = false;
@@ -30,13 +30,13 @@ static VkQueue get_present_queue(Context* context, Surface* surface)
         vkGetDeviceQueue(context->device, context->compute_queue_index, 0, &queue);
         return queue;
     }
-    ASSERT_MSG(false, "Could not find a present queue");
+    ASSERT_FMT(false, "Could not find a present queue");
     return queue;
 }
 
-Surface Surface::create(Context* context)
+surface surface::create(context* context)
 {
-    Surface surface{};
+    surface surface{};
     surface.context = context;
     VkWin32SurfaceCreateInfoKHR create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
@@ -48,7 +48,7 @@ Surface Surface::create(Context* context)
     return surface;
 }
 
-void Surface::destroy()
+void surface::destroy()
 {
     destroy_swapchain();
     vkDestroySurfaceKHR(context->instance, vk_handle, nullptr);
@@ -56,7 +56,7 @@ void Surface::destroy()
     context = nullptr;
 }
 
-void Surface::create_swapchain()
+void surface::create_swapchain()
 {
     VkSurfaceCapabilitiesKHR capabilities;
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context->physical_device, vk_handle, &capabilities));
@@ -130,7 +130,7 @@ void Surface::create_swapchain()
 
     for (size_t i = 0; i < image_count; ++i)
     {
-        ImageDescription image_desc{};
+        image_description image_desc{};
         image_desc.width = extent.width;
         image_desc.height = extent.height;
         image_desc.format = format.format;
@@ -140,7 +140,7 @@ void Surface::create_swapchain()
     }
 }
 
-void Surface::destroy_swapchain()
+void surface::destroy_swapchain()
 {
     for (const auto& image : images)
     {

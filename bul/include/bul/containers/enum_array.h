@@ -7,25 +7,25 @@
 
 namespace bul
 {
-template <typename Enum>
-concept CountEnum = requires(Enum e)
+template <typename E>
+concept count_enum = requires(E e)
 {
-    std::is_enum_v<Enum>;
-    Enum::Count;
+    std::is_enum_v<E>;
+    E::_count;
 };
 
-template <CountEnum Enum, typename T>
-struct EnumArray
+template <count_enum E, typename T>
+struct enum_array
 {
-    static constexpr size_t SIZE = size_t(Enum::Count);
+    static constexpr size_t SIZE = size_t(E::_count);
 
-    constexpr T& operator[](Enum e)
+    constexpr T& operator[](E e)
     {
         ASSERT(to_underlying(e) < SIZE);
         return data[to_underlying(e)];
     }
 
-    constexpr const T& operator[](Enum e) const
+    constexpr const T& operator[](E e) const
     {
         ASSERT(to_underlying(e) < SIZE);
         return data[to_underlying(e)];

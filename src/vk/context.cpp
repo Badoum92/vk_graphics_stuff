@@ -90,7 +90,7 @@ static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesse
     }
 }
 
-static void create_physical_device(Context* context)
+static void create_physical_device(context* context)
 {
     uint32_t physical_device_count;
     vkEnumeratePhysicalDevices(context->instance, &physical_device_count, nullptr);
@@ -116,9 +116,9 @@ static void create_physical_device(Context* context)
     bul::log_info("Physical device: %s", context->physical_device_properties.deviceName);
 }
 
-static void create_device(Context* context)
+static void create_device(context* context)
 {
-    bul::StaticVector<const char*, 1> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    bul::static_vector<const char*, 1> device_extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(context->physical_device, &queue_family_count, nullptr);
@@ -188,7 +188,7 @@ static void create_device(Context* context)
     volkLoadDevice(context->device);
 
     constexpr uint32_t descriptor_count = 256;
-    bul::StaticVector<VkDescriptorPoolSize, 4> pool_sizes{
+    bul::static_vector<VkDescriptorPoolSize, 4> pool_sizes{
         VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, .descriptorCount = descriptor_count},
         VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = descriptor_count},
         VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = descriptor_count},
@@ -219,15 +219,15 @@ static void create_device(Context* context)
     vkGetDeviceQueue(context->device, context->transfer_queue_index, 0, &context->transfer_queue);
 }
 
-Context Context::create(bool enable_validation)
+context context::create(bool enable_validation)
 {
-    bul::StaticVector<const char*, 1> validation_layers = {"VK_LAYER_KHRONOS_validation"};
-    bul::StaticVector<const char*, 3> instance_extensions = {VK_KHR_SURFACE_EXTENSION_NAME,
+    bul::static_vector<const char*, 1> validation_layers = {"VK_LAYER_KHRONOS_validation"};
+    bul::static_vector<const char*, 3> instance_extensions = {VK_KHR_SURFACE_EXTENSION_NAME,
                                                              VK_KHR_WIN32_SURFACE_EXTENSION_NAME};
 
     VK_CHECK(volkInitialize());
 
-    Context context;
+    context context;
 
     VkApplicationInfo app_info{};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -239,7 +239,7 @@ Context Context::create(bool enable_validation)
 
     if (enable_validation)
     {
-        instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        instance_extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
     VkInstanceCreateInfo instance_create_info{};
@@ -275,7 +275,7 @@ Context Context::create(bool enable_validation)
     return context;
 }
 
-void Context::destroy()
+void context::destroy()
 {
     vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
     descriptor_pool = VK_NULL_HANDLE;

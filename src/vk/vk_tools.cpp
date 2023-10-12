@@ -6,57 +6,57 @@
 
 namespace vk
 {
-ImageAccess get_src_image_access(ImageUsage usage)
+image_access get_src_image_access(image_usage usage)
 {
-    ImageAccess access;
+    image_access access;
     switch (usage)
     {
-    case ImageUsage::GraphicsShaderRead:
+    case image_usage::graphics_shader_read:
         access.stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
         access.access = 0;
         access.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         break;
-    case ImageUsage::GraphicsShaderReadWrite:
+    case image_usage::graphics_shader_read_write:
         access.stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         access.access = VK_ACCESS_SHADER_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_GENERAL;
         break;
-    case ImageUsage::ComputeShaderRead:
+    case image_usage::compute_shader_read:
         access.stage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         access.access = 0;
         access.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         break;
-    case ImageUsage::ComputeShaderReadWrite:
+    case image_usage::compute_shader_read_write:
         access.stage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         access.access = VK_ACCESS_SHADER_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_GENERAL;
         break;
-    case ImageUsage::TransferDst:
+    case image_usage::transfer_dst:
         access.stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         access.access = VK_ACCESS_TRANSFER_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         break;
-    case ImageUsage::TransferSrc:
+    case image_usage::transfer_src:
         access.stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         access.access = 0;
         access.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         break;
-    case ImageUsage::ColorAttachment:
+    case image_usage::color_attachment:
         access.stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         access.access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         break;
-    case ImageUsage::DepthAttachment:
+    case image_usage::depth_attachment:
         access.stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         access.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         break;
-    case ImageUsage::Present:
+    case image_usage::present:
         access.stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         access.access = 0;
         access.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         break;
-    case ImageUsage::None:
+    case image_usage::none:
         access.stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         access.access = 0;
         access.layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -68,57 +68,57 @@ ImageAccess get_src_image_access(ImageUsage usage)
     return access;
 }
 
-ImageAccess get_dst_image_access(ImageUsage usage)
+image_access get_dst_image_access(image_usage usage)
 {
-    ImageAccess access;
+    image_access access;
     switch (usage)
     {
-    case ImageUsage::GraphicsShaderRead:
+    case image_usage::graphics_shader_read:
         access.stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         access.access = VK_ACCESS_SHADER_READ_BIT;
         access.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         break;
-    case ImageUsage::GraphicsShaderReadWrite:
+    case image_usage::graphics_shader_read_write:
         access.stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         access.access = VK_ACCESS_SHADER_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_GENERAL;
         break;
-    case ImageUsage::ComputeShaderRead:
+    case image_usage::compute_shader_read:
         access.stage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         access.access = VK_ACCESS_SHADER_READ_BIT;
         access.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         break;
-    case ImageUsage::ComputeShaderReadWrite:
+    case image_usage::compute_shader_read_write:
         access.stage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         access.access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_GENERAL;
         break;
-    case ImageUsage::TransferDst:
+    case image_usage::transfer_dst:
         access.stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         access.access = VK_ACCESS_TRANSFER_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         break;
-    case ImageUsage::TransferSrc:
+    case image_usage::transfer_src:
         access.stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         access.access = VK_ACCESS_TRANSFER_READ_BIT;
         access.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         break;
-    case ImageUsage::ColorAttachment:
+    case image_usage::color_attachment:
         access.stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         access.access = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         access.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         break;
-    case ImageUsage::DepthAttachment:
+    case image_usage::depth_attachment:
         access.stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         access.access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
         access.layout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         break;
-    case ImageUsage::Present:
+    case image_usage::present:
         access.stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         access.access = 0;
         access.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         break;
-    case ImageUsage::None:
+    case image_usage::none:
         access.stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         access.access = 0;
         access.layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -130,7 +130,7 @@ ImageAccess get_dst_image_access(ImageUsage usage)
     return access;
 }
 
-VkImageMemoryBarrier get_image_barrier(Image& image, const ImageAccess& src, const ImageAccess& dst)
+VkImageMemoryBarrier get_image_barrier(image& image, const image_access& src, const image_access& dst)
 {
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

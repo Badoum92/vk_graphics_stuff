@@ -18,7 +18,7 @@ inline constexpr VkBufferUsageFlags transfer_buffer_usage =
 inline constexpr VkBufferUsageFlags indirect_buffer_usage =
     VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-struct BufferDescription
+struct buffer_description
 {
     uint32_t size = 0;
     VkBufferUsageFlags usage = storage_buffer_usage;
@@ -26,9 +26,9 @@ struct BufferDescription
     std::string name;
 };
 
-struct Buffer
+struct buffer
 {
-    BufferDescription description;
+    buffer_description description;
     VkBuffer vk_handle;
     VmaAllocation allocation = VK_NULL_HANDLE;
     void* mapped_data = nullptr;

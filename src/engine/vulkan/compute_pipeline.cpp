@@ -6,7 +6,7 @@
 
 namespace vk
 {
-bul::Handle<ComputeProgram> device::create_compute_program(const ComputeProgramDescription& description)
+bul::handle<ComputeProgram> device::create_compute_program(const ComputeProgramDescription& description)
 {
     DescriptorSet set = create_descriptor_set(description.descriptor_types);
 

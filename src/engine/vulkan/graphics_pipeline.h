@@ -38,8 +38,8 @@ struct RenderState
 
 struct GraphicsProgramDescription
 {
-    bul::Handle<Shader> vertex_shader;
-    bul::Handle<Shader> fragment_shader;
+    bul::handle<Shader> vertex_shader;
+    bul::handle<Shader> fragment_shader;
     std::vector<DescriptorType> descriptor_types;
     FrameBufferDescription attachment_formats;
 };

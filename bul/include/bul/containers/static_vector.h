@@ -31,7 +31,7 @@ struct static_vector
     {
         ASSERT(init_list.size() <= CAPACITY);
         _current = _end;
-        copy_range(init_list.begin(), init_list.end(), _begin);
+        uninitialized_copy_range(init_list.begin(), init_list.end(), _begin);
     }
 
     constexpr ~static_vector()
@@ -41,14 +41,11 @@ struct static_vector
 
     constexpr static_vector(const static_vector<T, CAPACITY>& other)
     {
-        clear();
-        _current = _begin + other.size();
-        copy_range(other._begin, other._end, _begin);
+        *this = other;
     }
 
     constexpr static_vector& operator=(const static_vector<T, CAPACITY>& other)
     {
-        clear();
         _current = _begin + other.size();
         copy_range(other._begin, other._end, _begin);
         return *this;
@@ -72,10 +69,7 @@ struct static_vector
         ASSERT(size_ <= CAPACITY);
         if (size_ < size())
         {
-            if constexpr (!std::is_trivially_destructible_v<T>)
-            {
-                delete_range(_begin + size_, _current);
-            }
+            delete_range(_begin + size_, _current);
         }
         else
         {
@@ -127,7 +121,7 @@ struct static_vector
         ASSERT(index < size());
         std::swap(_begin[index], back());
         --_current;
-        if (!std::is_trivially_default_constructible_v<T>)
+        if (!std::is_trivially_destructible_v<T>)
         {
             _current->~T();
         }
@@ -143,7 +137,7 @@ struct static_vector
         ASSERT(index < size());
         move_range(_begin + index + 1, _current, _begin + index);
         --_current;
-        if (!std::is_trivially_default_constructible_v<T>)
+        if (!std::is_trivially_destructible_v<T>)
         {
             _current->~T();
         }

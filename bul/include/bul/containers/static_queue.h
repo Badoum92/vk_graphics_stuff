@@ -1,67 +1,97 @@
 #pragma once
 
 #include <type_traits>
-#include <iterator>
+
+#include "bul/bul.h"
+#include "bul/memory_util.h"
 
 namespace bul
 {
 template <typename T, size_t CAPACITY>
-class StaticQueue
+struct static_queue
 {
-public:
-    constexpr StaticQueue() = default;
+    constexpr static_queue() = default;
 
-    constexpr ~StaticQueue()
+    constexpr ~static_queue()
     {
         if constexpr (!std::is_trivially_destructible_v<T>)
         {
-            for (size_t i = begin_; i != end_; i = (i + 1) % CAPACITY)
+            for (size_t i = _begin; i != _end; i = (i + 1) % CAPACITY)
             {
-                data_[i].~T();
+                _data[i].~T();
             }
         }
     }
 
-    constexpr StaticQueue(const StaticQueue&) = default;
-    constexpr StaticQueue& operator=(const StaticQueue&) = default;
-    constexpr StaticQueue(StaticQueue&&) = default;
-    constexpr StaticQueue& operator=(StaticQueue&&) = default;
-
-    constexpr bool push_back(const T& val)
+    constexpr static_queue(const static_queue<T, CAPACITY>& other)
     {
-        return emplace_back(val);
+        *this = other;
     }
 
-    constexpr bool push_back(T&& val)
+    constexpr static_queue<T, CAPACITY>& operator=(const static_queue<T, CAPACITY>& other)
     {
-        return emplace_back(std::move(val));
+        clear();
+        _begin = 0;
+        _end = other._size;
+        _size = other._size;
+        if (other._begin < other._end)
+        {
+            uninitialized_copy_range(other._data + other._begin, other._data + other._end, _data);
+        }
+        else
+        {
+            uninitialized_copy_range(other._data + other._begin, other._data + CAPACITY, _data);
+            uninitialized_copy_range(other._data, other._data + other._end, _data + CAPACITY - other._begin);
+        }
+    }
+
+    constexpr static_queue(static_queue<T, CAPACITY>&& other)
+    {
+        *this = std::move(other);
+    }
+
+    constexpr static_queue<T, CAPACITY>& operator=(static_queue<T, CAPACITY>&& other)
+    {
+        clear();
+        _begin = 0;
+        _end = other._size;
+        _size = other._size;
+        if (other._begin < other._end)
+        {
+            uninitialized_copy_range(other._data + other._begin, other._data + other._end, _data);
+        }
+        else
+        {
+            uninitialized_copy_range(other._data + other._begin, other._data + CAPACITY, _data);
+            uninitialized_copy_range(other._data, other._data + other._end, _data + CAPACITY - other._begin);
+        }
     }
 
     template <typename... Args>
-    constexpr bool emplace_back(Args&&... args)
+    constexpr T* emplace(Args&&... args)
     {
-        if (size_ == CAPACITY)
+        if (_size == CAPACITY)
         {
-            return false;
+            return nullptr;
         }
-        new (data_ + end_) T(std::forward<Args>(args)...);
-        end_ = (end_ + 1) % CAPACITY;
-        ++size_;
-        return true;
+        T* ret = new (_data + _end) T(std::forward<Args>(args)...);
+        _end = (_end + 1) % CAPACITY;
+        ++_size;
+        return ret;
     }
 
-    constexpr bool pop_front()
+    constexpr bool pop()
     {
-        if (size_ == 0)
+        if (_size == 0)
         {
             return false;
         }
         if constexpr (!std::is_trivially_destructible_v<T>)
         {
-            data_[begin_].~T();
+            _data[_begin].~T();
         }
-        begin_ = (begin_ + 1) % CAPACITY;
-        --size_;
+        _begin = (_begin + 1) % CAPACITY;
+        --_size;
         return true;
     }
 
@@ -72,99 +102,37 @@ public:
 
     constexpr size_t size() const
     {
-        return size_;
+        return _size;
     }
 
     constexpr bool empty() const
     {
-        return size() == 0;
-    }
-
-    constexpr T* begin()
-    {
-        return data_;
-    }
-
-    constexpr T* end()
-    {
-        return data_ + size_;
+        return _size == 0;
     }
 
     constexpr const T& front() const
     {
-        return data_[begin_];
+        ASSERT(_size > 0);
+        return _data[_begin];
     }
 
     constexpr T& front()
     {
-        return data_[begin_];
+        ASSERT(_size > 0);
+        return _data[_begin];
     }
 
-    struct Iterator
+    constexpr void clear()
     {
-        using iterator_category = std::forward_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using value_type = T;
-        using pointer = T*;
-        using reference = T&;
-
-        Iterator(size_t index, pointer base)
-            : index_(index)
-            , base_(base)
-        {}
-
-        reference operator*() const
+        while (_size > 0)
         {
-            return base_[index_];
+            pop();
         }
-
-        pointer operator->()
-        {
-            return base_ + index_;
-        }
-
-        Iterator& operator++()
-        {
-            index_ = (index_ + 1) % CAPACITY;
-            return *this;
-        }
-
-        Iterator operator++(int)
-        {
-            Iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-        friend bool operator==(const Iterator& a, const Iterator& b)
-        {
-            return a.base_ == b.base_ && a.index_ == b.index_;
-        }
-
-        friend bool operator!=(const Iterator& a, const Iterator& b)
-        {
-            return a.base_ != b.base_ || a.index_ != b.index_;
-        }
-
-    private:
-        size_t index_;
-        pointer base_;
-    };
-
-    Iterator begin() const
-    {
-        return Iterator(begin_, data_);
     }
 
-    Iterator end() const
-    {
-        return Iterator(end_, data_);
-    }
-
-private:
-    size_t begin_ = 0;
-    size_t end_ = 0;
-    size_t size_ = 0;
-    alignas(T) T data_[CAPACITY] = {};
+    size_t _begin = 0;
+    size_t _end = 0;
+    size_t _size = 0;
+    alignas(T) T _data[CAPACITY] = {};
 };
 } // namespace bul

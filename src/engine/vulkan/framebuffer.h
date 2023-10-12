@@ -76,7 +76,7 @@ struct FrameBufferDescription
 struct RenderPass
 {
     static RenderPass create(const FrameBufferDescription& description, const std::vector<LoadOp>& load_ops);
-    static const RenderPass& get_or_create(const bul::Handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops);
+    static const RenderPass& get_or_create(const bul::handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops);
     void destroy();
 
     VkRenderPass vk_handle = VK_NULL_HANDLE;
@@ -85,17 +85,17 @@ struct RenderPass
 
 struct FrameBuffer
 {
-    static bul::Handle<FrameBuffer> create(const FrameBufferDescription& description,
-                                           const std::vector<bul::Handle<Image>>& color_attachments,
-                                           const bul::Handle<Image>& depth_attachment);
-    static void destroy(bul::Handle<FrameBuffer> handle);
+    static bul::handle<FrameBuffer> create(const FrameBufferDescription& description,
+                                           const std::vector<bul::handle<Image>>& color_attachments,
+                                           const bul::handle<Image>& depth_attachment);
+    static void destroy(bul::handle<FrameBuffer> handle);
     void destroy();
 
     FrameBufferDescription description;
     VkFramebuffer vk_handle = VK_NULL_HANDLE;
 
-    std::vector<bul::Handle<Image>> color_attachments;
-    bul::Handle<Image> depth_attachment;
+    std::vector<bul::handle<Image>> color_attachments;
+    bul::handle<Image> depth_attachment;
     std::vector<RenderPass> renderpasses;
 };
 } // namespace vk

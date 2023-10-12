@@ -17,8 +17,8 @@ struct BufferDescription
 
 struct Buffer
 {
-    static bul::Handle<Buffer> create(const BufferDescription& description);
-    static void destroy(bul::Handle<Buffer> handle);
+    static bul::handle<Buffer> create(const BufferDescription& description);
+    static void destroy(bul::handle<Buffer> handle);
     void destroy();
     void* map();
     void unmap();
@@ -37,7 +37,7 @@ struct RingBuffer
     void unmap();
     uint32_t push(const void* data, uint32_t size);
 
-    bul::Handle<Buffer> buffer_handle;
+    bul::handle<Buffer> buffer_handle;
     void* mapped_data = nullptr;
     uint32_t size = 0;
     uint32_t alignment = 0;

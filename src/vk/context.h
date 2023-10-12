@@ -13,9 +13,9 @@
 
 namespace vk
 {
-struct Context
+struct context
 {
-    static Context create(bool enable_validation);
+    static context create(bool enable_validation);
     void destroy();
 
     static constexpr uint32_t MAX_FRAMES = 2;
@@ -38,19 +38,19 @@ struct Context
 
     VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 
-    Surface surface;
+    surface surface;
 
-    bul::Pool<Image> images;
-    bul::Pool<Buffer> buffers;
-    bul::Pool<Shader> shaders;
+    bul::pool<image> images;
+    bul::pool<buffer> buffers;
+    bul::pool<shader> shaders;
 
-    bul::Handle<Image> create_image(ImageDescription&& description, VkImage vk_image = VK_NULL_HANDLE);
-    void destroy_image(bul::Handle<Image> handle);
+    bul::handle<image> create_image(image_description&& description, VkImage vk_image = VK_NULL_HANDLE);
+    void destroy_image(bul::handle<image> handle);
 
-    bul::Handle<Buffer> create_buffer(BufferDescription&& description);
-    void destroy_buffer(bul::Handle<Buffer> handle);
+    bul::handle<buffer> create_buffer(buffer_description&& description);
+    void destroy_buffer(bul::handle<buffer> handle);
 
-    bul::Handle<Shader> create_shader(const std::string_view path);
-    void destroy_shader(bul::Handle<Shader> handle);
+    bul::handle<shader> create_shader(const std::string_view path);
+    void destroy_shader(bul::handle<shader> handle);
 };
 } // namespace vk

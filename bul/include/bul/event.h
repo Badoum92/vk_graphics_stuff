@@ -4,65 +4,65 @@
 
 namespace bul
 {
-enum class EventType
+enum class event_type
 {
-    MouseClick,
-    Key,
-    MouseMove,
-    Count
+    mouse_click,
+    key,
+    mouse_move,
+    _count
 };
 
 // clang-format off
-constexpr inline EnumArray<EventType, const char*> event_types_str = {
+constexpr inline enum_array<event_type, const char*> event_types_str = {
     "MouseClick",
     "Key",
     "MouseMove"
 };
 // clang-format on
 
-struct Event
+struct event
 {
-    struct MouseClick_
+    struct _mouse_click
     {
-        MouseButton button;
-        ButtonState state;
+        mouse_button button;
+        button_state state;
     };
 
-    struct Key_
+    struct _key
     {
-        Key key;
-        ButtonState state;
+        key key;
+        button_state state;
     };
 
-    struct MouseMove_
+    struct _mouse_move
     {
         int x;
         int y;
     };
 
-    EventType type;
+    event_type type;
     union
     {
-        MouseClick_ mouse_click;
-        Key_ key;
-        MouseMove_ mouse_move;
+        _mouse_click mouse_click;
+        _key key;
+        _mouse_move mouse_move;
     };
 
-    Event(MouseButton button, ButtonState state)
+    event(mouse_button button, button_state state)
     {
-        type = EventType::MouseClick;
+        type = event_type::mouse_click;
         mouse_click = {.button = button, .state = state};
     }
 
-    Event(Key k, ButtonState state)
+    event(bul::key key_, bul::button_state state)
     {
-        type = EventType::Key;
-        key = {k, state};
+        type = event_type::key;
+        key = {key_, state};
     }
 
-    Event(int x, int y)
+    event(int x, int y)
     {
-        type = EventType::MouseMove;
+        type = event_type::mouse_move;
         mouse_move = {x, y};
     }
 };

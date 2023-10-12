@@ -22,7 +22,7 @@ namespace surface
     inline VkExtent2D extent;
     inline VkPresentModeKHR present_mode;
     inline VkSurfaceFormatKHR format;
-    inline std::vector<bul::Handle<Image>> images;
-    inline std::vector<bul::Handle<FrameBuffer>> framebuffers;
+    inline std::vector<bul::handle<Image>> images;
+    inline std::vector<bul::handle<FrameBuffer>> framebuffers;
 };
 } // namespace vk

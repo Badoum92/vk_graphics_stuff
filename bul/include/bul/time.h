@@ -19,10 +19,10 @@ double delta_ns();
 void update();
 } // namespace Time
 
-class Timer
+class timer
 {
 public:
-    Timer();
+    timer();
 
     double total_s() const;
     double total_ms() const;

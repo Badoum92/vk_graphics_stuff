@@ -31,7 +31,7 @@ static ImageView create_image_view(VkImage image, const VkImageSubresourceRange&
     return view;
 }
 
-bul::Handle<Image> Image::create(const ImageDescription& description, VkImage vk_image)
+bul::handle<Image> Image::create(const ImageDescription& description, VkImage vk_image)
 {
     VmaAllocation allocation = VK_NULL_HANDLE;
     if (vk_image == VK_NULL_HANDLE)
@@ -72,12 +72,12 @@ bul::Handle<Image> Image::create(const ImageDescription& description, VkImage vk
         Image{.description = description, .vk_handle = vk_image, .allocation = allocation, .full_view = full_view});
 }
 
-bul::Handle<Image> Image::create(const ImageDescription& description, const std::string_view path)
+bul::handle<Image> Image::create(const ImageDescription& description, const std::string_view path)
 {
     int width, height, channels;
     if (!stbi_info(path.data(), &width, &height, &channels))
     {
-        return bul::Handle<Image>::invalid;
+        return bul::handle<Image>::invalid;
     }
 
     ImageDescription new_description = description;
@@ -88,7 +88,7 @@ bul::Handle<Image> Image::create(const ImageDescription& description, const std:
     return create(new_description);
 }
 
-void Image::destroy(bul::Handle<Image> handle)
+void Image::destroy(bul::handle<Image> handle)
 {
     device::images.get(handle).destroy();
     device::images.erase(handle);

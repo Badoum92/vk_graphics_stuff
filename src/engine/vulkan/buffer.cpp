@@ -8,7 +8,7 @@
 
 namespace vk
 {
-bul::Handle<Buffer> Buffer::create(const BufferDescription& description)
+bul::handle<Buffer> Buffer::create(const BufferDescription& description)
 {
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -26,7 +26,7 @@ bul::Handle<Buffer> Buffer::create(const BufferDescription& description)
     return device::buffers.insert({.description = description, .vk_handle = vk_buffer, .allocation = allocation});
 }
 
-void Buffer::destroy(bul::Handle<Buffer> handle)
+void Buffer::destroy(bul::handle<Buffer> handle)
 {
     device::buffers.get(handle).destroy();
     device::buffers.erase(handle);

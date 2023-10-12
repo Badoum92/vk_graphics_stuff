@@ -61,20 +61,20 @@ DescriptorSet device::create_descriptor_set(const std::vector<DescriptorType>& d
     return descriptor_set;
 }
 
-void DescriptorSet::bind_image(uint32_t binding, const bul::Handle<Image>& image)
+void DescriptorSet::bind_image(uint32_t binding, const bul::handle<Image>& image)
 {
     ASSERT(descriptor_types[binding].info.type == DescriptorType::Type::SampledImage
            || descriptor_types[binding].info.type == DescriptorType::Type::StorageImage);
     descriptors[binding].image = {image};
 }
 
-void DescriptorSet::bind_storage_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer)
+void DescriptorSet::bind_storage_buffer(uint32_t binding, const bul::handle<Buffer>& buffer)
 {
     ASSERT(descriptor_types[binding].info.type == DescriptorType::Type::StorageBuffer);
     descriptors[binding].buffer = {buffer};
 }
 
-void DescriptorSet::bind_uniform_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer, uint32_t offset, uint32_t size)
+void DescriptorSet::bind_uniform_buffer(uint32_t binding, const bul::handle<Buffer>& buffer, uint32_t offset, uint32_t size)
 {
     ASSERT(descriptor_types[binding].info.type == DescriptorType::Type::DynamicBuffer);
     descriptors[binding].dynamic = {buffer, offset, size};

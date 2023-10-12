@@ -142,7 +142,7 @@ void surface::create_swapchain()
     for (uint32_t i = 0; i < image_count; ++i)
     {
         images[i] = Image::create(img_desc, vk_images[i]);
-        framebuffers[i] = FrameBuffer::create(fb_desc, {images[i]}, bul::Handle<Image>::invalid);
+        framebuffers[i] = FrameBuffer::create(fb_desc, {images[i]}, bul::handle<Image>::invalid);
     }
 }
 

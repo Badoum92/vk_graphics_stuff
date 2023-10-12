@@ -55,14 +55,14 @@ namespace device
     DescriptorSet create_descriptor_set(const std::vector<DescriptorType>& descriptor_types);
     void destroy_descriptor_set(DescriptorSet& descriptor_set);
 
-    bul::Handle<Shader> create_shader(const std::string& path);
+    bul::handle<Shader> create_shader(const std::string& path);
     void destroy_shader(Shader& shader);
 
-    bul::Handle<GraphicsProgram> create_graphics_program(const GraphicsProgramDescription& description);
+    bul::handle<GraphicsProgram> create_graphics_program(const GraphicsProgramDescription& description);
     void destroy_graphics_program(GraphicsProgram& graphics_program);
-    VkPipeline compile(const bul::Handle<GraphicsProgram>& handle, const RenderState& render_state);
+    VkPipeline compile(const bul::handle<GraphicsProgram>& handle, const RenderState& render_state);
 
-    bul::Handle<ComputeProgram> create_compute_program(const ComputeProgramDescription& description);
+    bul::handle<ComputeProgram> create_compute_program(const ComputeProgramDescription& description);
     void destroy_compute_program(ComputeProgram& compute_program);
 
     void create_frame_contexts();

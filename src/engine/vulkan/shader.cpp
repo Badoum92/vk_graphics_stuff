@@ -7,7 +7,7 @@
 
 namespace vk
 {
-bul::Handle<Shader> device::create_shader(const std::string& path)
+bul::handle<Shader> device::create_shader(const std::string& path)
 {
     std::vector<uint8_t> shader_code;
     bul::read_file((path + ".spv").c_str(), shader_code);

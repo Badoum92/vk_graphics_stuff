@@ -18,7 +18,7 @@ struct FrameContext
     uint32_t image_index = 0;
     CommandContext command_context;
 
-    bul::Handle<FrameBuffer> framebuffer;
-    bul::Handle<Image> image;
+    bul::handle<FrameBuffer> framebuffer;
+    bul::handle<Image> image;
 };
 }

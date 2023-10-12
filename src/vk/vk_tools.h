@@ -11,20 +11,25 @@
 
 namespace vk
 {
-struct Context;
+struct context;
 
-ImageAccess get_src_image_access(ImageUsage usage);
-ImageAccess get_dst_image_access(ImageUsage usage);
-VkImageMemoryBarrier get_image_barrier(Image& image, const ImageAccess& src, const ImageAccess& dst);
+image_access get_src_image_access(image_usage usage);
+image_access get_dst_image_access(image_usage usage);
+VkImageMemoryBarrier get_image_barrier(image& image, const image_access& src, const image_access& dst);
 
 bool is_depth(VkFormat format);
 bool is_stencil(VkFormat format);
 
 const char* vk_result_to_str(VkResult result);
 
-void set_resource_name(Context* context, uint64_t vk_handle, VkDebugReportObjectTypeEXT objectType,
+void set_resource_name(context* context, uint64_t vk_handle, VkDebugReportObjectTypeEXT objectType,
                        std::string_view name);
 
-#define VK_CHECK(RESULT) ASSERT_FMT((RESULT) == VK_SUCCESS, "%s", vk_result_to_str(result__))
+#define VK_CHECK(RESULT)                                                                                               \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        VkResult _result__ = (RESULT);                                                                                 \
+        ASSERT_FMT(_result__ == VK_SUCCESS, "%s (%s)", #RESULT, vk_result_to_str(_result__));                          \
+    } while (0)
 
 } // namespace vk

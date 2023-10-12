@@ -27,7 +27,7 @@ struct vector
     {
         reserve(init_list.size());
         _current = _end;
-        copy_range(init_list.begin(), init_list.end(), _begin);
+        uninitialized_copy_range(init_list.begin(), init_list.end(), _begin);
     }
 
     vector(size_t size, const T& default_value)
@@ -51,22 +51,16 @@ struct vector
 
     vector(const vector<T>& other)
     {
-        clear();
-        free(_begin);
-        _begin = reinterpret_cast<T*>(malloc(other.size_bytes()));
-        _current = _begin + other.size();
-        _end = _current;
-        copy_range(other._begin, other._end, _begin);
+        *this = other;
     }
 
     vector<T>& operator=(const vector<T>& other)
     {
         clear();
-        free(_begin);
-        _begin = reinterpret_cast<T*>(malloc(other.size_bytes()));
+        _begin = reinterpret_cast<T*>(realloc(_begin, other.size_bytes()));
         _current = _begin + other.size();
         _end = _current;
-        copy_range(other._begin, other._end, _begin);
+        uninitialized_copy_range(other._begin, other._end, _begin);
         return *this;
     }
 
@@ -77,6 +71,7 @@ struct vector
 
     vector<T>& operator=(vector<T>&& other) noexcept
     {
+        clear();
         free(_begin);
         _begin = other._begin;
         _current = other._current;
@@ -91,10 +86,7 @@ struct vector
     {
         if (size_ < size())
         {
-            if constexpr (!std::is_trivially_destructible_v<T>)
-            {
-                delete_range(_begin + size_, _current);
-            }
+            delete_range(_begin + size_, _current);
         }
         else
         {
@@ -114,7 +106,7 @@ struct vector
         T* new_begin = reinterpret_cast<T*>(malloc(size_ * sizeof(T)));
         T* new_end = new_begin + size_;
         T* new_current = new_begin + size();
-        move_range(_begin, _current, new_begin);
+        uninitialized_move_range(_begin, _current, new_begin);
         free(_begin);
         _begin = new_begin;
         _current = new_current;
@@ -167,7 +159,7 @@ struct vector
         ASSERT(index < size());
         std::swap(_begin[index], back());
         --_current;
-        if (!std::is_trivially_default_constructible_v<T>)
+        if (!std::is_trivially_destructible_v<T>)
         {
             _current->~T();
         }
@@ -183,7 +175,7 @@ struct vector
         ASSERT(index < size());
         move_range(_begin + index + 1, _current, _begin + index);
         --_current;
-        if (!std::is_trivially_default_constructible_v<T>)
+        if (!std::is_trivially_destructible_v<T>)
         {
             _current->~T();
         }

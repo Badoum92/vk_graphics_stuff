@@ -9,7 +9,7 @@
 
 namespace bul::window
 {
-static std::vector<Event> events;
+static std::vector<event> events;
 static vec2u size_ = {0, 0};
 static HWND handle_ = nullptr;
 static bool should_close_ = false;
@@ -24,7 +24,7 @@ static RAWINPUT* raw_input_ = nullptr;
 static UINT raw_input_size_ = 0;
 
 // clang-format off
-static EnumArray<Key, int> key_to_win32_key = {
+static enum_array<key, int> key_to_win32_key = {
 #define X(KEY, WIN32_KEY) WIN32_KEY,
 #include "bul/virtual_keys.def"
 #undef X
@@ -144,7 +144,7 @@ bool cursor_visible()
     return cursor_visible_;
 }
 
-const std::vector<Event>& poll_events()
+const std::vector<event>& poll_events()
 {
     events.clear();
     input::_private::new_frame();
@@ -171,19 +171,19 @@ static WPARAM handle_left_right_special_keys(WPARAM wParam, LPARAM lParam)
     return wParam;
 }
 
-static Key handle_key_msg(WPARAM wParam, LPARAM)
+static key handle_key_msg(WPARAM wParam, LPARAM)
 {
-    int count = to_underlying(Key::Count);
+    int count = to_underlying(key::_count);
     for (int i = 0; i < count; ++i)
     {
-        Key key = to_enum<Key>(i);
+        key key = to_enum<bul::key>(i);
         int win32_key = key_to_win32_key[key];
         if (static_cast<int>(wParam) == win32_key)
         {
             return key;
         }
     }
-    return Key::Count;
+    return key::_count;
 }
 
 static bool is_right_alt(MSG m)
@@ -195,7 +195,7 @@ static bool is_right_alt(MSG m)
 static bool is_right_alt()
 {
     MSG next;
-    LONG time = GetMessageTime();
+    DWORD time = GetMessageTime();
     if (PeekMessage(&next, nullptr, 0, 0, PM_NOREMOVE) && is_right_alt(next) && next.time == time)
     {
         PeekMessage(&next, nullptr, 0, 0, PM_REMOVE);
@@ -228,15 +228,15 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     case WM_KEYDOWN:
     case WM_KEYUP: {
         wParam = handle_left_right_special_keys(wParam, lParam);
-        Key key = handle_key_msg(wParam, lParam);
-        if (key != Key::Count)
+        key key = handle_key_msg(wParam, lParam);
+        if (key != bul::key::_count)
         {
-            if (key == Key::LCtrl && is_right_alt())
+            if (key == bul::key::l_ctrl && is_right_alt())
             {
-                key = Key::RAlt;
+                key = bul::key::r_alt;
             }
             keys[key] = !(HIWORD(lParam) & KF_UP);
-            events.emplace_back(key, HIWORD(lParam) & KF_UP ? ButtonState::Up : ButtonState::Down);
+            events.emplace_back(key, HIWORD(lParam) & KF_UP ? button_state::up : button_state::down);
         }
         return 0;
     }
@@ -253,59 +253,59 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     }
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
-        bul::mouse_buttons[MouseButton::Mouse_1] = true;
-        events.emplace_back(MouseButton::Mouse_1, ButtonState::Down);
+        bul::mouse_buttons[mouse_button::mouse_1] = true;
+        events.emplace_back(mouse_button::mouse_1, button_state::down);
         return 0;
     }
     case WM_LBUTTONUP: {
-        bul::mouse_buttons[MouseButton::Mouse_1] = false;
-        events.emplace_back(MouseButton::Mouse_1, ButtonState::Up);
+        bul::mouse_buttons[mouse_button::mouse_1] = false;
+        events.emplace_back(mouse_button::mouse_1, button_state::up);
         return 0;
     }
     case WM_RBUTTONDOWN:
     case WM_RBUTTONDBLCLK: {
-        bul::mouse_buttons[MouseButton::Mouse_2] = true;
-        events.emplace_back(MouseButton::Mouse_2, ButtonState::Down);
+        bul::mouse_buttons[mouse_button::mouse_2] = true;
+        events.emplace_back(mouse_button::mouse_2, button_state::down);
         return 0;
     }
     case WM_RBUTTONUP: {
-        bul::mouse_buttons[MouseButton::Mouse_2] = false;
-        events.emplace_back(MouseButton::Mouse_2, ButtonState::Up);
+        bul::mouse_buttons[mouse_button::mouse_2] = false;
+        events.emplace_back(mouse_button::mouse_2, button_state::up);
         return 0;
     }
     case WM_MBUTTONDOWN: {
-        bul::mouse_buttons[MouseButton::Mouse_3] = true;
-        events.emplace_back(MouseButton::Mouse_3, ButtonState::Down);
+        bul::mouse_buttons[mouse_button::mouse_3] = true;
+        events.emplace_back(mouse_button::mouse_3, button_state::down);
         return 0;
     }
     case WM_MBUTTONUP: {
-        bul::mouse_buttons[MouseButton::Mouse_3] = false;
-        events.emplace_back(MouseButton::Mouse_3, ButtonState::Up);
+        bul::mouse_buttons[mouse_button::mouse_3] = false;
+        events.emplace_back(mouse_button::mouse_3, button_state::up);
         return 0;
     }
     case WM_XBUTTONDOWN: {
         if (lParam & MK_XBUTTON1)
         {
-            bul::mouse_buttons[MouseButton::Mouse_4] = true;
-            events.emplace_back(MouseButton::Mouse_4, ButtonState::Down);
+            bul::mouse_buttons[mouse_button::mouse_4] = true;
+            events.emplace_back(mouse_button::mouse_4, button_state::down);
         }
         else
         {
-            bul::mouse_buttons[MouseButton::Mouse_5] = true;
-            events.emplace_back(MouseButton::Mouse_5, ButtonState::Down);
+            bul::mouse_buttons[mouse_button::mouse_5] = true;
+            events.emplace_back(mouse_button::mouse_5, button_state::down);
         }
         return 0;
     }
     case WM_XBUTTONUP: {
         if (lParam & MK_XBUTTON1)
         {
-            bul::mouse_buttons[MouseButton::Mouse_4] = false;
-            events.emplace_back(MouseButton::Mouse_4, ButtonState::Up);
+            bul::mouse_buttons[mouse_button::mouse_4] = false;
+            events.emplace_back(mouse_button::mouse_4, button_state::up);
         }
         else
         {
-            bul::mouse_buttons[MouseButton::Mouse_5] = false;
-            events.emplace_back(MouseButton::Mouse_5, ButtonState::Up);
+            bul::mouse_buttons[mouse_button::mouse_5] = false;
+            events.emplace_back(mouse_button::mouse_5, button_state::up);
         }
         return 0;
     }
@@ -320,7 +320,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         if (size > raw_input_size_)
         {
             raw_input_size_ = size;
-            raw_input_ = static_cast<RAWINPUT*>(realloc(raw_input_, size));
+            raw_input_ = reinterpret_cast<RAWINPUT*>(realloc(raw_input_, size));
         }
 
         size = raw_input_size_;

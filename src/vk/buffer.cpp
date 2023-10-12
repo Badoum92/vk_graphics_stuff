@@ -7,7 +7,7 @@
 
 namespace vk
 {
-bul::Handle<Buffer> Context::create_buffer(BufferDescription&& description)
+bul::handle<buffer> context::create_buffer(buffer_description&& description)
 {
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -31,20 +31,20 @@ bul::Handle<Buffer> Context::create_buffer(BufferDescription&& description)
     void* mapped_data = nullptr;
     vmaMapMemory(allocator, allocation, &mapped_data);
 
-    return buffers.insert({.description = std::move(description),
-                           .vk_handle = vk_buffer,
-                           .allocation = allocation,
-                           .mapped_data = mapped_data});
+    return buffers.insert(buffer{.description = std::move(description),
+                                 .vk_handle = vk_buffer,
+                                 .allocation = allocation,
+                                 .mapped_data = mapped_data});
 }
 
-void Context::destroy_buffer(bul::Handle<Buffer> handle)
+void context::destroy_buffer(bul::handle<buffer> handle)
 {
     if (!handle)
     {
         return;
     }
 
-    Buffer& buffer = buffers.get(handle);
+    buffer& buffer = buffers.get(handle);
     if (buffer.mapped_data != nullptr)
     {
         vmaUnmapMemory(allocator, buffer.allocation);

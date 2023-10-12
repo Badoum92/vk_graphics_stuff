@@ -4,9 +4,9 @@
 
 namespace vk
 {
-static ImageView create_image_view(Context* context, const ImageDescription& description, VkImage vk_image)
+static image_view create_image_view(context* context, const image_description& description, VkImage vk_image)
 {
-    ImageView view{};
+    image_view view{};
     view.range.aspectMask = is_depth(description.format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     view.range.baseMipLevel = 0;
     view.range.levelCount = description.mip_levels;
@@ -30,7 +30,7 @@ static ImageView create_image_view(Context* context, const ImageDescription& des
     return view;
 }
 
-bul::Handle<Image> Context::create_image(ImageDescription&& description, VkImage vk_image)
+bul::handle<image> context::create_image(image_description&& description, VkImage vk_image)
 {
     VmaAllocation allocation = VK_NULL_HANDLE;
     if (vk_image == VK_NULL_HANDLE)
@@ -64,27 +64,27 @@ bul::Handle<Image> Context::create_image(ImageDescription&& description, VkImage
     full_range.baseArrayLayer = 0;
     full_range.layerCount = 1;
 
-    ImageView full_view = create_image_view(this, description, vk_image);
+    image_view full_view = create_image_view(this, description, vk_image);
 
     if (!description.name.empty())
     {
         set_resource_name(this, (uint64_t)vk_image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, description.name);
     }
 
-    return images.insert(Image{.description = std::move(description),
+    return images.insert(image{.description = std::move(description),
                                .vk_handle = vk_image,
                                .allocation = allocation,
                                .full_view = full_view});
 }
 
-void Context::destroy_image(bul::Handle<Image> handle)
+void context::destroy_image(bul::handle<image> handle)
 {
     if (!handle)
     {
         return;
     }
 
-    Image& image = images.get(handle);
+    image& image = images.get(handle);
     if (image.allocation != VK_NULL_HANDLE)
     {
         vmaDestroyImage(allocator, image.vk_handle, image.allocation);

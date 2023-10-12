@@ -19,7 +19,7 @@ static int64_t get_perf_counter()
 }
 
 static const int64_t perf_frequency = get_perf_frequency();
-static Timer global_timer;
+static timer global_timer;
 
 namespace time
 {
@@ -69,53 +69,53 @@ void update()
 }
 } // namespace Time
 
-Timer::Timer()
+timer::timer()
 {
     start_time_ = get_perf_counter();
     prev_time_ = start_time_;
 }
 
-double Timer::total_s() const
+double timer::total_s() const
 {
     return double(get_perf_counter() - start_time_) * S / perf_frequency;
 }
 
-double Timer::total_ms() const
+double timer::total_ms() const
 {
     return double(get_perf_counter() - start_time_) * MS / perf_frequency;
 }
 
-double Timer::total_us() const
+double timer::total_us() const
 {
     return double(get_perf_counter() - start_time_) * US / perf_frequency;
 }
 
-double Timer::total_ns() const
+double timer::total_ns() const
 {
     return double(get_perf_counter() - start_time_) * NS / perf_frequency;
 }
 
-double Timer::delta_s()
+double timer::delta_s()
 {
     return delta_ * S;
 }
 
-double Timer::delta_ms()
+double timer::delta_ms()
 {
     return delta_ * MS;
 }
 
-double Timer::delta_us()
+double timer::delta_us()
 {
     return delta_ * US;
 }
 
-double Timer::delta_ns()
+double timer::delta_ns()
 {
     return delta_ * NS;
 }
 
-void Timer::update()
+void timer::update()
 {
     int64_t cur_time = get_perf_counter();
     delta_ = double(cur_time - prev_time_) / perf_frequency;

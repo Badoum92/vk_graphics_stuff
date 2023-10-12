@@ -7,7 +7,7 @@
 
 namespace vk
 {
-bul::Handle<GraphicsProgram> device::create_graphics_program(const GraphicsProgramDescription& description)
+bul::handle<GraphicsProgram> device::create_graphics_program(const GraphicsProgramDescription& description)
 {
     DescriptorSet set = create_descriptor_set(description.descriptor_types);
 
@@ -39,7 +39,7 @@ void device::destroy_graphics_program(GraphicsProgram& graphics_program)
     graphics_program.pipelines.clear();
 }
 
-VkPipeline device::compile(const bul::Handle<GraphicsProgram>& handle, const RenderState& render_state)
+VkPipeline device::compile(const bul::handle<GraphicsProgram>& handle, const RenderState& render_state)
 {
     GraphicsProgram& program = graphics_programs.get(handle);
 

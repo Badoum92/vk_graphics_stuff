@@ -86,7 +86,7 @@ RenderPass RenderPass::create(const FrameBufferDescription& description, const s
     return {vk_renderpass, load_ops};
 }
 
-const RenderPass& RenderPass::get_or_create(const bul::Handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops)
+const RenderPass& RenderPass::get_or_create(const bul::handle<FrameBuffer>& handle, const std::vector<LoadOp>& load_ops)
 {
     auto& fb = device::framebuffers.get(handle);
     for (const auto& renderpass : fb.renderpasses)
@@ -106,9 +106,9 @@ void RenderPass::destroy()
     vk_handle = VK_NULL_HANDLE;
 }
 
-bul::Handle<FrameBuffer> FrameBuffer::create(const FrameBufferDescription& description,
-                                             const std::vector<bul::Handle<Image>>& color_attachments,
-                                             const bul::Handle<Image>& depth_attachment)
+bul::handle<FrameBuffer> FrameBuffer::create(const FrameBufferDescription& description,
+                                             const std::vector<bul::handle<Image>>& color_attachments,
+                                             const bul::handle<Image>& depth_attachment)
 {
     ASSERT(description.color_formats.size() == color_attachments.size());
     ASSERT(description.depth_format.has_value() == depth_attachment.is_valid());
@@ -153,7 +153,7 @@ bul::Handle<FrameBuffer> FrameBuffer::create(const FrameBufferDescription& descr
     return device::framebuffers.insert(std::move(framebuffer));
 }
 
-void FrameBuffer::destroy(bul::Handle<FrameBuffer> handle)
+void FrameBuffer::destroy(bul::handle<FrameBuffer> handle)
 {
     device::framebuffers.get(handle).destroy();
     device::framebuffers.erase(handle);
@@ -169,6 +169,6 @@ void FrameBuffer::destroy()
     }
     renderpasses.clear();
     color_attachments.clear();
-    depth_attachment = bul::Handle<Image>::invalid;
+    depth_attachment = bul::handle<Image>::invalid;
 }
 } // namespace vk

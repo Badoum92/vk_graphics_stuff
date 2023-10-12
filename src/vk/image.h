@@ -15,35 +15,35 @@ inline constexpr VkImageUsageFlags image_usage_storage =
 inline constexpr VkImageUsageFlags image_usage_color_attachment =
     image_usage_storage | image_usage_sampled | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-enum class ImageUsage
+enum class image_usage
 {
-    None,
-    GraphicsShaderRead,
-    GraphicsShaderReadWrite,
-    ComputeShaderRead,
-    ComputeShaderReadWrite,
-    TransferDst,
-    TransferSrc,
-    ColorAttachment,
-    DepthAttachment,
-    Present
+    none,
+    graphics_shader_read,
+    graphics_shader_read_write,
+    compute_shader_read,
+    compute_shader_read_write,
+    transfer_dst,
+    transfer_src,
+    color_attachment,
+    depth_attachment,
+    present
 };
 
-struct ImageAccess
+struct image_access
 {
     VkPipelineStageFlags stage = 0;
     VkAccessFlags access = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
 
-struct ImageView
+struct image_view
 {
     VkImageView vk_handle = VK_NULL_HANDLE;
     VkFormat format = VK_FORMAT_UNDEFINED;
     VkImageSubresourceRange range;
 };
 
-struct ImageDescription
+struct image_description
 {
     uint32_t width = 1;
     uint32_t height = 1;
@@ -57,12 +57,12 @@ struct ImageDescription
     std::string name;
 };
 
-struct Image
+struct image
 {
-    ImageDescription description;
+    image_description description;
     VkImage vk_handle = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;
-    ImageView full_view;
-    ImageUsage usage = ImageUsage::None;
+    image_view full_view;
+    image_usage usage = image_usage::none;
 };
 } // namespace vk

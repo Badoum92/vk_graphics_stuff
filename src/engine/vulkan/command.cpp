@@ -106,7 +106,7 @@ void Command::end()
     vkEndCommandBuffer(vk_handle);
 }
 
-void Command::barrier(const bul::Handle<Image>& image_handle, ImageUsage dst_usage)
+void Command::barrier(const bul::handle<Image>& image_handle, ImageUsage dst_usage)
 {
     auto& image = device::images.get(image_handle);
     const auto& src_access = get_src_image_access(image.usage);
@@ -116,45 +116,45 @@ void Command::barrier(const bul::Handle<Image>& image_handle, ImageUsage dst_usa
     image.usage = dst_usage;
 }
 
-void Command::bind_image(const bul::Handle<GraphicsProgram>& program_handle, const bul::Handle<Image>& image_handle,
+void Command::bind_image(const bul::handle<GraphicsProgram>& program_handle, const bul::handle<Image>& image_handle,
                          uint32_t binding)
 {
     auto& program = device::graphics_programs.get(program_handle);
     program.descriptor_set.bind_image(binding, image_handle);
 }
 
-void Command::bind_uniform_buffer(const bul::Handle<GraphicsProgram>& program_handle,
-                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+void Command::bind_uniform_buffer(const bul::handle<GraphicsProgram>& program_handle,
+                                  const bul::handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
                                   uint32_t size)
 {
     auto& program = device::graphics_programs.get(program_handle);
     program.descriptor_set.bind_uniform_buffer(binding, buffer_handle, offset, size);
 }
 
-void Command::bind_storage_buffer(const bul::Handle<GraphicsProgram>& program_handle,
-                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding)
+void Command::bind_storage_buffer(const bul::handle<GraphicsProgram>& program_handle,
+                                  const bul::handle<Buffer>& buffer_handle, uint32_t binding)
 {
     auto& program = device::graphics_programs.get(program_handle);
     program.descriptor_set.bind_storage_buffer(binding, buffer_handle);
 }
 
-void Command::bind_image(const bul::Handle<ComputeProgram>& program_handle, const bul::Handle<Image>& image_handle,
+void Command::bind_image(const bul::handle<ComputeProgram>& program_handle, const bul::handle<Image>& image_handle,
                          uint32_t binding)
 {
     auto& program = device::compute_programs.get(program_handle);
     program.descriptor_set.bind_image(binding, image_handle);
 }
 
-void Command::bind_uniform_buffer(const bul::Handle<ComputeProgram>& program_handle,
-                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
+void Command::bind_uniform_buffer(const bul::handle<ComputeProgram>& program_handle,
+                                  const bul::handle<Buffer>& buffer_handle, uint32_t binding, uint32_t offset,
                                   uint32_t size)
 {
     auto& program = device::compute_programs.get(program_handle);
     program.descriptor_set.bind_uniform_buffer(binding, buffer_handle, offset, size);
 }
 
-void Command::bind_storage_buffer(const bul::Handle<ComputeProgram>& program_handle,
-                                  const bul::Handle<Buffer>& buffer_handle, uint32_t binding)
+void Command::bind_storage_buffer(const bul::handle<ComputeProgram>& program_handle,
+                                  const bul::handle<Buffer>& buffer_handle, uint32_t binding)
 {
     auto& program = device::compute_programs.get(program_handle);
     program.descriptor_set.bind_storage_buffer(binding, buffer_handle);
@@ -172,14 +172,14 @@ void GraphicsCommand::set_viewport(const VkViewport& viewport)
     vkCmdSetViewport(vk_handle, 0, 1, &viewport);
 }
 
-void GraphicsCommand::bind_index_buffer(const bul::Handle<Buffer>& buffer_handle, VkIndexType index_type,
+void GraphicsCommand::bind_index_buffer(const bul::handle<Buffer>& buffer_handle, VkIndexType index_type,
                                         uint32_t offset)
 {
     auto& buffer = device::buffers.get(buffer_handle);
     vkCmdBindIndexBuffer(vk_handle, buffer.vk_handle, offset, index_type);
 }
 
-void GraphicsCommand::bind_descriptor_set(const bul::Handle<GraphicsProgram>& program_handle, DescriptorSet& set,
+void GraphicsCommand::bind_descriptor_set(const bul::handle<GraphicsProgram>& program_handle, DescriptorSet& set,
                                           uint32_t set_index)
 {
     auto& program = device::graphics_programs.get(program_handle);
@@ -188,7 +188,7 @@ void GraphicsCommand::bind_descriptor_set(const bul::Handle<GraphicsProgram>& pr
                             set.dynamic_offsets.size(), set.dynamic_offsets.data());
 }
 
-void GraphicsCommand::bind_pipeline(const bul::Handle<GraphicsProgram>& program_handle, uint32_t pipeline_index)
+void GraphicsCommand::bind_pipeline(const bul::handle<GraphicsProgram>& program_handle, uint32_t pipeline_index)
 {
     auto& program = device::graphics_programs.get(program_handle);
     if (program.description.descriptor_types.size() > 0)
@@ -198,7 +198,7 @@ void GraphicsCommand::bind_pipeline(const bul::Handle<GraphicsProgram>& program_
     vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, program.pipelines[pipeline_index]);
 }
 
-void GraphicsCommand::begin_renderpass(const bul::Handle<FrameBuffer>& framebuffer_handle,
+void GraphicsCommand::begin_renderpass(const bul::handle<FrameBuffer>& framebuffer_handle,
                                        const std::vector<LoadOp>& load_ops)
 {
     auto& framebuffer = device::framebuffers.get(framebuffer_handle);
@@ -229,7 +229,7 @@ void GraphicsCommand::end_renderpass()
     vkCmdEndRenderPass(vk_handle);
 }
 
-void GraphicsCommand::begin_rendering(const bul::Handle<FrameBuffer>& framebuffer_handle,
+void GraphicsCommand::begin_rendering(const bul::handle<FrameBuffer>& framebuffer_handle,
                                       const std::vector<LoadOp>& load_ops)
 {
     auto& framebuffer = device::framebuffers.get(framebuffer_handle);
@@ -289,7 +289,7 @@ void GraphicsCommand::draw_indexed(uint32_t index_count, uint32_t first_index, u
 
 /* Compute */
 
-void ComputeCommand::bind_descriptor_set(const bul::Handle<ComputeProgram>& program_handle, DescriptorSet& set,
+void ComputeCommand::bind_descriptor_set(const bul::handle<ComputeProgram>& program_handle, DescriptorSet& set,
                                          uint32_t set_index)
 {
     auto& program = device::compute_programs.get(program_handle);
@@ -298,7 +298,7 @@ void ComputeCommand::bind_descriptor_set(const bul::Handle<ComputeProgram>& prog
                             set.dynamic_offsets.size(), set.dynamic_offsets.data());
 }
 
-void ComputeCommand::bind_pipeline(const bul::Handle<ComputeProgram>& program_handle)
+void ComputeCommand::bind_pipeline(const bul::handle<ComputeProgram>& program_handle)
 {
     auto& program = device::compute_programs.get(program_handle);
     if (program.description.descriptor_types.size() > 0)
@@ -315,7 +315,7 @@ void ComputeCommand::dispatch(uint32_t x, uint32_t y, uint32_t z)
 
 /* Transfer */
 
-void TransferCommand::upload_buffer(const bul::Handle<Buffer>& buffer_handle, void* data, uint32_t size)
+void TransferCommand::upload_buffer(const bul::handle<Buffer>& buffer_handle, void* data, uint32_t size)
 {
     // FIXME delete buffer after use
     auto staging_handle = Buffer::create(
@@ -337,7 +337,7 @@ void TransferCommand::upload_buffer(const bul::Handle<Buffer>& buffer_handle, vo
     vkCmdCopyBuffer(vk_handle, staging_buffer.vk_handle, buffer.vk_handle, 1, &buffer_copy);
 }
 
-void TransferCommand::upload_image(const bul::Handle<Image>& image_handle, void* data, uint32_t size)
+void TransferCommand::upload_image(const bul::handle<Image>& image_handle, void* data, uint32_t size)
 {
     // FIXME delete buffer after use
     auto staging_handle = Buffer::create(
@@ -368,7 +368,7 @@ void TransferCommand::upload_image(const bul::Handle<Image>& image_handle, void*
                            1, &buffer_image_copy);
 }
 
-void TransferCommand::upload_image(const bul::Handle<Image>& image_handle, const std::string& path)
+void TransferCommand::upload_image(const bul::handle<Image>& image_handle, const std::string& path)
 {
     int width, height, channels;
     uint8_t* data = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
@@ -380,7 +380,7 @@ void TransferCommand::upload_image(const bul::Handle<Image>& image_handle, const
     stbi_image_free(data);
 }
 
-void TransferCommand::blit_image(const bul::Handle<Image>& src, const bul::Handle<Image>& dst)
+void TransferCommand::blit_image(const bul::handle<Image>& src, const bul::handle<Image>& dst)
 {
     auto& src_image = device::images.get(src);
     auto& dst_image = device::images.get(dst);

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "bul/bul.h"
-#include "bul/hash.h"
-
 #include <utility>
 #include <type_traits>
-#include <vector>
+
+#include "bul/bul.h"
+#include "bul/hash.h"
+#include "bul/containers/vector.h"
 
 namespace bul
 {
@@ -324,9 +324,9 @@ private:
         }
     }
 
-    std::vector<slot> slots_;
-    std::vector<Key> keys_;
-    std::vector<Val> values_;
+    vector<slot> slots_;
+    vector<Key> keys_;
+    vector<Val> values_;
 
     static inline constexpr float load_factor = 0.75f;
 };

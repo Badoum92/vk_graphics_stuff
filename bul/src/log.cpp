@@ -24,7 +24,7 @@ void log_debug(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::Debug, fmt, args);
+    log(LogLevel::debug, fmt, args);
     va_end(args);
 }
 
@@ -32,7 +32,7 @@ void log_info(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::Info, fmt, args);
+    log(LogLevel::info, fmt, args);
     va_end(args);
 }
 
@@ -40,7 +40,7 @@ void log_warning(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::Warning, fmt, args);
+    log(LogLevel::warning, fmt, args);
     va_end(args);
 }
 
@@ -48,7 +48,7 @@ void log_error(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::Error, fmt, args);
+    log(LogLevel::error, fmt, args);
     va_end(args);
 }
 

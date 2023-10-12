@@ -10,9 +10,8 @@ add_compile_options(
 
 add_library(default_interface INTERFACE)
 target_compile_options(default_interface INTERFACE
-    $<$<CXX_COMPILER_ID:Clang>:-Wall>
-    $<$<CXX_COMPILER_ID:Clang>:-Wextra>
-    $<$<CXX_COMPILER_ID:Clang>:-pedantic>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -pedantic>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
 )
 
 # --- Vulkan ---

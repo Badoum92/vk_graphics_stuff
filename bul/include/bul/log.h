@@ -6,14 +6,14 @@ namespace bul
 {
 enum class LogLevel
 {
-    Debug,
-    Info,
-    Warning,
-    Error,
-    Count,
+    debug,
+    info,
+    warning,
+    error,
+    _count,
 };
 
-static constexpr EnumArray<LogLevel, const char*> log_level_str = {
+static constexpr enum_array<LogLevel, const char*> log_level_str = {
     "[DEBUG]",
     "[INFO]",
     "[WARNING]",

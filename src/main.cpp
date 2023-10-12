@@ -31,12 +31,12 @@ int main(int, char**)
             bul::time::update();
             bul::window::poll_events();
 
-            if (bul::key_pressed(bul::Key::Escape))
+            if (bul::key_pressed(bul::key::escape))
             {
                 bul::window::close();
             }
 
-            if (bul::key_pressed(bul::Key::LAlt))
+            if (bul::key_pressed(bul::key::l_alt))
             {
                 bul::window::show_cursor(!bul::window::cursor_visible());
             }

@@ -11,17 +11,17 @@ namespace vk
 {
 struct ImageDescriptor
 {
-    bul::Handle<Image> handle;
+    bul::handle<Image> handle;
 };
 
 struct BufferDescriptor
 {
-    bul::Handle<Buffer> handle;
+    bul::handle<Buffer> handle;
 };
 
 struct DynamicDescriptor
 {
-    bul::Handle<Buffer> handle;
+    bul::handle<Buffer> handle;
     uint32_t offset = 0;
     uint32_t size = 0;
 };
@@ -81,9 +81,9 @@ struct DescriptorSet
     std::vector<uint32_t> dynamic_descriptors;
     std::vector<uint32_t> dynamic_offsets;
 
-    void bind_image(uint32_t binding, const bul::Handle<Image>& image);
-    void bind_storage_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer);
-    void bind_uniform_buffer(uint32_t binding, const bul::Handle<Buffer>& buffer, uint32_t offset, uint32_t size);
+    void bind_image(uint32_t binding, const bul::handle<Image>& image);
+    void bind_storage_buffer(uint32_t binding, const bul::handle<Buffer>& buffer);
+    void bind_uniform_buffer(uint32_t binding, const bul::handle<Buffer>& buffer, uint32_t offset, uint32_t size);
     VkDescriptorSet get_or_create_vk_set();
 };
 } // namespace vk
