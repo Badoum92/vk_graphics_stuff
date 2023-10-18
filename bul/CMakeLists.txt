@@ -8,6 +8,7 @@ add_library(bul STATIC
     src/hash.cpp
     src/format.cpp
     src/log.cpp
+    src/cmd_args.cpp
     src/platform/util_win32.cpp
     src/platform/window_win32.cpp
     src/platform/time_win32.cpp

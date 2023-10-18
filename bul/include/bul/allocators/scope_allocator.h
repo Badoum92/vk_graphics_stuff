@@ -1,29 +1,60 @@
 #pragma once
 
-#include "bul/types.h"
+#include "bul/bul.h"
+#include "bul/allocators/linear_allocator.h"
 
 namespace bul
 {
 struct scope_allocator
 {
-    using free_t = void (*)(void*);
+    struct dtor_list
+    {
+        void (*dtor)(void* ptr);
+        dtor_list* next;
+    };
+    static_assert(sizeof(dtor_list) == 16);
 
-    explicit scope_allocator(size_t capacity);
-    scope_allocator(void* buffer, size_t size, free_t free_function = nullptr);
-    ~scope_allocator();
+    scope_allocator(linear_allocator allocator)
+        : _allocator(allocator)
+        , _scope_begin(allocator._current)
+    {}
 
-    scope_allocator(const scope_allocator& other);
-    scope_allocator& operator=(const scope_allocator& other);
+    ~scope_allocator()
+    {
+        for (dtor_list* dtor_list = _dtor_list; dtor_list; dtor_list = dtor_list->next)
+        {
+            dtor_list->dtor(dtor_list + 1);
+        }
+        _allocator.rewind(_scope_begin);
+    }
 
-    scope_allocator(scope_allocator&& other);
-    scope_allocator& operator=(scope_allocator&& other);
+    void* alloc(uint32_t size)
+    {
+        return _allocator.alloc(size);
+    }
 
-    void* allocate(size_t size, size_t alignment = 8);
+    void* alloc_aligned(uint32_t size, uint32_t alignment)
+    {
+        return _allocator.alloc(size, alignment);
+    }
 
-    uint8_t* begin = nullptr;
-    uint8_t* end = nullptr;
-    uint8_t* previous = nullptr;
-    uint8_t* current = nullptr;
-    free_t free_function = nullptr;
+    template <typename T, typename... Args>
+    T* alloc_object(Args&&... args)
+    {
+        dtor_list* dtor_list = (dtor_list*)alloc_aligned(sizeof(sizeof(dtor_list) + sizeof(T), alignof(dtor_list)));
+        T* object = (T*)(dtor_list + 1);
+
+        dtor_list->next = nullptr;
+        dtor_list->dtor = [](void* ptr) { ((T*)ptr)->~T(); };
+
+        _dtor_list->next = dtor_list;
+        _dtor_list = dtor_list;
+
+        return new (object)(std::forward<Args>(args)...);
+    }
+
+    linear_allocator _allocator;
+    uint8_t* _scope_begin;
+    dtor_list* _dtor_list;
 };
 } // namespace bul

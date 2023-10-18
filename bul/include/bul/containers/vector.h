@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <new>
 #include <type_traits>
 #include <initializer_list>
 

@@ -4,7 +4,7 @@
 
 namespace bul
 {
-enum class LogLevel
+enum class log_level
 {
     debug,
     info,
@@ -13,7 +13,7 @@ enum class LogLevel
     _count,
 };
 
-static constexpr enum_array<LogLevel, const char*> log_level_str = {
+static constexpr enum_array<log_level, const char*> log_level_str = {
     "[DEBUG]",
     "[INFO]",
     "[WARNING]",
@@ -24,9 +24,9 @@ void log_debug(const char* fmt, ...);
 void log_info(const char* fmt, ...);
 void log_warning(const char* fmt, ...);
 void log_error(const char* fmt, ...);
-void log(LogLevel level, const char* fmt, ...);
+void log(log_level level, const char* fmt, ...);
 
-using log_callback = void (*)(LogLevel, const char*);
+using log_callback = void (*)(log_level, const char*);
 void add_log_callback(log_callback callback);
 void remove_log_callback(log_callback callback);
 } // namespace bul

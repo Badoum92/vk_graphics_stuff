@@ -54,13 +54,13 @@ struct span
     constexpr T& operator[](size_t i)
     {
         ASSERT(i < size());
-        return data[i];
+        return _begin[i];
     }
 
     constexpr const T& operator[](size_t i) const
     {
         ASSERT(i < size());
-        return data[i];
+        return _begin[i];
     }
 
     constexpr T* begin()

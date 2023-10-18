@@ -38,25 +38,6 @@ bool read_file(const char* path, uint8_t* data, size_t size)
     return read == size;
 }
 
-bool read_file(const char* path, std::vector<uint8_t>& data)
-{
-    FILE* file = nullptr;
-    if (fopen_s(&file, path, "rb") != 0)
-    {
-        return false;
-    }
-    size_t size = file_size(file);
-    if (fseek(file, 0, SEEK_SET) != 0)
-    {
-        fclose(file);
-        return 0;
-    }
-    data.resize(size);
-    size_t read = fread(data.data(), 1, size, file);
-    fclose(file);
-    return read == size;
-}
-
 bool write_file(const char* path, const uint8_t* data, size_t size)
 {
     FILE* file = nullptr;

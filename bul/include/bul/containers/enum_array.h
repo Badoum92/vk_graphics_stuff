@@ -21,13 +21,13 @@ struct enum_array
 
     constexpr T& operator[](E e)
     {
-        ASSERT(to_underlying(e) < SIZE);
+        ASSERT(size_t(to_underlying(e)) < SIZE);
         return data[to_underlying(e)];
     }
 
     constexpr const T& operator[](E e) const
     {
-        ASSERT(to_underlying(e) < SIZE);
+        ASSERT(size_t(to_underlying(e)) < SIZE);
         return data[to_underlying(e)];
     }
 

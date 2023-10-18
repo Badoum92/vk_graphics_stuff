@@ -20,105 +20,100 @@ static int64_t get_perf_counter()
 
 static const int64_t perf_frequency = get_perf_frequency();
 static timer global_timer;
+static timer delta_timer;
+static float delta_time_s;
+static float delta_time_ms;
+static float delta_time_us;
+static float delta_time_ns;
 
 namespace time
 {
-double total_s()
+float total_s()
 {
-    return global_timer.total_s();
+    return global_timer.get_s();
 }
 
-double total_ms()
+float total_ms()
 {
-    return global_timer.total_ms();
+    return global_timer.get_ms();
 }
 
-double total_us()
+float total_us()
 {
-    return global_timer.total_us();
+    return global_timer.get_us();
 }
 
-double total_ns()
+float total_ns()
 {
-    return global_timer.total_ns();
+    return global_timer.get_ns();
 }
 
-double delta_s()
+float delta_s()
 {
-    return global_timer.delta_s();
+    float time = delta_timer.get_s();
+    delta_timer.reset();
+    return time;
 }
 
-double delta_ms()
+float delta_ms()
 {
-    return global_timer.delta_ms();
+    float time = delta_timer.get_s();
+    delta_timer.reset();
+    return time;
 }
 
-double delta_us()
+float delta_us()
 {
-    return global_timer.delta_us();
+    float time = delta_timer.get_s();
+    delta_timer.reset();
+    return time;
 }
 
-double delta_ns()
+float delta_ns()
 {
-    return global_timer.delta_ns();
+    float time = delta_timer.get_s();
+    delta_timer.reset();
+    return time;
 }
 
 void update()
 {
-    global_timer.update();
+    delta_time_ns = delta_timer.get_ns();
+    delta_timer.reset();
+    delta_time_us = delta_time_ns / 1'000.0f;
+    delta_time_ms = delta_time_ns / 1'000'000.0f;
+    delta_time_s = delta_time_ns / 1'000'000'000.0f;
 }
-} // namespace Time
+} // namespace time
 
 timer::timer()
 {
-    start_time_ = get_perf_counter();
-    prev_time_ = start_time_;
+    reset();
 }
 
-double timer::total_s() const
+void timer::reset()
 {
-    return double(get_perf_counter() - start_time_) * S / perf_frequency;
+    _start_time = get_perf_counter();
 }
 
-double timer::total_ms() const
+float timer::get_s() const
 {
-    return double(get_perf_counter() - start_time_) * MS / perf_frequency;
+    return float(get_perf_counter() - _start_time) * time::S / perf_frequency;
 }
 
-double timer::total_us() const
+float timer::get_ms() const
 {
-    return double(get_perf_counter() - start_time_) * US / perf_frequency;
+    return float(get_perf_counter() - _start_time) * time::MS / perf_frequency;
 }
 
-double timer::total_ns() const
+float timer::get_us() const
 {
-    return double(get_perf_counter() - start_time_) * NS / perf_frequency;
+    return float(get_perf_counter() - _start_time) * time::US / perf_frequency;
 }
 
-double timer::delta_s()
+float timer::get_ns() const
 {
-    return delta_ * S;
+    return float(get_perf_counter() - _start_time) * time::NS / perf_frequency;
 }
 
-double timer::delta_ms()
-{
-    return delta_ * MS;
-}
-
-double timer::delta_us()
-{
-    return delta_ * US;
-}
-
-double timer::delta_ns()
-{
-    return delta_ * NS;
-}
-
-void timer::update()
-{
-    int64_t cur_time = get_perf_counter();
-    delta_ = double(cur_time - prev_time_) / perf_frequency;
-    prev_time_ = cur_time;
-}
 } // namespace bul

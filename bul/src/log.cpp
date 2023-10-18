@@ -10,7 +10,7 @@ namespace bul
 {
 static vector<log_callback> callbacks;
 
-static void log(LogLevel level, const char* fmt, va_list args)
+static void log(log_level level, const char* fmt, va_list args)
 {
     const char* text = format(fmt, args);
     printf("%s %s\n", log_level_str[level], text);
@@ -24,7 +24,7 @@ void log_debug(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::debug, fmt, args);
+    log(log_level::debug, fmt, args);
     va_end(args);
 }
 
@@ -32,7 +32,7 @@ void log_info(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::info, fmt, args);
+    log(log_level::info, fmt, args);
     va_end(args);
 }
 
@@ -40,7 +40,7 @@ void log_warning(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::warning, fmt, args);
+    log(log_level::warning, fmt, args);
     va_end(args);
 }
 
@@ -48,11 +48,11 @@ void log_error(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(LogLevel::error, fmt, args);
+    log(log_level::error, fmt, args);
     va_end(args);
 }
 
-void log(LogLevel level, const char* fmt, ...)
+void log(log_level level, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);

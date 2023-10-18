@@ -55,15 +55,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         switch (msg_severity)
         {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            return bul::LogLevel::Debug;
+            return bul::log_level::Debug;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            return bul::LogLevel::Info;
+            return bul::log_level::Info;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            return bul::LogLevel::Warning;
+            return bul::log_level::Warning;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            return bul::LogLevel::Error;
+            return bul::log_level::Error;
         default:
-            return bul::LogLevel::Count;
+            return bul::log_level::Count;
         }
     }();
 

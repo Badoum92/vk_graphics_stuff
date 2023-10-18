@@ -6,46 +6,37 @@ namespace bul
 {
 namespace time
 {
-double total_s();
-double total_ms();
-double total_us();
-double total_ns();
+inline constexpr int S = 1;
+inline constexpr int MS = 1'000;
+inline constexpr int US = 1'000'000;
+inline constexpr int NS = 1'000'000'000;
 
-double delta_s();
-double delta_ms();
-double delta_us();
-double delta_ns();
+float total_s();
+float total_ms();
+float total_us();
+float total_ns();
+
+float delta_s();
+float delta_ms();
+float delta_us();
+float delta_ns();
 
 void update();
 } // namespace Time
 
-class timer
+struct timer
 {
-public:
     timer();
 
-    double total_s() const;
-    double total_ms() const;
-    double total_us() const;
-    double total_ns() const;
+    void reset();
 
-    double delta_s();
-    double delta_ms();
-    double delta_us();
-    double delta_ns();
+    float get_s() const;
+    float get_ms() const;
+    float get_us() const;
+    float get_ns() const;
 
-    void update();
-
-    static constexpr inline int S = 1;
-    static constexpr inline int MS = 1'000;
-    static constexpr inline int US = 1'000'000;
-    static constexpr inline int NS = 1'000'000'000;
-
-private:
 #if defined(_WIN32)
-    int64_t start_time_ = 0;
-    int64_t prev_time_ = 0;
-    double delta_ = 0;
+    int64_t _start_time;
 #else
     static_assert(false, "Timer unimplemented for this platform");
 #endif

@@ -1,41 +1,36 @@
 #pragma once
 
-#include "bul/types.h"
+#include "bul/bul.h"
 
 namespace bul
 {
-struct linear_allocator : public non_copyable
+struct linear_allocator
 {
-    using free_t = void (*)(void*);
+    linear_allocator(void* buffer, uint32_t size)
+        : _current(buffer)
+        , _end(_current + size)
+    {}
 
-    explicit linear_allocator(size_t capacity);
-    linear_allocator(void* buffer, size_t size, free_t free_function = nullptr);
-    ~linear_allocator();
-
-    linear_allocator(linear_allocator&& other);
-    linear_allocator& operator=(linear_allocator&& other);
-
-    void* allocate(size_t size, size_t alignment = 8);
-
-    template <typename T>
-    T* allocate()
+    void* alloc(uint32_t size)
     {
-        return allocate(sizeof(T), alignof(T));
+        void* ptr = _current;
+        _current += size;
+        ASSERT(_current <= _end);
+        return ptr;
     }
 
-    void free(void* ptr)
+    void* alloc_aligned(uint32_t size, uint32_t alignment = 16)
     {
-        current = ptr;
+        _current = align_pow2(_current, alignment);
+        return alloc(size);
     }
 
-    void clear()
+    void rewind(void* ptr)
     {
-        current = begin;
+        _current = ptr;
     }
 
-    uint8_t* begin = nullptr;
-    uint8_t* end = nullptr;
-    uint8_t* current = nullptr;
-    free_t free_function = nullptr;
+    uint8_t* _current = nullptr;
+    uint8_t* _end = nullptr;
 };
 } // namespace bul
