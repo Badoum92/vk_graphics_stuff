@@ -3,44 +3,27 @@
 #include "bul/bul.h"
 #include "bul/math/vector.h"
 
-#include <cstring>
-#include <cmath>
+#include <string.h>
+#include <math.h>
+#include <intrin.h>
 
 namespace bul
 {
 struct mat4f
 {
-    union
-    {
-        float data[16];
-        vec4f cols[4];
-    };
+    float data[4 * 4];
 
-    mat4f()
+    static mat4f create(const float (&values)[16])
     {
-        memset(data, 0, 16 * sizeof(float));
-    }
-
-    explicit mat4f(const float (&values)[16])
-    {
-        for (size_t x = 0; x < 4; ++x)
+        mat4f m;
+        for (uint32_t x = 0; x < 4; ++x)
         {
-            for (size_t y = 0; y < 4; ++y)
+            for (uint32_t y = 0; y < 4; ++y)
             {
-                (*this)[x][y] = values[y * 4 + x];
+                m[x][y] = values[y * 4 + x];
             }
         }
-    }
-
-    mat4f(const mat4f& other)
-    {
-        memcpy(data, other.data, 16 * sizeof(float));
-    }
-
-    mat4f& operator=(const mat4f& other)
-    {
-        memcpy(data, other.data, 16 * sizeof(float));
-        return *this;
+        return m;
     }
 
     static mat4f identity()
@@ -57,7 +40,7 @@ struct mat4f
 
     void operator+=(const mat4f& other)
     {
-        for (size_t i = 0; i < 16; ++i)
+        for (uint32_t i = 0; i < 16; ++i)
         {
             data[i] += other.data[i];
         }
@@ -65,7 +48,7 @@ struct mat4f
 
     void operator-=(const mat4f& other)
     {
-        for (size_t i = 0; i < 16; ++i)
+        for (uint32_t i = 0; i < 16; ++i)
         {
             data[i] -= other.data[i];
         }
@@ -73,7 +56,7 @@ struct mat4f
 
     void operator*=(float val)
     {
-        for (size_t i = 0; i < 16; ++i)
+        for (uint32_t i = 0; i < 16; ++i)
         {
             data[i] *= val;
         }
@@ -84,16 +67,16 @@ struct mat4f
         return memcmp(data, other.data, 16 * sizeof(float)) == 0;
     }
 
-    vec4f& operator[](size_t i)
+    vec4f& operator[](uint32_t i)
     {
         ASSERT(i < 4);
-        return cols[i];
+        return ((vec4f*)data)[i];
     }
 
-    const vec4f& operator[](size_t i) const
+    const vec4f& operator[](uint32_t i) const
     {
         ASSERT(i < 4);
-        return cols[i];
+        return ((vec4f*)data)[i];
     }
 };
 
@@ -113,27 +96,26 @@ inline mat4f operator-(const mat4f& a, const mat4f& b)
 
 inline mat4f operator*(const mat4f& a, const mat4f& b)
 {
-    mat4f res;
-    res[0][0] = a[0][0] * b[0][0] + a[1][0] * b[0][1] + a[2][0] * b[0][2] + a[3][0] * b[0][3];
-    res[0][1] = a[0][1] * b[0][0] + a[1][1] * b[0][1] + a[2][1] * b[0][2] + a[3][1] * b[0][3];
-    res[0][2] = a[0][2] * b[0][0] + a[1][2] * b[0][1] + a[2][2] * b[0][2] + a[3][2] * b[0][3];
-    res[0][3] = a[0][3] * b[0][0] + a[1][3] * b[0][1] + a[2][3] * b[0][2] + a[3][3] * b[0][3];
-
-    res[1][0] = a[0][0] * b[1][0] + a[1][0] * b[1][1] + a[2][0] * b[1][2] + a[3][0] * b[1][3];
-    res[1][1] = a[0][1] * b[1][0] + a[1][1] * b[1][1] + a[2][1] * b[1][2] + a[3][1] * b[1][3];
-    res[1][2] = a[0][2] * b[1][0] + a[1][2] * b[1][1] + a[2][2] * b[1][2] + a[3][2] * b[1][3];
-    res[1][3] = a[0][3] * b[1][0] + a[1][3] * b[1][1] + a[2][3] * b[1][2] + a[3][3] * b[1][3];
-
-    res[2][0] = a[0][0] * b[2][0] + a[1][0] * b[2][1] + a[2][0] * b[2][2] + a[3][0] * b[2][3];
-    res[2][1] = a[0][1] * b[2][0] + a[1][1] * b[2][1] + a[2][1] * b[2][2] + a[3][1] * b[2][3];
-    res[2][2] = a[0][2] * b[2][0] + a[1][2] * b[2][1] + a[2][2] * b[2][2] + a[3][2] * b[2][3];
-    res[2][3] = a[0][3] * b[2][0] + a[1][3] * b[2][1] + a[2][3] * b[2][2] + a[3][3] * b[2][3];
-
-    res[3][0] = a[0][0] * b[3][0] + a[1][0] * b[3][1] + a[2][0] * b[3][2] + a[3][0] * b[3][3];
-    res[3][1] = a[0][1] * b[3][0] + a[1][1] * b[3][1] + a[2][1] * b[3][2] + a[3][1] * b[3][3];
-    res[3][2] = a[0][2] * b[3][0] + a[1][2] * b[3][1] + a[2][2] * b[3][2] + a[3][2] * b[3][3];
-    res[3][3] = a[0][3] * b[3][0] + a[1][3] * b[3][1] + a[2][3] * b[3][2] + a[3][3] * b[3][3];
-    return res;
+    mat4f c;
+    __m128 col[4];
+    __m128 sum[4];
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        col[i] = _mm_loadu_ps(&a.data[i * 4]);
+    }
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        sum[i] = _mm_setzero_ps();
+        for (uint32_t j = 0; j < 4; j++)
+        {
+            sum[i] = _mm_add_ps(_mm_mul_ps(_mm_set1_ps(b.data[i * 4 + j]), col[j]), sum[i]);
+        }
+    }
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        _mm_storeu_ps(&c.data[i * 4], sum[i]);
+    }
+    return c;
 }
 
 inline mat4f operator*(const mat4f& a, float f)
@@ -146,97 +128,77 @@ inline mat4f operator*(const mat4f& a, float f)
 inline vec4f operator*(const mat4f& a, const vec4f& v)
 {
     vec4f ret;
-    ret.x = a[0][0] * v[0] + a[0][1] * v[1] + a[0][2] * v[2] + a[0][3] * v[3];
-    ret.y = a[1][0] * v[0] + a[1][1] * v[1] + a[1][2] * v[2] + a[1][3] * v[3];
-    ret.z = a[2][0] * v[0] + a[2][1] * v[1] + a[2][2] * v[2] + a[2][3] * v[3];
-    ret.w = a[3][0] * v[0] + a[3][1] * v[1] + a[3][2] * v[2] + a[3][3] * v[3];
+    __m128 _v = _mm_loadu_ps(&v.x);
+    __m128 _a = _mm_mul_ps(_mm_loadu_ps(&a.data[0 * 4]), _v);
+    __m128 _b = _mm_mul_ps(_mm_loadu_ps(&a.data[1 * 4]), _v);
+    __m128 _c = _mm_mul_ps(_mm_loadu_ps(&a.data[2 * 4]), _v);
+    __m128 _d = _mm_mul_ps(_mm_loadu_ps(&a.data[3 * 4]), _v);
+    _mm_storeu_ps(&ret.x, _mm_hadd_ps(_mm_hadd_ps(_a, _b), _mm_hadd_ps(_c, _d)));
     return ret;
 }
 
 inline mat4f translation(const vec3f& v)
 {
     // clang-format off
-    return mat4f{{
+    return mat4f::create({
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f,
         v.x , v.y , v.y , 1.0f,
-    }};
+    });
     // clang-format on
 }
 
 inline mat4f scale(const vec3f& s)
 {
     // clang-format off
-    return mat4f{{
+    return mat4f::create({
         s.x , 0.0f, 0.0f, 0.0f,
         0.0f, s.y , 0.0f, 0.0f,
         0.0f, 0.0f, s.z , 0.0f,
         0.0f, 0.0f, 0.0f, 1.0f,
-    }};
+    });
     // clang-format on
 }
 
 inline mat4f rotation_x(float angle)
 {
-    float s = sin(angle);
-    float c = cos(angle);
+    float s = sinf(angle);
+    float c = cosf(angle);
     // clang-format off
-    return mat4f{{
+    return mat4f::create({
         1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, c,    s,    0.0f,
-        0.0f, -s,   c,    0.0f,
+        0.0f, c,    -s,   0.0f,
+        0.0f, s,    c,    0.0f,
         0.0f, 0.0f, 0.0f, 1.0f,
-    }};
+    });
     // clang-format on
 }
 
 inline mat4f rotation_y(float angle)
 {
-    float s = sin(angle);
-    float c = cos(angle);
+    float s = sinf(angle);
+    float c = cosf(angle);
     // clang-format off
-    return mat4f({
-        c,     s,    0.0f, 0.0f,
-        -s,    c,    0.0f, 0.0f,
-        0.0f,  0.0f, 1.0f, 0.0f,
-        0.0f,  0.0f, 0.0f, 1.0f,
+    return mat4f::create({
+        c,    0.0f, s,    0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        -s,   0.0f, c,    0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
     });
     // clang-format on
 }
 
 inline mat4f rotation_z(float angle)
 {
-    float s = sin(angle);
-    float c = cos(angle);
+    float s = sinf(angle);
+    float c = cosf(angle);
     // clang-format off
-    return mat4f({
-        c,    0.0f, -s,   0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        s,    0.0f, c,    0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f,
-    });
-    // clang-format on
-}
-
-inline mat4f rotation(bul::vec4f quaternion)
-{
-    float qxx = quaternion.x * quaternion.x;
-    float qyy = quaternion.y * quaternion.y;
-    float qzz = quaternion.z * quaternion.z;
-    float qxz = quaternion.x * quaternion.z;
-    float qxy = quaternion.x * quaternion.y;
-    float qyz = quaternion.y * quaternion.z;
-    float qwx = quaternion.w * quaternion.x;
-    float qwy = quaternion.w * quaternion.y;
-    float qwz = quaternion.w * quaternion.z;
-
-    // clang-format off
-    return mat4f({
-        1.0f - 2.0f * (qyy + qzz), 2.0f * (qxy + qwz),        2.0f * (qxz - qwy),        0.0f,
-        2.0f * (qxy - qwz),        1.0f - 2.0f * (qxx + qzz), 2.0f * (qyz + qwx),        0.0f,
-        2.0f * (qxz + qwy),        2.0f * (qyz - qwx),        1.0f - 2.0f * (qxx + qyy), 0.0f,
-        0.0f,                      0.0f,                      0.0f,                      1.0f,
+    return mat4f::create({
+        c,     -s,   0.0f, 0.0f,
+        s,     c,    0.0f, 0.0f,
+        0.0f,  0.0f, 1.0f, 0.0f,
+        0.0f,  0.0f, 0.0f, 1.0f,
     });
     // clang-format on
 }
@@ -299,8 +261,10 @@ inline mat4f inverse(const mat4f& m)
 
     det = 1.0f / det;
 
-    for (size_t i = 0; i < 16; i++)
+    for (uint32_t i = 0; i < 16; i++)
+    {
         inv.data[i] *= det;
+    }
 
     return inv;
 }
@@ -312,21 +276,21 @@ inline mat4f lookat(bul::vec3f pos, bul::vec3f target, bul::vec3f up, mat4f* inv
     vec3f y = cross(x, z);
 
     // clang-format off
-    mat4f ret{{
+    mat4f ret = mat4f::create({
         x.x,  x.y,  x.z,  -dot(pos, x),
         y.x,  y.y,  y.z,  -dot(pos, y),
         -z.x, -z.y, -z.z, dot(pos, z),
         0.0f, 0.0f, 0.0f, 1.0f,
-    }};
+    });
 
     if (inv)
     {
-        *inv = mat4f{{
+        *inv = mat4f::create({
             x.x,  y.x,  -z.x, pos.x,
             x.y,  y.y,  -z.y, pos.y,
             x.z,  y.z,  -z.z, pos.z,
             0.0f, 0.0f, 0.0f, 1.0f,
-        }};
+        });
     }
     // clang-format on
 
@@ -335,25 +299,25 @@ inline mat4f lookat(bul::vec3f pos, bul::vec3f target, bul::vec3f up, mat4f* inv
 
 inline mat4f perspective(float fov_y, float aspect_ratio, float _near, float _far, mat4f* inv = nullptr)
 {
-    float A = std::tan(fov_y / 2.0f);
+    float A = tanf(fov_y / 2.0f);
     float B = A * aspect_ratio;
 
     // clang-format off
-    mat4f proj{{
+    mat4f proj = mat4f::create({
         1.0f / B, 0.0f,      0.0f,                  0.0f,
         0.0f,     -1.0f / A, 0.0f,                  0.0f,
         0.0f,     0.0f,      _far / (_near - _far), -(_far * _near) / (_far - _near),
         0.0f,     0.0f,      -1.0f,                 0.0f,
-    }};
+    });
 
     if (inv)
     {
-        *inv = mat4f{{
+        *inv = mat4f::create({
             B,    0.0f, 0.0f,                            0.0f,
             0.0f, -A,   0.0f,                            0.0f,
             0.0f, 0.0f, 0.0f,                            -1.0f,
             0.0f, 0.0f, -(_far - _near) / (_far * _near), 1.0f / _near,
-        }};
+        });
     }
     // clang-format on
 

@@ -1,30 +1,30 @@
 #pragma once
 
-#include <vector>
+#include "vk/image.h"
 
 #include "bul/containers/handle.h"
-#include "vk/image.h"
+#include "bul/containers/static_vector.h"
 
 namespace vk
 {
 struct context;
 
+constexpr uint32_t max_swapchain_images = 4;
+
 struct surface
 {
     static surface create(context* context);
-    void destroy();
+    void destroy(context* context);
 
-    void create_swapchain();
-    void destroy_swapchain();
+    void create_swapchain(context* context);
+    void destroy_swapchain(context* context);
 
-    context* context = nullptr;
     VkSurfaceKHR vk_handle = VK_NULL_HANDLE;
     VkQueue present_queue = VK_NULL_HANDLE;
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     VkExtent2D extent;
     VkPresentModeKHR present_mode;
     VkSurfaceFormatKHR format;
-    std::vector<bul::handle<image>> images;
-    // bul::Vector<bul::handle<FrameBuffer>> framebuffers;
+    bul::static_vector<bul::handle<image>, max_swapchain_images> images;
 };
 } // namespace vk

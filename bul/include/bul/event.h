@@ -43,27 +43,27 @@ struct event
     event_type type;
     union
     {
-        _mouse_click mouse_click;
-        _key key;
-        _mouse_move mouse_move;
+        _mouse_click mouse_click_event;
+        _key key_event;
+        _mouse_move mouse_move_event;
     };
 
     event(mouse_button button, button_state state)
     {
         type = event_type::mouse_click;
-        mouse_click = {.button = button, .state = state};
+        mouse_click_event = {button, state};
     }
 
-    event(bul::key key_, bul::button_state state)
+    event(key key, button_state state)
     {
         type = event_type::key;
-        key = {key_, state};
+        key_event = {key, state};
     }
 
     event(int x, int y)
     {
         type = event_type::mouse_move;
-        mouse_move = {x, y};
+        mouse_move_event = {x, y};
     }
 };
 } // namespace bul

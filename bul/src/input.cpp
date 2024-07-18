@@ -2,7 +2,7 @@
 
 #include "bul/containers/enum_array.h"
 
-#include <cstring>
+#include <string.h>
 
 namespace bul
 {
@@ -12,24 +12,24 @@ static enum_array<mouse_button, bool> mouse_buttons_prev = {false};
 enum_array<key, bool> keys = {false};
 static enum_array<key, bool> keys_prev = {false};
 
-namespace input::_private
-{
-void new_frame()
+vec2i mouse_position_delta = {0, 0};
+
+void input_new_frame()
 {
     memcpy(mouse_buttons_prev.data, mouse_buttons.data, mouse_buttons.SIZE);
     memcpy(keys_prev.data, keys.data, keys.SIZE);
+    mouse_position_delta = {0, 0};
 }
-} // namespace _private
 
-bool button_down(mouse_button button)
+bool mouse_button_down(mouse_button button)
 {
     return mouse_buttons[button];
 }
-bool button_pressed(mouse_button button)
+bool mouse_button_pressed(mouse_button button)
 {
     return mouse_buttons[button] && !mouse_buttons_prev[button];
 }
-bool button_released(mouse_button button)
+bool mouse_button_released(mouse_button button)
 {
     return !mouse_buttons[button] && mouse_buttons_prev[button];
 }

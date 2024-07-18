@@ -156,15 +156,14 @@ bool is_depth(VkFormat format)
         || format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void set_resource_name(Context* context, uint64_t vk_handle, VkDebugReportObjectTypeEXT objectType,
-                       std::string_view name)
+void set_resource_name(context* context, uint64_t vk_handle, VkObjectType object_type, const char* name)
 {
-    VkDebugMarkerObjectNameInfoEXT name_info{};
-    name_info.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT;
-    name_info.objectType = objectType;
-    name_info.object = vk_handle;
-    name_info.pObjectName = name.data();
-    vkDebugMarkerSetObjectNameEXT(context->device, &name_info);
+    VkDebugUtilsObjectNameInfoEXT name_info = {};
+    name_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+    name_info.objectType = object_type;
+    name_info.objectHandle = vk_handle;
+    name_info.pObjectName = name;
+    vkSetDebugUtilsObjectNameEXT(context->device, &name_info);
 }
 
 const char* vk_result_to_str(VkResult result)
@@ -197,6 +196,7 @@ const char* vk_result_to_str(VkResult result)
         CASE(VK_ERROR_INVALID_EXTERNAL_HANDLE);
         CASE(VK_ERROR_FRAGMENTATION);
         CASE(VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS);
+        CASE(VK_PIPELINE_COMPILE_REQUIRED);
         CASE(VK_ERROR_SURFACE_LOST_KHR);
         CASE(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
         CASE(VK_SUBOPTIMAL_KHR);
@@ -204,16 +204,24 @@ const char* vk_result_to_str(VkResult result)
         CASE(VK_ERROR_INCOMPATIBLE_DISPLAY_KHR);
         CASE(VK_ERROR_VALIDATION_FAILED_EXT);
         CASE(VK_ERROR_INVALID_SHADER_NV);
+        CASE(VK_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR);
+        CASE(VK_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR);
+        CASE(VK_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR);
+        CASE(VK_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR);
+        CASE(VK_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR);
+        CASE(VK_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR);
         CASE(VK_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT);
-        CASE(VK_ERROR_NOT_PERMITTED_EXT);
+        CASE(VK_ERROR_NOT_PERMITTED_KHR);
         CASE(VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT);
         CASE(VK_THREAD_IDLE_KHR);
         CASE(VK_THREAD_DONE_KHR);
         CASE(VK_OPERATION_DEFERRED_KHR);
         CASE(VK_OPERATION_NOT_DEFERRED_KHR);
-        CASE(VK_PIPELINE_COMPILE_REQUIRED_EXT);
+        CASE(VK_ERROR_COMPRESSION_EXHAUSTED_EXT);
+        CASE(VK_ERROR_INCOMPATIBLE_SHADER_BINARY_EXT);
         CASE(VK_RESULT_MAX_ENUM);
     }
+    return "?";
 #undef CASE
 }
 } // namespace vk

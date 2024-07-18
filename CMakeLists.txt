@@ -10,9 +10,18 @@ add_compile_options(
 
 add_library(default_interface INTERFACE)
 target_compile_options(default_interface INTERFACE
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -pedantic>
-    $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -pedantic -msse4.1>
+    $<$<CXX_COMPILER_ID:MSVC>:/W4 /Zc:preprocessor>
 )
+target_compile_definitions(default_interface INTERFACE
+    $<$<BOOL:${WIN32}>:NOMINMAX>
+    $<$<BOOL:${WIN32}>:NOCOMM>
+    $<$<BOOL:${WIN32}>:WIN32_LEAN_AND_MEAN>
+    $<$<BOOL:${WIN32}>:VC_EXTRALEAN>
+    $<$<BOOL:${WIN32}>:_CRT_SECURE_NO_WARNINGS>
+)
+
+# set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,readability-*)
 
 # --- Vulkan ---
 
@@ -31,8 +40,11 @@ add_executable(main
     src/util/implems.cpp
 
     src/engine/camera.cpp
-    src/engine/renderer.cpp
-    src/engine/path_tracing_renderer.cpp
+    src/engine/image.cpp
+    src/engine/texture.cpp
+    # src/engine/renderer.cpp
+    # src/engine/path_tracing_renderer.cpp
+    src/engine/test_renderer.cpp
     src/engine/gltf.cpp
     src/engine/vox_loader.cpp
 
@@ -42,37 +54,22 @@ add_executable(main
     src/vk/image.cpp
     src/vk/buffer.cpp
     src/vk/shader.cpp
-
-    # src/engine/vulkan/vk_tools.cpp
-    # src/engine/vulkan/context.cpp
-    # src/engine/vulkan/device.cpp
-    # src/engine/vulkan/surface.cpp
-    # src/engine/vulkan/image.cpp
-    # src/engine/vulkan/buffer.cpp
-    # src/engine/vulkan/framebuffer.cpp
-    # src/engine/vulkan/shader.cpp
-    # src/engine/vulkan/graphics_pipeline.cpp
-    # src/engine/vulkan/compute_pipeline.cpp
-    # src/engine/vulkan/descriptor_set.cpp
-    # src/engine/vulkan/command.cpp
-    # src/engine/vulkan/frame_context.cpp
-    # src/engine/vulkan/imgui.cpp
+    src/vk/pipeline.cpp
+    src/vk/descriptor.cpp
+    src/vk/commands.cpp
 )
 
 target_include_directories(main
     PRIVATE src
     PRIVATE src/util
     PRIVATE src/engine
-    # PRIVATE src/engine/vulkan
 
     PRIVATE .
 )
 
 target_include_directories(main
     SYSTEM PRIVATE ${Vulkan_INCLUDE_DIRS}
-    SYSTEM PRIVATE third_party/glm
     SYSTEM PRIVATE third_party/imgui
-    SYSTEM PRIVATE third_party/nlohmann/include
     SYSTEM PRIVATE third_party
 )
 
@@ -81,19 +78,7 @@ target_link_libraries(main
     imgui
     bul
     volk
-)
-
-add_definitions(
-    -DGLM_FORCE_RADIANS
-    -DGLM_FORCE_DEPTH_ZERO_TO_ONE
-    -DGLM_FORCE_RIGHT_HANDED
-)
-
-target_compile_definitions(main PRIVATE
-    $<$<BOOL:${WIN32}>:NOMINMAX>
-    $<$<BOOL:${WIN32}>:NOCOMM>
-    $<$<BOOL:${WIN32}>:WIN32_LEAN_AND_MEAN>
-    $<$<BOOL:${WIN32}>:VC_EXTRALEAN>
+    ufbx
 )
 
 set_target_properties(main PROPERTIES
@@ -119,7 +104,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     add_custom_command(
         OUTPUT ${SPIRV}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
-        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/shaders/include --target-env=vulkan1.2 -std=460 ${GLSL} -o ${SPIRV}
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -g -I ${CMAKE_SOURCE_DIR}/shaders/include --target-env=vulkan1.3 -std=460 ${GLSL} -o ${SPIRV}
         DEPENDS ${GLSL} ${GLSL_INCLUDE_FILES}
     )
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})
@@ -131,4 +116,5 @@ add_dependencies(main shaders)
 add_custom_command(TARGET main POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:main>/shaders/"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_BINARY_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:main>/resources"
 )

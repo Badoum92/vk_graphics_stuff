@@ -7,7 +7,7 @@ target_compile_options(third_party_interface INTERFACE
 
 # --- Volk ---
 
-add_library(volk volk/volk.c)
+add_library(volk STATIC volk/volk.c)
 target_link_libraries(volk PRIVATE third_party_interface)
 target_include_directories(volk SYSTEM PUBLIC
     volk
@@ -18,7 +18,7 @@ target_compile_definitions(volk PUBLIC
     VK_NO_PROTOTYPES
 )
 
-# --- IMGUI ---
+# --- ImGui ---
 
 file(GLOB IMGUI_SOURCES
     imgui/*.cpp
@@ -30,3 +30,9 @@ target_include_directories(imgui PRIVATE
     ${Vulkan_INCLUDE_DIRS}
 )
 set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
+
+# --- ufbx ---
+
+add_library(ufbx STATIC ufbx/ufbx.c)
+target_link_libraries(ufbx PRIVATE third_party_interface)
+target_include_directories(ufbx SYSTEM PRIVATE ufbx)

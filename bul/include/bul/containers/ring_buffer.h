@@ -1,84 +1,62 @@
 #pragma once
 
-#include <cstdint>
-#include <cstdlib>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "bul/bul.h"
 
 namespace bul
 {
-class RingBuffer
+struct ring_buffer
 {
-public:
-    RingBuffer(size_t size, size_t alignment = 1)
-        : size_(size)
-        , alignment_(alignment)
-        , allocated_(true)
-    {
-        data_ = (uint8_t*)malloc(size);
-    }
-
-    RingBuffer(void* data, size_t size, size_t alignment = 1)
-        : data_((uint8_t*)data)
-        , size_(size)
-        , alignment_(alignment)
+    ring_buffer(void* data, uint32_t size)
+        : _data((uint8_t*)data)
+        , _size(size)
     {}
 
-    ~RingBuffer()
+    void* push(const void* data, uint32_t size, uint32_t alignment)
     {
-        if (allocated_)
+        uint32_t aligned_size = size + alignment - size % alignment;
+        if (_offset + size > _size)
         {
-            free(data_);
-            data_ = nullptr;
+            _offset = 0;
         }
-    }
-
-    void* push(const void* data, uint32_t size)
-    {
-        uint32_t aligned_size = size + alignment_ - size % alignment_;
-        if (offset_ + size > size_)
-        {
-            offset_ = 0;
-        }
-        memcpy(bul::ptr_offset(data_, offset_), data, size);
-        uint32_t ret = offset_;
-        offset_ += aligned_size;
+        memcpy(bul::ptr_offset(_data, _offset), data, size);
+        uint32_t ret = _offset;
+        _offset += aligned_size;
         return ret;
     }
 
     template <typename T>
-    T& push(const T& data)
+    T& push(const T& data, uint32_t alignment)
     {
-        uint32_t aligned_size = sizeof(T) + alignment_ - sizeof(T) % alignment_;
-        if (offset_ + sizeof(T) > size_)
+        uint32_t aligned_size = sizeof(T) + alignment - sizeof(T) % alignment;
+        if (_offset + sizeof(T) > _size)
         {
-            offset_ = 0;
+            _offset = 0;
         }
-        *bul::ptr_offset<T*>(data_, offset_) = data;
-        uint32_t ret = offset_;
-        offset_ += aligned_size;
+        *bul::ptr_offset<T*>(_data, _offset) = data;
+        uint32_t ret = _offset;
+        _offset += aligned_size;
         return ret;
     }
 
     template <typename T>
-    T& push(T&& data)
+    T& push(T&& data, uint32_t alignment)
     {
-        uint32_t aligned_size = sizeof(T) + alignment_ - sizeof(T) % alignment_;
-        if (offset_ + sizeof(T) > size_)
+        uint32_t aligned_size = sizeof(T) + alignment - sizeof(T) % alignment;
+        if (_offset + sizeof(T) > _size)
         {
-            offset_ = 0;
+            _offset = 0;
         }
-        *bul::ptr_offset<T*>(data_, offset_) = std::move(data);
-        uint32_t ret = offset_;
-        offset_ += aligned_size;
+        *bul::ptr_offset<T*>(_data, _offset) = std::move(data);
+        uint32_t ret = _offset;
+        _offset += aligned_size;
         return ret;
     }
 
-private:
-    uint8_t* data_ = nullptr;
-    uint32_t size_ = 0;
-    uint32_t alignment_ = 0;
-    uint32_t offset_ = 0;
-    bool allocated_ = false;
+    uint8_t* _data = nullptr;
+    uint32_t _size = 0;
+    uint32_t _offset = 0;
 };
 } // namespace bul

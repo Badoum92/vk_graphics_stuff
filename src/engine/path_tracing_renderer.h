@@ -1,10 +1,13 @@
+#if 0
 #pragma once
 
 #include <volk.h>
 
+#include "bul/containers/handle.h"
+
 #include "vulkan/fwd.h"
 #include "camera.h"
-#include "device.h"
+// #include "device.h"
 
 class PathTracingRenderer
 {
@@ -37,5 +40,6 @@ private:
     bul::handle<vk::Image> voxels;
     bul::handle<vk::Buffer> voxel_materials;
 
-    vk::RingBuffer global_uniform_buffer;
+    // vk::RingBuffer global_uniform_buffer;
 };
+#endif

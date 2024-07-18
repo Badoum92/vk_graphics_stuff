@@ -7,18 +7,6 @@ namespace bul
 template <typename T>
 struct handle
 {
-    handle()
-        : value(UINT32_MAX)
-        , version(UINT32_MAX)
-    {}
-
-    explicit constexpr handle(uint32_t value_, uint32_t version_ = 0)
-        : value(value_)
-        , version(version_)
-    {
-        ASSERT(value != UINT32_MAX && version != UINT32_MAX);
-    }
-
     constexpr bool is_valid() const
     {
         return value != UINT32_MAX;
@@ -39,7 +27,12 @@ struct handle
         return is_valid();
     }
 
-    uint32_t value = 0;
-    uint32_t version = 0;
+    static constexpr handle<T> invalid()
+    {
+        return {UINT32_MAX, UINT32_MAX};
+    }
+
+    uint32_t value = UINT32_MAX;
+    uint32_t version = UINT32_MAX;
 };
 } // namespace bul

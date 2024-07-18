@@ -1,9 +1,8 @@
 #include "bul/bul.h"
 
-#include <cstdio>
-#include <cstdarg>
+#include <stdio.h>
+#include <stdarg.h>
 
-#include "bul/format.h"
 #include "bul/log.h"
 
 #if defined(_WIN32)
@@ -19,21 +18,21 @@ void _assert(bool condition, const char* str, const char* file, unsigned line, c
         return;
     }
 
+
+    _log(log_level::error, file, line, "Assertion failed: %s", str);
     if (fmt)
     {
         va_list args;
         va_start(args, fmt);
-        const char* msg = format(fmt, args);
-        printf("Assertion (%s) failed in %s line %u: %s\n", str, file, line, msg);
+        char msg_buf[1024];
+        vsnprintf(msg_buf, sizeof(msg_buf), fmt, args);
+        _log(log_level::error, file, line, "%s", msg_buf);
         va_end(args);
-    }
-    else
-    {
-        printf("Assertion (%s) failed in %s line %u\n", str, file, line);
     }
 
 #if defined(_WIN32)
-    const char* debug_output = format("%s(%d): assertion (%s) failed\n", file, line, str);
+    char debug_output[1024];
+    snprintf(debug_output, sizeof(debug_output), "%s(%d): Assertion failed: %s\n", file, line, str);
     OutputDebugString(debug_output);
 #endif
 

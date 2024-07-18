@@ -1,36 +1,45 @@
 #include "shader.h"
 
-#include <string_view>
+#include "vk/context.h"
 
+#include "bul/bul.h"
 #include "bul/file.h"
-
-#include "vk_tools.h"
-#include "context.h"
+#include "bul/allocators/scope_allocator.h"
 
 namespace vk
 {
-bul::handle<shader> context::create_shader(const std::string_view path)
+bul::handle<shader> context::create_shader(const char* path)
 {
-    std::vector<uint8_t> shader_code;
-    std::string spirv_path{path.data(), path.size()};
-    spirv_path += ".spv";
-    bul::read_file(spirv_path.c_str(), shader_code);
+    bul::scope_allocator scope_allocator = bul::scope_allocator::create_global();
 
-    VkShaderModuleCreateInfo shader_info{};
+    bul::file file = bul::file::open(path, bul::file::mode::read);
+    defer
+    {
+        file.close();
+    };
+    uint32_t file_size = file.size();
+    uint8_t* file_data = (uint8_t*)scope_allocator.alloc(file_size);
+    file.read(file_data, file_size);
+
+    VkShaderModuleCreateInfo shader_info = {};
     shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_info.codeSize = shader_code.size();
-    shader_info.pCode = (uint32_t*)shader_code.data();
+    shader_info.codeSize = file_size;
+    shader_info.pCode = (uint32_t*)file_data;
 
     VkShaderModule vk_shader = VK_NULL_HANDLE;
     VK_CHECK(vkCreateShaderModule(device, &shader_info, nullptr, &vk_shader));
 
-    return shaders.insert(shader{.path = std::move(spirv_path), .vk_handle = vk_shader});
+    return shaders.insert(shader{vk_shader, path});
 }
 
 void context::destroy_shader(bul::handle<shader> handle)
 {
     shader& shader = shaders.get(handle);
-    vkDestroyShaderModule(device, shader.vk_handle, nullptr);
-    shader.vk_handle = VK_NULL_HANDLE;
+    if (shader.vk_handle != VK_NULL_HANDLE)
+    {
+        vkDestroyShaderModule(device, shader.vk_handle, nullptr);
+        shader.vk_handle = VK_NULL_HANDLE;
+    }
+    shaders.erase(handle);
 }
 } // namespace vk

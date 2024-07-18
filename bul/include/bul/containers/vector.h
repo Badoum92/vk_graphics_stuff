@@ -1,285 +1,153 @@
 #pragma once
 
-#include <cstdlib>
-#include <new>
-#include <type_traits>
-#include <initializer_list>
+#include <stdlib.h>
+#include <string.h>
 
 #include "bul/bul.h"
 #include "bul/containers/span.h"
-#include "bul/memory_util.h"
 
 namespace bul
 {
 template <typename T>
 struct vector
 {
-    static_assert(std::is_default_constructible_v<T>, "Type must be default constructible");
-    static_assert(std::is_move_constructible_v<T>, "Type must be move constructible");
-
-    vector() = default;
-
-    explicit vector(size_t size)
+    void destroy()
     {
-        resize(size);
+        free(data);
+        data = nullptr;
+        size = 0;
+        capacity = 0;
     }
 
-    vector(std::initializer_list<T> init_list)
+    void reserve(uint32_t capacity_)
     {
-        reserve(init_list.size());
-        _current = _end;
-        uninitialized_copy_range(init_list.begin(), init_list.end(), _begin);
-    }
-
-    vector(size_t size, const T& default_value)
-    {
-        reserve(size);
-        _current = _end;
-        for (T* cur = _begin; cur != _end; ++cur)
-        {
-            *cur = default_value;
-        }
-    }
-
-    ~vector()
-    {
-        clear();
-        free(_begin);
-        _begin = nullptr;
-        _current = nullptr;
-        _end = nullptr;
-    }
-
-    vector(const vector<T>& other)
-    {
-        *this = other;
-    }
-
-    vector<T>& operator=(const vector<T>& other)
-    {
-        clear();
-        _begin = reinterpret_cast<T*>(realloc(_begin, other.size_bytes()));
-        _current = _begin + other.size();
-        _end = _current;
-        uninitialized_copy_range(other._begin, other._end, _begin);
-        return *this;
-    }
-
-    vector(vector<T>&& other) noexcept
-    {
-        *this = std::move(other);
-    }
-
-    vector<T>& operator=(vector<T>&& other) noexcept
-    {
-        clear();
-        free(_begin);
-        _begin = other._begin;
-        _current = other._current;
-        _end = other._end;
-        other._begin = nullptr;
-        other._current = nullptr;
-        other._end = nullptr;
-        return *this;
-    }
-
-    void resize(size_t size_)
-    {
-        if (size_ < size())
-        {
-            delete_range(_begin + size_, _current);
-        }
-        else
-        {
-            reserve(size_);
-            default_construct_range(_current, _end);
-        }
-        _current = _begin + size_;
-    }
-
-    void reserve(size_t size_)
-    {
-        if (size_ <= capacity())
+        if (capacity_ <= capacity)
         {
             return;
         }
 
-        T* new_begin = reinterpret_cast<T*>(malloc(size_ * sizeof(T)));
-        T* new_end = new_begin + size_;
-        T* new_current = new_begin + size();
-        uninitialized_move_range(_begin, _current, new_begin);
-        free(_begin);
-        _begin = new_begin;
-        _current = new_current;
-        _end = new_end;
+        capacity = capacity_;
+        T* new_data = (T*)malloc(capacity * sizeof(T));
+        memcpy(new_data, data, size * sizeof(T));
+        free(data);
+        data = new_data;
     }
 
-    template <typename... Args>
-    T& emplace_back(Args&&... args)
+    void resize(uint32_t size_)
     {
-        if (_current == _end)
+        if (size_ > capacity)
         {
-            reserve(capacity() == 0 ? 1 : capacity() * 2);
+            reserve(size_);
         }
-        T* ret = new (_current) T(std::forward<Args>(args)...);
-        ++_current;
-        return *ret;
+        size = size_;
     }
 
-    T&& pop_back()
+    T& push_back(const T& value)
     {
-        ASSERT(_current != _begin);
-        --_current;
-        return std::move(*_current);
+        T& element = push_back();
+        element = value;
+        return element;
+    }
+
+    T& push_back()
+    {
+        if (size == capacity)
+        {
+            capacity = capacity * 2 + (capacity == 0);
+            T* new_data = (T*)malloc(capacity * sizeof(T));
+            memcpy(new_data, data, size * sizeof(T));
+            free(data);
+            data = new_data;
+        }
+        T& element = data[size++];
+        return element;
+    }
+
+    T pop_back()
+    {
+        ASSERT(size > 0);
+        T element = data[--size];
+        return element;
     }
 
     void clear()
     {
-        resize(0);
+        size = 0;
     }
 
-    size_t find(const T& to_find) const
+    uint32_t size_bytes() const
     {
-        for (const T* cur = _begin; cur != _current; ++cur)
-        {
-            if (*cur == to_find)
-            {
-                return cur - _begin;
-            }
-        }
-        return size_t(-1);
+        return size * sizeof(T);
     }
 
-    void erase(size_t index)
+    T& operator[](uint32_t index)
     {
-        if (index == size_t(-1))
-        {
-            return;
-        }
-
-        ASSERT(index < size());
-        std::swap(_begin[index], back());
-        --_current;
-        if (!std::is_trivially_destructible_v<T>)
-        {
-            _current->~T();
-        }
+        ASSERT(index < size);
+        return data[index];
     }
 
-    void erase_stable(size_t index)
+    const T& operator[](uint32_t index) const
     {
-        if (index == size_t(-1))
-        {
-            return;
-        }
-
-        ASSERT(index < size());
-        move_range(_begin + index + 1, _current, _begin + index);
-        --_current;
-        if (!std::is_trivially_destructible_v<T>)
-        {
-            _current->~T();
-        }
-    }
-
-    size_t size() const
-    {
-        return _current - _begin;
-    }
-
-    size_t size_bytes() const
-    {
-        return size() * sizeof(T);
-    }
-
-    size_t capacity() const
-    {
-        return _end - _begin;
-    }
-
-    bool empty() const
-    {
-        return _current == _begin;
-    }
-
-    T* data()
-    {
-        return _begin;
-    }
-
-    const T* data() const
-    {
-        return _begin;
-    }
-
-    T& operator[](size_t index)
-    {
-        ASSERT(index < size());
-        return _begin[index];
-    }
-
-    const T& operator[](size_t index) const
-    {
-        ASSERT(index < size());
-        return _begin[index];
+        ASSERT(index < size);
+        return data[index];
     }
 
     T& front()
     {
-        ASSERT(size() > 0);
-        return *_begin;
+        ASSERT(size > 0);
+        return data[0];
     }
 
     const T& front() const
     {
-        ASSERT(size() > 0);
-        return *_begin;
+        ASSERT(size > 0);
+        return data[0];
     }
 
     T& back()
     {
-        ASSERT(size() > 0);
-        return *(_current - 1);
+        ASSERT(size > 0);
+        return data[size - 1];
     }
 
     const T& back() const
     {
-        ASSERT(size() > 0);
-        return *(_current - 1);
+        ASSERT(size > 0);
+        return data[size - 1];
     }
 
     T* begin()
     {
-        return _begin;
+        return data;
     }
 
     const T* begin() const
     {
-        return _begin;
+        return data;
     }
 
     T* end()
     {
-        return _end;
+        return data + size;
     }
 
     const T* end() const
     {
-        return _end;
+        return data + size;
     }
 
     operator span<T>()
     {
-        return span<T>{_begin, _current};
+        return span<T>{data, size};
     }
 
     operator span<const T>() const
     {
-        return span<const T>{_begin, _current};
+        return span<const T>{data, size};
     }
 
-    T* _begin = nullptr;
-    T* _current = nullptr;
-    T* _end = nullptr;
+    T* data = nullptr;
+    uint32_t size = 0;
+    uint32_t capacity = 0;
 };
 } // namespace bul

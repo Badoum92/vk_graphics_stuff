@@ -2,27 +2,14 @@
 
 #include <Windows.h>
 #include <windowsx.h>
+#include <stdlib.h>
 
 #include "bul/bul.h"
-#include "bul/util.h"
 #include "bul/input.h"
+#include "bul/containers/enum_array.h"
 
-namespace bul::window
+namespace bul
 {
-static std::vector<event> events;
-static vec2u size_ = {0, 0};
-static HWND handle_ = nullptr;
-static bool should_close_ = false;
-static bool resized_ = false;
-
-static vec2i cursor_pos_ = {0, 0};
-static bool cursor_visible_ = true;
-static bul::vec2i save_visible_cursor_pos_ = cursor_pos_;
-static bul::vec2i save_invisible_cursor_pos_ = cursor_pos_;
-
-static RAWINPUT* raw_input_ = nullptr;
-static UINT raw_input_size_ = 0;
-
 // clang-format off
 static enum_array<key, int> key_to_win32_key = {
 #define X(KEY, WIN32_KEY) WIN32_KEY,
@@ -33,11 +20,14 @@ static enum_array<key, int> key_to_win32_key = {
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-void create(const std::string_view title, vec2u size)
+void window::create(window* window, const char* title, vec2i size)
 {
-    destroy();
+    ASSERT(window != nullptr);
 
-    size_ = size;
+    window->should_close = false;
+    window->resized = false;
+    window->is_cursor_visible = true;
+    window->size = size;
 
     WNDCLASS wc = {};
     wc.lpfnWndProc = window_proc;
@@ -45,93 +35,70 @@ void create(const std::string_view title, vec2u size)
     wc.lpszClassName = "Win32 Window Class";
     RegisterClass(&wc);
 
-    RECT rect = {0, 0, static_cast<LONG>(size_.x), static_cast<LONG>(size_.y)};
+    RECT rect = {0, 0, size.x, size.y};
     AdjustWindowRectEx(&rect, WS_BORDER | WS_OVERLAPPEDWINDOW, false, 0);
-    size_.x = uint32_t(rect.right - rect.left);
-    size_.y = uint32_t(rect.bottom - rect.top);
-    handle_ = CreateWindowEx(0, wc.lpszClassName, title.data(), WS_BORDER | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                             CW_USEDEFAULT, size_.x, size_.y, nullptr, nullptr, wc.hInstance, nullptr);
+    size.x = rect.right - rect.left;
+    size.y = rect.bottom - rect.top;
+    window->handle = CreateWindowEx(0, wc.lpszClassName, title, WS_BORDER | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+                                    CW_USEDEFAULT, size.x, size.y, nullptr, nullptr, wc.hInstance, nullptr);
 
-    ASSERT(handle_ != nullptr);
-    should_close_ = false;
-    ShowWindow(handle_, SW_SHOW);
-    resized_ = false;
+    ENSURE(window->handle != nullptr);
+    SetProp((HWND)window->handle, "bul", window);
+    ShowWindow((HWND)window->handle, SW_SHOW);
 
     RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
     ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+    window->raw_input = nullptr;
+    window->raw_input_size = 0;
 }
 
-void destroy()
+void window::destroy()
 {
-    free(raw_input_);
+    DestroyWindow((HWND)handle);
+    handle = nullptr;
+    size = {0, 0};
+    free(raw_input);
+    raw_input = nullptr;
+    raw_input_size = 0;
 }
 
-void close()
+void window::set_title(const char* title_)
 {
-    DestroyWindow(handle_);
-    size_ = {0, 0};
-    handle_ = nullptr;
+    SetWindowText((HWND)handle, title_);
 }
 
-bool should_close()
+float window::aspect_ratio() const
 {
-    return should_close_;
+    return (float)size.x / (float)size.y;
 }
 
-void* handle()
+void window::show_cursor(bool show)
 {
-    return handle_;
-}
-
-vec2u size()
-{
-    return size_;
-}
-
-bool resized()
-{
-    bool ret = resized_;
-    resized_ = false;
-    return ret;
-}
-
-float aspect_ratio()
-{
-    return static_cast<float>(size_.x) / static_cast<float>(size_.y);
-}
-
-vec2i cursor_pos()
-{
-    return cursor_pos_;
-}
-
-void show_cursor(bool show)
-{
-    cursor_visible_ = show;
+    is_cursor_visible = show;
 
     RECT rect;
-    GetClientRect(static_cast<HWND>(window::handle()), &rect);
-    ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&rect.left));
-    ClientToScreen(static_cast<HWND>(window::handle()), reinterpret_cast<POINT*>(&rect.right));
+    GetClientRect((HWND)handle, &rect);
+    ClientToScreen((HWND)handle, (POINT*)&rect.left);
+    ClientToScreen((HWND)handle, (POINT*)&rect.right);
 
-    if (!cursor_visible_)
+    if (!show)
     {
-        save_visible_cursor_pos_ = cursor_pos_;
-        cursor_pos_ = save_invisible_cursor_pos_;
+        visible_cursor_position = cursor_position;
+        cursor_position = invisible_cursor_position;
 
         ClipCursor(&rect);
         SetCursor(nullptr);
 
-        RAWINPUTDEVICE rid = {0x01, 0x02, 0, static_cast<HWND>(window::handle())};
+        RAWINPUTDEVICE rid = {0x01, 0x02, 0, (HWND)handle};
         ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
     }
     else
     {
-        save_invisible_cursor_pos_ = cursor_pos_;
-        cursor_pos_ = save_visible_cursor_pos_;
+        invisible_cursor_position = cursor_position;
+        cursor_position = visible_cursor_position;
 
         ClipCursor(nullptr);
-        SetCursorPos(rect.left + cursor_pos_.x, rect.top + cursor_pos_.y);
+        SetCursorPos(rect.left + cursor_position.x, rect.top + cursor_position.y);
         SetCursor(LoadCursor(nullptr, IDC_ARROW));
 
         RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
@@ -139,22 +106,15 @@ void show_cursor(bool show)
     }
 }
 
-bool cursor_visible()
+void window::poll_events()
 {
-    return cursor_visible_;
-}
-
-const std::vector<event>& poll_events()
-{
-    events.clear();
-    input::_private::new_frame();
+    input_new_frame();
     MSG msg = {};
     while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
     {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    return events;
 }
 
 static WPARAM handle_left_right_special_keys(WPARAM wParam, LPARAM lParam)
@@ -173,12 +133,12 @@ static WPARAM handle_left_right_special_keys(WPARAM wParam, LPARAM lParam)
 
 static key handle_key_msg(WPARAM wParam, LPARAM)
 {
-    int count = to_underlying(key::_count);
+    int count = (int)key::_count;
     for (int i = 0; i < count; ++i)
     {
-        key key = to_enum<bul::key>(i);
+        key key = (bul::key)i;
         int win32_key = key_to_win32_key[key];
-        if (static_cast<int>(wParam) == win32_key)
+        if ((int)wParam == win32_key)
         {
             return key;
         }
@@ -206,18 +166,26 @@ static bool is_right_alt()
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    window* w = (window*)GetProp(hwnd, "bul");
+
     switch (uMsg)
     {
         // Window events
 
     case WM_DESTROY: {
-        should_close_ = true;
+        w->should_close = true;
         PostQuitMessage(0);
         return 0;
     }
+
+    case WM_CLOSE: {
+        w->should_close = true;
+        return 0;
+    }
+
     case WM_SIZE: {
-        size_ = {LOWORD(lParam), HIWORD(lParam)};
-        resized_ = true;
+        w->size = {LOWORD(lParam), HIWORD(lParam)};
+        w->resized = true;
         return 0;
     }
 
@@ -236,7 +204,7 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
                 key = bul::key::r_alt;
             }
             keys[key] = !(HIWORD(lParam) & KF_UP);
-            events.emplace_back(key, HIWORD(lParam) & KF_UP ? button_state::up : button_state::down);
+            // events.emplace_back(key, HIWORD(lParam) & KF_UP ? button_state::up : button_state::down);
         }
         return 0;
     }
@@ -244,55 +212,58 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         // Mouse events
 
     case WM_MOUSEMOVE: {
-        if (cursor_visible())
+        if (w->is_cursor_visible)
         {
-            cursor_pos_ = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-            events.emplace_back(cursor_pos_.x, cursor_pos_.y);
+            bul::vec2i new_cursor_position = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+            mouse_position_delta.x = new_cursor_position.x - w->cursor_position.x;
+            mouse_position_delta.y = new_cursor_position.y - w->cursor_position.y;
+            w->cursor_position = new_cursor_position;
+            // events.emplace_back(cursor_pos_.x, cursor_pos_.y);
         }
         return 0;
     }
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
         bul::mouse_buttons[mouse_button::mouse_1] = true;
-        events.emplace_back(mouse_button::mouse_1, button_state::down);
+        // events.emplace_back(mouse_button::mouse_1, button_state::down);
         return 0;
     }
     case WM_LBUTTONUP: {
         bul::mouse_buttons[mouse_button::mouse_1] = false;
-        events.emplace_back(mouse_button::mouse_1, button_state::up);
+        // events.emplace_back(mouse_button::mouse_1, button_state::up);
         return 0;
     }
     case WM_RBUTTONDOWN:
     case WM_RBUTTONDBLCLK: {
         bul::mouse_buttons[mouse_button::mouse_2] = true;
-        events.emplace_back(mouse_button::mouse_2, button_state::down);
+        // events.emplace_back(mouse_button::mouse_2, button_state::down);
         return 0;
     }
     case WM_RBUTTONUP: {
         bul::mouse_buttons[mouse_button::mouse_2] = false;
-        events.emplace_back(mouse_button::mouse_2, button_state::up);
+        // events.emplace_back(mouse_button::mouse_2, button_state::up);
         return 0;
     }
     case WM_MBUTTONDOWN: {
         bul::mouse_buttons[mouse_button::mouse_3] = true;
-        events.emplace_back(mouse_button::mouse_3, button_state::down);
+        // events.emplace_back(mouse_button::mouse_3, button_state::down);
         return 0;
     }
     case WM_MBUTTONUP: {
         bul::mouse_buttons[mouse_button::mouse_3] = false;
-        events.emplace_back(mouse_button::mouse_3, button_state::up);
+        // events.emplace_back(mouse_button::mouse_3, button_state::up);
         return 0;
     }
     case WM_XBUTTONDOWN: {
         if (lParam & MK_XBUTTON1)
         {
             bul::mouse_buttons[mouse_button::mouse_4] = true;
-            events.emplace_back(mouse_button::mouse_4, button_state::down);
+            // events.emplace_back(mouse_button::mouse_4, button_state::down);
         }
         else
         {
             bul::mouse_buttons[mouse_button::mouse_5] = true;
-            events.emplace_back(mouse_button::mouse_5, button_state::down);
+            // events.emplace_back(mouse_button::mouse_5, button_state::down);
         }
         return 0;
     }
@@ -300,12 +271,12 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         if (lParam & MK_XBUTTON1)
         {
             bul::mouse_buttons[mouse_button::mouse_4] = false;
-            events.emplace_back(mouse_button::mouse_4, button_state::up);
+            // events.emplace_back(mouse_button::mouse_4, button_state::up);
         }
         else
         {
             bul::mouse_buttons[mouse_button::mouse_5] = false;
-            events.emplace_back(mouse_button::mouse_5, button_state::up);
+            // events.emplace_back(mouse_button::mouse_5, button_state::up);
         }
         return 0;
     }
@@ -314,35 +285,36 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
     case WM_INPUT: {
         UINT size = 0;
-        HRAWINPUT ri = reinterpret_cast<HRAWINPUT>(lParam);
+        HRAWINPUT raw_input_handle = (HRAWINPUT)lParam;
+        RAWINPUT* raw_input;
 
-        GetRawInputData(ri, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER));
-        if (size > raw_input_size_)
+        GetRawInputData(raw_input_handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER));
+        if (size > w->raw_input_size)
         {
-            raw_input_size_ = size;
-            raw_input_ = reinterpret_cast<RAWINPUT*>(realloc(raw_input_, size));
+            w->raw_input_size = size;
+            w->raw_input = (RAWINPUT*)realloc(w->raw_input, size);
+            ENSURE(w->raw_input != nullptr);
         }
 
-        size = raw_input_size_;
-        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != UINT(-1));
-        ENSURE(GetRawInputData(ri, RID_INPUT, raw_input_, &size, sizeof(RAWINPUTHEADER)) != UINT(-1));
+        size = w->raw_input_size;
+        raw_input = (RAWINPUT*)w->raw_input;
+        ENSURE(GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &size, sizeof(RAWINPUTHEADER)) != UINT32_MAX);
 
-        bul::vec2i delta;
-        if (raw_input_->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
+        if (raw_input->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
         {
-            delta.x = raw_input_->data.mouse.lLastX - cursor_pos_.x;
-            delta.y = raw_input_->data.mouse.lLastY - cursor_pos_.y;
+            mouse_position_delta.x = raw_input->data.mouse.lLastX - w->cursor_position.x;
+            mouse_position_delta.y = raw_input->data.mouse.lLastY - w->cursor_position.y;
         }
         else
         {
-            delta.x = raw_input_->data.mouse.lLastX;
-            delta.y = raw_input_->data.mouse.lLastY;
+            mouse_position_delta.x = raw_input->data.mouse.lLastX;
+            mouse_position_delta.y = raw_input->data.mouse.lLastY;
         }
-        cursor_pos_ += delta;
+        w->cursor_position += mouse_position_delta;
         return 0;
     }
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
-} // namespace bul::window
+} // namespace bul

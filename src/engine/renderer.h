@@ -1,12 +1,13 @@
+#if 0
 #pragma once
 
 #include <volk.h>
 
+#include "bul/containers/handle.h"
+
 #include "camera.h"
 #include "gltf.h"
-#include "device.h"
-
-#include "fwd.h"
+// #include "device.h"
 
 class Renderer
 {
@@ -39,5 +40,6 @@ private:
     bul::handle<vk::GraphicsProgram> graphics_program;
     bul::handle<vk::ComputeProgram> tonemap_program;
 
-    vk::RingBuffer global_uniform_buffer;
+    // vk::RingBuffer global_uniform_buffer;
 };
+#endif

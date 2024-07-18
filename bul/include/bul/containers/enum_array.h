@@ -1,34 +1,24 @@
 #pragma once
 
-#include <type_traits>
-
 #include "bul/bul.h"
-#include "bul/util.h"
 
 namespace bul
 {
-template <typename E>
-concept count_enum = requires(E e)
-{
-    std::is_enum_v<E>;
-    E::_count;
-};
-
-template <count_enum E, typename T>
+template <typename E, typename T>
 struct enum_array
 {
-    static constexpr size_t SIZE = size_t(E::_count);
+    static constexpr uint32_t SIZE = (uint32_t)E::_count;
 
     constexpr T& operator[](E e)
     {
-        ASSERT(size_t(to_underlying(e)) < SIZE);
-        return data[to_underlying(e)];
+        ASSERT((uint32_t)e < SIZE);
+        return data[(uint32_t)e];
     }
 
     constexpr const T& operator[](E e) const
     {
-        ASSERT(size_t(to_underlying(e)) < SIZE);
-        return data[to_underlying(e)];
+        ASSERT((uint32_t)e < SIZE);
+        return data[(uint32_t)e];
     }
 
     T data[SIZE];

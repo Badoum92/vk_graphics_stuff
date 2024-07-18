@@ -12,8 +12,8 @@ public:
         ORTHOGRAPHIC
     };
 
-    Camera(const bul::vec3f& pos = {0.0f, 0.0f, 0.0f}, const bul::vec3f& world_up = {0.0f, 1.0f, 0.0f}, float yaw = -90.0f,
-           float pitch = 0.0f, float near = 0.001f, float far = 1000.0f);
+    Camera(const bul::vec3f& pos = {0.0f, 0.0f, 0.0f}, const bul::vec3f& world_up = {0.0f, 1.0f, 0.0f},
+           float yaw = -90.0f, float pitch = 0.0f, float near = 0.001f, float far = 1000.0f);
 
     void update_vectors();
     const bul::mat4f& get_view();
@@ -87,4 +87,36 @@ protected:
 
     float last_x_;
     float last_y_;
+};
+
+struct camera
+{
+    void compute_view_proj();
+
+    void move_forward(float offset);
+    void move_up(float offset);
+    void move_right(float offset);
+    void rotate(bul::vec3f angles);
+
+    bul::vec3f position;
+    bul::vec3f forward;
+    bul::vec3f up;
+    bul::vec3f right;
+
+    float yaw;
+    float pitch;
+    float roll;
+    union
+    {
+        float fov_y;
+        float ortho_size;
+    };
+    float aspect_ratio;
+    float near_plane;
+    float far_plane;
+
+    bul::mat4f view;
+    bul::mat4f inv_view;
+    bul::mat4f proj;
+    bul::mat4f inv_proj;
 };

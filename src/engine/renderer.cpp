@@ -1,3 +1,4 @@
+#if 0
 #include "renderer.h"
 
 #include <iostream>
@@ -304,3 +305,4 @@ void Renderer::render_gui()
 
     ImGui::End();
 }
+#endif

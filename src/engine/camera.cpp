@@ -1,3 +1,4 @@
+#if 0
 #include "camera.h"
 
 #include <cmath>
@@ -20,8 +21,8 @@ Camera::Camera(const bul::vec3f& pos, const bul::vec3f& world_up, float yaw, flo
     far_ = far;
     update_vectors();
 
-    width_ = bul::window::size().x;
-    height_ = bul::window::size().y;
+    width_ = (float)bul::window::size().x;
+    height_ = (float)bul::window::size().y;
     aspect_ratio_ = bul::window::aspect_ratio();
 }
 
@@ -145,24 +146,24 @@ float Camera::get_ortho_size() const
 void Camera::update_pos()
 {
     dir_ = bul::vec3i(0);
-    if (bul::key_down(bul::Key::Z))
+    if (bul::key_down(bul::key::Z))
         dir_.z += 1;
-    if (bul::key_down(bul::Key::S))
+    if (bul::key_down(bul::key::S))
         dir_.z -= 1;
-    if (bul::key_down(bul::Key::Q))
+    if (bul::key_down(bul::key::Q))
         dir_.x -= 1;
-    if (bul::key_down(bul::Key::D))
+    if (bul::key_down(bul::key::D))
         dir_.x += 1;
-    if (bul::key_down(bul::Key::Space))
+    if (bul::key_down(bul::key::space))
         dir_.y += 1;
-    if (bul::key_down(bul::Key::C))
+    if (bul::key_down(bul::key::C))
         dir_.y -= 1;
 
     if (dir_ == bul::vec3i(0))
         return;
 
     auto dir = bul::normalize(bul::vec3f{(float)dir_.x, (float)dir_.y, (float)dir_.z});
-    dir *= speed_ * bul::time::delta_s();
+    dir *= speed_ * bul::time_delta_s();
     pos_ += right_ * dir.x;
     pos_ += world_up_ * dir.y;
     pos_ += front_straight_ * dir.z;
@@ -179,8 +180,8 @@ void Camera::update_view()
     if (last_pos == pos)
         return;
 
-    float x_offset = pos.x - last_pos.x;
-    float y_offset = last_pos.y - pos.y;
+    float x_offset = (float)(pos.x - last_pos.x);
+    float y_offset = (float)(last_pos.y - pos.y);
     last_pos.x = pos.x;
     last_pos.y = pos.y;
 
@@ -246,4 +247,49 @@ const bul::vec3f& Camera::get_right() const
 bool Camera::is_moving() const
 {
     return recompute_view_;
+}
+#endif
+
+#include "camera.h"
+
+#include "bul/math/math.h"
+
+void camera::compute_view_proj()
+{
+    bul::mat4f rotation = bul::rotation_x(pitch) * bul::rotation_y(yaw) * bul::rotation_z(roll);
+    forward = bul::normalize(rotation * bul::vec4f{0, 0, -1, 0});
+    right = bul::normalize(rotation * bul::vec4f{1, 0, 0, 0});
+    up = bul::normalize(rotation * bul::vec4f{0, 1, 0, 0});
+
+    view = bul::lookat(position, position + forward, up, &inv_view);
+    proj = bul::perspective(fov_y, aspect_ratio, near_plane, far_plane, &inv_proj);
+}
+
+void camera::move_forward(float offset)
+{
+    position += forward * offset;
+}
+
+void camera::move_up(float offset)
+{
+    position += up * offset;
+}
+
+void camera::move_right(float offset)
+{
+    position += right * offset;
+}
+
+void camera::rotate(bul::vec3f angles)
+{
+    if (angles == bul::vec3f{0, 0, 0})
+    {
+        return;
+    }
+
+    pitch += angles.x;
+    yaw += angles.y;
+    roll += angles.z;
+
+    pitch = bul_clamp(-bul::half_pi + 0.01f, pitch, bul::half_pi - 0.01f);
 }

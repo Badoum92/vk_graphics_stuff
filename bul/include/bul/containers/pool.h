@@ -1,17 +1,16 @@
 #pragma once
 
-#include <cstdlib>
+#include <stdlib.h>
 #include <iterator>
 #include <type_traits>
 
 #include "bul/bul.h"
-#include "bul/types.h"
 #include "bul/containers/handle.h"
 
 namespace bul
 {
 template <typename T>
-struct pool : public non_copyable
+struct pool
 {
     static_assert(std::is_move_constructible_v<T>, "Type must be move constructible");
 
@@ -106,8 +105,7 @@ struct pool : public non_copyable
 
     bool is_valid(handle<T> handle) const
     {
-        return handle.value < _capacity && handle.version == _data[handle.value].version
-            && !_data[handle.value].free;
+        return handle.value < _capacity && handle.version == _data[handle.value].version && !_data[handle.value].free;
     }
 
     const T& get(handle<T> handle) const
@@ -125,7 +123,7 @@ struct pool : public non_copyable
     void clear()
     {
         _first_free = 0;
-        for (size_t i = 0; i < _capacity; ++i)
+        for (uint32_t i = 0; i < _capacity; ++i)
         {
             if constexpr (!std::is_trivially_destructible_v<T>)
             {
@@ -250,4 +248,94 @@ struct pool : public non_copyable
     uint32_t _capacity = 0;
     uint32_t _first_free = UINT32_MAX;
 };
+
+//template <typename T>
+//struct apool
+//{
+//    handle<T> insert(const T& element)
+//    {
+//        if (size == capacity)
+//        {
+//            _grow();
+//        }
+//        handle_index& first_free_handle_index = handle_indices[first_free];
+//        uint32_t next_free = first_free_handle_index.index;
+//        data[size] = element;
+//        first_free_handle_index.index = size;
+//        handles[size] = first_free;
+//        handle<T> handle = {first_free, first_free_handle_index.version};
+//        first_free = next_free;
+//        return handle;
+//    }
+//
+//    void remove(handle<T> handle)
+//    {}
+//
+//    const T* get(handle<T> handle) const
+//    {
+//        return data[handle_indices[handle.value].index];
+//    }
+//
+//    T* get(handle<T> handle)
+//    {
+//        return data[handle_indices[handle.value].index];
+//    }
+//
+//    const T* begin() const
+//    {
+//        return data;
+//    }
+//
+//    T* begin()
+//    {
+//        return data;
+//    }
+//
+//    const T* end() const
+//    {
+//        return data + size;
+//    }
+//
+//    T* end()
+//    {
+//        return data + size;
+//    }
+//
+//    void _grow()
+//    {
+//        uint32_t new_capacity = capacity * 2 + (capacity == 0);
+//        T* new_data = (T*)malloc(new_capacity * sizeof(T));
+//        uint32_t* new_handles = (uint32_t*)malloc(new_capacity * sizeof(uint32_t));
+//        handle_index* new_handle_indices = (handle_index*)malloc(new_capacity * sizeof(handle_index));
+//        memcpy(new_data, data, size * sizeof(T));
+//        memcpy(new_handles, handles, size * sizeof(uint32_t));
+//        memcpy(new_handle_indices, handle_indices, size * sizeof(handle_index));
+//        free(data);
+//        free(handles);
+//        free(handle_indices);
+//        capacity = new_capacity;
+//        data = new_data;
+//        handles = new_handles;
+//        handle_indices = new_handle_indices;
+//        for (uint32_t i = size; i < capacity; ++i)
+//        {
+//            handle_indices[i] = {i + 1, 0};
+//        }
+//        handle_indices[capacity - 1].index = UINT32_MAX;
+//        first_free_handle_index = size;
+//    }
+//
+//    struct handle_index
+//    {
+//        uint32_t index;
+//        uint32_t generation;
+//    };
+//
+//    T* data = nullptr;
+//    uint32_t* handles = nullptr;
+//    handle_index* handle_indices = nullptr;
+//    uint32_t size = 0;
+//    uint32_t capacity = 0;
+//    uint32_t first_free = UINT32_MAX;
+//};
 } // namespace bul

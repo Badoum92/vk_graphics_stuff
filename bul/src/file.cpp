@@ -1,6 +1,6 @@
 #include "bul/file.h"
 
-#include <cstdio>
+#include <stdint.h>
 
 namespace bul
 {
@@ -47,6 +47,6 @@ bool write_file(const char* path, const uint8_t* data, size_t size)
     }
     size_t written = fwrite(data, 1, size, file);
     fclose(file);
-    return written = size;
+    return written == size;
 }
 } // namespace bul

@@ -60,7 +60,7 @@ struct Mesh
 struct Node
 {
     std::vector<uint32_t> children;
-    uint32_t mesh = -1;
+    uint32_t mesh = UINT32_MAX;
     bul::mat4f transform = bul::mat4f::identity();
 };
 

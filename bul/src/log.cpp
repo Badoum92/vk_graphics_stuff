@@ -1,72 +1,46 @@
 #include "bul/log.h"
 
-#include <cstdio>
-#include <cstdarg>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <time.h>
 
-#include "bul/format.h"
-#include "bul/containers/vector.h"
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
+#include "bul/containers/enum_array.h"
 
 namespace bul
 {
-static vector<log_callback> callbacks;
+static constexpr enum_array<log_level, const char*> levels = {
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+};
 
-static void log(log_level level, const char* fmt, va_list args)
-{
-    const char* text = format(fmt, args);
-    printf("%s %s\n", log_level_str[level], text);
-    for (log_callback callback : callbacks)
-    {
-        callback(level, text);
-    }
-}
+static constexpr enum_array<log_level, const char*> colors = {
+    "\x1b[36m",
+    "\x1b[32m",
+    "\x1b[33m",
+    "\x1b[31m",
+};
 
-void log_debug(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    log(log_level::debug, fmt, args);
-    va_end(args);
-}
-
-void log_info(const char* fmt, ...)
+void _log(log_level level, const char* file, int line, const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    log(log_level::info, fmt, args);
+
+    char time_buf[16];
+    time_t t = time(NULL);
+    time_buf[strftime(time_buf, sizeof(time_buf), "%H:%M:%S", localtime(&t))] = 0;
+
+    printf("%s %s%-7s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", time_buf, colors[level], levels[level], file, line);
+    vprintf(fmt, args);
+    printf("\n");
+    fflush(stdout);
+
     va_end(args);
-}
-
-void log_warning(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    log(log_level::warning, fmt, args);
-    va_end(args);
-}
-
-void log_error(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    log(log_level::error, fmt, args);
-    va_end(args);
-}
-
-void log(log_level level, const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    log(level, fmt, args);
-    va_end(args);
-}
-
-void add_log_callback(log_callback callback)
-{
-    callbacks.emplace_back(callback);
-}
-
-void remove_log_callback(log_callback callback)
-{
-    callbacks.erase(callbacks.find(callback));
 }
 } // namespace bul

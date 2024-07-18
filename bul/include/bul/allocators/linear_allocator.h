@@ -6,31 +6,16 @@ namespace bul
 {
 struct linear_allocator
 {
-    linear_allocator(void* buffer, uint32_t size)
-        : _current(buffer)
-        , _end(_current + size)
-    {}
+    static linear_allocator create(void* buffer, uint32_t size);
 
-    void* alloc(uint32_t size)
-    {
-        void* ptr = _current;
-        _current += size;
-        ASSERT(_current <= _end);
-        return ptr;
-    }
+    void* alloc(uint32_t size);
+    void* alloc_aligned(uint32_t size, uint32_t alignment = sizeof(void*));
+    void reset(void* ptr);
 
-    void* alloc_aligned(uint32_t size, uint32_t alignment = 16)
-    {
-        _current = align_pow2(_current, alignment);
-        return alloc(size);
-    }
-
-    void rewind(void* ptr)
-    {
-        _current = ptr;
-    }
-
-    uint8_t* _current = nullptr;
-    uint8_t* _end = nullptr;
+    uint8_t* begin;
+    uint8_t* end;
+    uint8_t* current;
 };
+
+extern thread_local linear_allocator g_linear_allocator;
 } // namespace bul

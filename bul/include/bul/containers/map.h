@@ -17,7 +17,7 @@ public:
 
     explicit map(size_t capacity_ = 2)
     {
-        capacity_ = align_pow2(capacity_, 2);
+        // capacity_ = align_pow2(capacity_, 2);
         slots_.resize(capacity_);
         keys_.reserve(capacity_);
         values_.reserve(capacity_);

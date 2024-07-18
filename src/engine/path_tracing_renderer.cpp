@@ -1,3 +1,4 @@
+#if 0
 #include "path_tracing_renderer.h"
 
 #include <iostream>
@@ -308,3 +309,4 @@ void PathTracingRenderer::render_gui()
 
     ImGui::End();
 }
+#endif

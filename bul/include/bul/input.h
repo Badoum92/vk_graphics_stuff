@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bul/containers/enum_array.h"
+#include "bul/math/vector.h"
 
 namespace bul
 {
@@ -52,17 +53,15 @@ constexpr inline enum_array<button_state, const char*> button_states_str = {
 };
 // clang-format on
 
-namespace input::_private
-{
-void new_frame();
-}
+void input_new_frame();
 
 extern enum_array<mouse_button, bool> mouse_buttons;
+extern vec2i mouse_position_delta;
 extern enum_array<key, bool> keys;
 
-bool button_down(mouse_button button);
-bool button_pressed(mouse_button button);
-bool button_released(mouse_button button);
+bool mouse_button_down(mouse_button button);
+bool mouse_button_pressed(mouse_button button);
+bool mouse_button_released(mouse_button button);
 
 bool key_down(key key);
 bool key_pressed(key key);

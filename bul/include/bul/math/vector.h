@@ -2,7 +2,7 @@
 
 #include "bul/bul.h"
 
-#include <cmath>
+#include <math.h>
 
 namespace bul
 {
@@ -11,7 +11,7 @@ struct vec2
 {
     using value_t = T;
 
-    static constexpr size_t SIZE = 2;
+    static constexpr uint32_t SIZE = 2;
     T x = 0;
     T y = 0;
 
@@ -75,13 +75,13 @@ struct vec2
         return &x;
     }
 
-    T& operator[](size_t i)
+    T& operator[](uint32_t i)
     {
         ASSERT(i < SIZE);
         return data()[i];
     }
 
-    const T& operator[](size_t i) const
+    const T& operator[](uint32_t i) const
     {
         ASSERT(i < SIZE);
         return data()[i];
@@ -93,7 +93,7 @@ struct vec3
 {
     using value_t = T;
 
-    static constexpr size_t SIZE = 3;
+    static constexpr uint32_t SIZE = 3;
     T x = 0;
     T y = 0;
     T z = 0;
@@ -166,13 +166,13 @@ struct vec3
         return &x;
     }
 
-    T& operator[](size_t i)
+    T& operator[](uint32_t i)
     {
         ASSERT(i < SIZE);
         return data()[i];
     }
 
-    const T& operator[](size_t i) const
+    const T& operator[](uint32_t i) const
     {
         ASSERT(i < SIZE);
         return data()[i];
@@ -184,7 +184,7 @@ struct vec4
 {
     using value_t = T;
 
-    static constexpr size_t SIZE = 4;
+    static constexpr uint32_t SIZE = 4;
     T x = 0;
     T y = 0;
     T z = 0;
@@ -212,6 +212,11 @@ struct vec4
         , z(xyz.z)
         , w(w_)
     {}
+
+    constexpr operator vec3<T>() const
+    {
+        return vec3<T>{x, y, z};
+    }
 
     constexpr void operator*=(T val)
     {
@@ -273,13 +278,13 @@ struct vec4
         return &x;
     }
 
-    T& operator[](size_t i)
+    T& operator[](uint32_t i)
     {
         ASSERT(i < SIZE);
         return data()[i];
     }
 
-    const T& operator[](size_t i) const
+    const T& operator[](uint32_t i) const
     {
         ASSERT(i < SIZE);
         return data()[i];
@@ -398,9 +403,9 @@ template <typename V>
 auto min(const V& v)
 {
     auto res = v[0];
-    for (size_t i = 1; i < V::SIZE; ++i)
+    for (uint32_t i = 1; i < V::SIZE; ++i)
     {
-        res = std::min(res, v[i]);
+        res = res < v[i] ? res : v[i];
     }
     return res;
 }
@@ -409,18 +414,18 @@ template <typename V>
 auto max(const V& v)
 {
     auto res = v[0];
-    for (size_t i = 1; i < V::SIZE; ++i)
+    for (uint32_t i = 1; i < V::SIZE; ++i)
     {
-        res = std::max(res, v[i]);
+        res = res > v[i] ? res : v[i];
     }
     return res;
 }
 
 template <typename V>
-size_t min_comp(const V& v)
+uint32_t min_comp(const V& v)
 {
-    size_t comp = 0;
-    for (size_t i = 1; i < V::SIZE; ++i)
+    uint32_t comp = 0;
+    for (uint32_t i = 1; i < V::SIZE; ++i)
     {
         if (v[i] < v[comp])
         {
@@ -431,10 +436,10 @@ size_t min_comp(const V& v)
 }
 
 template <typename V>
-size_t max_comp(const V& v)
+uint32_t max_comp(const V& v)
 {
-    size_t comp = 0;
-    for (size_t i = 1; i < V::SIZE; ++i)
+    uint32_t comp = 0;
+    for (uint32_t i = 1; i < V::SIZE; ++i)
     {
         if (v[i] > v[comp])
         {
@@ -448,7 +453,7 @@ template <typename V>
 auto dot(const V& a, const V& b)
 {
     typename V::value_t res = 0;
-    for (size_t i = 0; i < V::SIZE; ++i)
+    for (uint32_t i = 0; i < V::SIZE; ++i)
     {
         res += a[i] * b[i];
     }
@@ -458,7 +463,7 @@ auto dot(const V& a, const V& b)
 template <typename V>
 auto length(const V& v)
 {
-    return std::sqrt(dot(v, v));
+    return sqrtf((float)dot(v, v));
 }
 
 template <typename V>
@@ -490,7 +495,7 @@ inline vec3f cross(const vec3f& a, const vec3f& b)
     return {a.y * b.z - b.y * a.z, a.z * b.x - b.z * a.x, a.x * b.y - b.x * a.y};
 }
 
-inline constexpr vec3f right = {1, 0, 0};
-inline constexpr vec3f up = {0, 1, 0};
-inline constexpr vec3f front = {0, 0, -1};
+inline constexpr vec3f RIGHT = {1, 0, 0};
+inline constexpr vec3f UP = {0, 1, 0};
+inline constexpr vec3f FRONT = {0, 0, -1};
 } // namespace bul

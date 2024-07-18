@@ -1,7 +1,5 @@
 #pragma once
 
-#include "bul/containers/enum_array.h"
-
 namespace bul
 {
 enum class log_level
@@ -13,20 +11,11 @@ enum class log_level
     _count,
 };
 
-static constexpr enum_array<log_level, const char*> log_level_str = {
-    "[DEBUG]",
-    "[INFO]",
-    "[WARNING]",
-    "[ERROR]",
-};
+#define log_debug(...) _log(bul::log_level::debug, __FILE__, __LINE__, __VA_ARGS__)
+#define log_info(...) _log(bul::log_level::info, __FILE__, __LINE__, __VA_ARGS__)
+#define log_warning(...) _log(bul::log_level::warning, __FILE__, __LINE__, __VA_ARGS__)
+#define log_error(...) _log(bul::log_level::error, __FILE__, __LINE__, __VA_ARGS__)
+#define log(LEVEL, ...) _log(LEVEL, __FILE__, __LINE__, __VA_ARGS__)
 
-void log_debug(const char* fmt, ...);
-void log_info(const char* fmt, ...);
-void log_warning(const char* fmt, ...);
-void log_error(const char* fmt, ...);
-void log(log_level level, const char* fmt, ...);
-
-using log_callback = void (*)(log_level, const char*);
-void add_log_callback(log_callback callback);
-void remove_log_callback(log_callback callback);
+void _log(log_level level, const char* file, int line, const char* fmt, ...);
 } // namespace bul

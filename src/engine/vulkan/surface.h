@@ -23,6 +23,5 @@ namespace surface
     inline VkPresentModeKHR present_mode;
     inline VkSurfaceFormatKHR format;
     inline std::vector<bul::handle<Image>> images;
-    inline std::vector<bul::handle<FrameBuffer>> framebuffers;
 };
 } // namespace vk

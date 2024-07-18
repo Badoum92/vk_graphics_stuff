@@ -1,18 +1,17 @@
 #pragma once
 
-#include <string>
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 
 namespace vk
 {
-inline constexpr VkImageUsageFlags image_usage_depth_attachment =
+constexpr VkImageUsageFlags image_usage_depth_attachment =
     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-inline constexpr VkImageUsageFlags image_usage_sampled =
+constexpr VkImageUsageFlags image_usage_sampled =
     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-inline constexpr VkImageUsageFlags image_usage_storage =
+constexpr VkImageUsageFlags image_usage_storage =
     VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-inline constexpr VkImageUsageFlags image_usage_color_attachment =
+constexpr VkImageUsageFlags image_usage_color_attachment =
     image_usage_storage | image_usage_sampled | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
 enum class image_usage
@@ -48,21 +47,74 @@ struct image_description
     uint32_t width = 1;
     uint32_t height = 1;
     uint32_t depth = 1;
+    uint32_t mip_levels = 1;
     VkImageType type = VK_IMAGE_TYPE_2D;
     VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
     VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
-    uint32_t mip_levels = 1;
     VkImageUsageFlags usage = image_usage_sampled;
-    VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    std::string name;
+    VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_AUTO;
+    const char* name;
 };
 
 struct image
 {
-    image_description description;
     VkImage vk_handle = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;
     image_view full_view;
     image_usage usage = image_usage::none;
+    image_description description;
+};
+
+struct sampler_description
+{
+    VkFilter filter = VK_FILTER_NEAREST;
+    VkSamplerAddressMode address_mode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    float min_lod = 0.0f;
+    float max_lod = VK_LOD_CLAMP_NONE;
+};
+
+struct sampler
+{
+    VkSampler vk_handle = VK_NULL_HANDLE;
+    sampler_description description;
+};
+
+struct load_op
+{
+    static load_op load()
+    {
+        load_op op;
+        op.vk_loadop = VK_ATTACHMENT_LOAD_OP_LOAD;
+        return op;
+    }
+
+    static load_op dont_care()
+    {
+        load_op op;
+        op.vk_loadop = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        return op;
+    }
+
+    static load_op clear(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f)
+    {
+        load_op op;
+        op.vk_loadop = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        op.clear_value.color.float32[0] = r;
+        op.clear_value.color.float32[1] = g;
+        op.clear_value.color.float32[2] = b;
+        op.clear_value.color.float32[3] = a;
+        return op;
+    }
+
+    static load_op clear(float depth, uint32_t stencil)
+    {
+        load_op op;
+        op.vk_loadop = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        op.clear_value.depthStencil = {depth, stencil};
+        return op;
+    }
+
+    VkAttachmentLoadOp vk_loadop = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    VkClearValue clear_value;
 };
 } // namespace vk

@@ -1,3 +1,4 @@
+#if 0
 #include "gltf.h"
 
 #include "bul/bul.h"
@@ -11,6 +12,7 @@ namespace gltf
 {
 using rapidjson_document = rapidjson::Document;
 using rapidjson_array = rapidjson::GenericArray<true, rapidjson::Value>;
+using rapidjson_size = rapidjson::SizeType;
 using Buffer = std::vector<uint8_t>;
 
 enum AccessorComponentType
@@ -100,13 +102,13 @@ static AccessorType string_to_accessor_type(std::string_view s)
 static BufferView get_buffer_view(rapidjson_document& json, uint64_t buffer_view_index,
                                   const std::vector<Buffer>& buffers)
 {
-    const auto& buffer_view_json = json["bufferViews"].GetArray()[buffer_view_index];
+    const auto& buffer_view_json = json["bufferViews"].GetArray()[(rapidjson_size)buffer_view_index];
     uint64_t buffer_index = buffer_view_json["buffer"].GetUint64();
 
     uint32_t byte_offset = 0;
     if (buffer_view_json.HasMember("byteOffset"))
     {
-        byte_offset = buffer_view_json["byteOffset"].GetUint64();
+        byte_offset = buffer_view_json["byteOffset"].GetUint();
     }
 
     uint32_t byte_length = buffer_view_json["byteLength"].GetUint();
@@ -129,7 +131,7 @@ static Accessor get_accessor(rapidjson_document& json, uint64_t accessor_index, 
         return accessor;
     }
 
-    const auto& json_accessor = json["accessors"].GetArray()[accessor_index];
+    const auto& json_accessor = json["accessors"].GetArray()[(rapidjson_size)accessor_index];
     uint64_t buffer_view_index = json_accessor["bufferView"].GetUint64();
     uint64_t byte_offset = 0;
     if (json_accessor.HasMember("byteOffset"))
@@ -155,7 +157,7 @@ static std::vector<Buffer> load_buffers(const std::string& dir_path, rapidjson_d
         std::string_view uri = json_buffer["uri"].GetString();
         std::string buffer_path = dir_path + uri.data();
         Buffer& buffer = buffers.emplace_back();
-        bul::read_file(buffer_path.c_str(), buffer);
+        // bul::read_file(buffer_path.c_str(), buffer);
     }
     return buffers;
 }
@@ -261,7 +263,7 @@ static std::vector<Primitive> load_primitives(rapidjson_document& json, const ra
         }
         else
         {
-            ASSERT_MSG(false, "Invalid gltf index type");
+            ASSERT_FMT(false, "Invalid gltf index type");
         }
 
         const auto& json_attributes = json_primitive["attributes"];
@@ -459,7 +461,7 @@ Model load(std::string_view gltf_path)
     std::string dir_path{gltf_path.substr(0, dir_separator_index + 1)};
 
     std::vector<uint8_t> json_data;
-    bul::read_file(gltf_path.data(), json_data);
+    // bul::read_file(gltf_path.data(), json_data);
     rapidjson_document json;
     json.Parse((const char*)json_data.data(), json_data.size());
 
@@ -476,3 +478,4 @@ Model load(std::string_view gltf_path)
     return model;
 }
 } // namespace gltf
+#endif

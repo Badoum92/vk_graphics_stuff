@@ -1,26 +1,37 @@
 #pragma once
 
-#include <string_view>
-#include <vector>
-
 #include "bul/event.h"
 #include "bul/math/vector.h"
 
-namespace bul::window
+namespace bul
 {
-void create(const std::string_view title, vec2u size = {1280, 720});
-void destroy();
-void close();
-bool should_close();
-void* handle();
+struct window
+{
+    static void create(window* window, const char* title, vec2i size);
+    void destroy();
 
-vec2u size();
-bool resized();
-float aspect_ratio();
+    static void poll_events();
 
-vec2i cursor_pos();
-void show_cursor(bool show);
-bool cursor_visible();
+    void set_title(const char* title);
+    float aspect_ratio() const;
+    void show_cursor(bool show);
 
-const std::vector<event>& poll_events();
-} // namespace bul::window
+    bool should_close;
+    bool resized;
+    bool is_cursor_visible;
+    vec2i size;
+    vec2i cursor_position;
+    vec2i visible_cursor_position;
+    vec2i invisible_cursor_position;
+    vec2i delta_cursor;
+    const char* title;
+
+#if defined(_WIN32)
+    void* handle;
+    void* raw_input;
+    uint32_t raw_input_size;
+#else
+#error window not implemented for this platform
+#endif
+};
+} // namespace bul

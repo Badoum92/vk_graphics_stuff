@@ -1,44 +1,16 @@
 #pragma once
 
-#include "bul/bul.h"
+#include <stdint.h>
 
 namespace bul
 {
-namespace time
-{
-inline constexpr int S = 1;
-inline constexpr int MS = 1'000;
-inline constexpr int US = 1'000'000;
-inline constexpr int NS = 1'000'000'000;
+int64_t current_tick();
 
-float total_s();
-float total_ms();
-float total_us();
-float total_ns();
+int64_t ticks_to_s(int64_t ticks);
+int64_t ticks_to_ms(int64_t ticks);
+int64_t ticks_to_us(int64_t ticks);
 
-float delta_s();
-float delta_ms();
-float delta_us();
-float delta_ns();
-
-void update();
-} // namespace Time
-
-struct timer
-{
-    timer();
-
-    void reset();
-
-    float get_s() const;
-    float get_ms() const;
-    float get_us() const;
-    float get_ns() const;
-
-#if defined(_WIN32)
-    int64_t _start_time;
-#else
-    static_assert(false, "Timer unimplemented for this platform");
-#endif
-};
+float ticks_to_s_f(int64_t ticks);
+float ticks_to_ms_f(int64_t ticks);
+float ticks_to_us_f(int64_t ticks);
 } // namespace bul

@@ -7,17 +7,21 @@
 
 namespace vk
 {
-bul::handle<buffer> context::create_buffer(buffer_description&& description)
+bul::handle<buffer> context::create_buffer(const buffer_description& description)
 {
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = description.size;
-    buffer_info.usage = description.usage;
+    buffer_info.usage = description.usage | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
     buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    bool host_accessible = description.usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
+        || description.usage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+        || description.usage & VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
 
     VmaAllocationCreateInfo alloc_info{};
     alloc_info.usage = description.memory_usage;
-    if (description.memory_usage == VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE)
+    if (host_accessible)
     {
         alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     }
@@ -26,24 +30,27 @@ bul::handle<buffer> context::create_buffer(buffer_description&& description)
     VmaAllocation allocation = VK_NULL_HANDLE;
     VK_CHECK(vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr));
 
-    set_resource_name(this, (uint64_t)vk_buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, description.name);
+    VkBufferDeviceAddressInfo buffer_device_address_info = {};
+    buffer_device_address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    buffer_device_address_info.buffer = vk_buffer;
+    VkDeviceAddress device_address = vkGetBufferDeviceAddress(device, &buffer_device_address_info);
 
     void* mapped_data = nullptr;
-    vmaMapMemory(allocator, allocation, &mapped_data);
+    if (host_accessible)
+    {
+        vmaMapMemory(allocator, allocation, &mapped_data);
+    }
 
-    return buffers.insert(buffer{.description = std::move(description),
-                                 .vk_handle = vk_buffer,
-                                 .allocation = allocation,
-                                 .mapped_data = mapped_data});
+    if (description.name)
+    {
+        set_resource_name(this, (uint64_t)vk_buffer, VK_OBJECT_TYPE_BUFFER, description.name);
+    }
+
+    return buffers.insert(buffer{vk_buffer, allocation, device_address, mapped_data, description});
 }
 
 void context::destroy_buffer(bul::handle<buffer> handle)
 {
-    if (!handle)
-    {
-        return;
-    }
-
     buffer& buffer = buffers.get(handle);
     if (buffer.mapped_data != nullptr)
     {
