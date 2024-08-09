@@ -18,9 +18,12 @@ struct descriptor_set
     static descriptor_set create(context* context);
     void destroy(context* context);
 
-    uint32_t insert_descriptor(context* context, bul::handle<image> image_handle, bul::handle<sampler> sampler_handle,
+    uint32_t create_descriptor(context* context, bul::handle<image> image_handle, bul::handle<sampler> sampler_handle,
                                VkDescriptorType type);
-    void remove_descriptor(context* context, uint32_t index);
+    uint32_t create_empty_descriptor(context* context, VkDescriptorType type);
+    void update_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
+                           bul::handle<sampler> sampler_handle, VkDescriptorType type);
+    void destroy_descriptor(context* context, uint32_t index);
 
     VkDescriptorSetLayout layout;
     bul::handle<buffer> buffer_handle;

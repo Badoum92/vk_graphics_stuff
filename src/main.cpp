@@ -13,37 +13,8 @@
 #include "bul/input.h"
 #include "bul/log.h"
 
-#include "ufbx/ufbx.h"
-
 int main(int, char**)
 {
-    //ufbx_load_opts opts = {0}; // Optional, pass NULL for defaults
-    //ufbx_error error; // Optional, pass NULL if you don't care about errors
-    //ufbx_scene* scene = ufbx_load_file("resources/sponza.fbx", &opts, &error);
-    //if (!scene)
-    //{
-    //    fprintf(stderr, "Failed to load: %s\n", error.description.data);
-    //    exit(1);
-    //}
-
-    //// Use and inspect `scene`, it's just plain data!
-
-    //// Let's just list all objects within the scene for example:
-    //for (size_t i = 0; i < scene->nodes.count; i++)
-    //{
-    //    ufbx_node* node = scene->nodes.data[i];
-    //    if (node->is_root)
-    //        continue;
-
-    //    printf("Object: %s\n", node->name.data);
-    //    if (node->mesh)
-    //    {
-    //        printf("-> mesh with %zu faces\n", node->mesh->faces.count);
-    //    }
-    //}
-
-    //ufbx_free_scene(scene);
-
     image image = image::from_file("resources/undefined.png");
 
     bul::window main_window;
@@ -72,7 +43,7 @@ int main(int, char**)
     vk_context.wait_idle();
     vk_context.destroy_buffer(staging_buffer_handle);
 
-    vk_context.undefined_descriptor = vk_context.descriptor_set.insert_descriptor(
+    vk_context.undefined_descriptor = vk_context.descriptor_set.create_descriptor(
         &vk_context, vk_context.undefined_image_handle, vk_context.default_sampler,
         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
     ASSERT(vk_context.undefined_descriptor == 0);
@@ -86,8 +57,8 @@ int main(int, char**)
     camera.roll = 0;
     camera.fov_y = bul_radians(60.0f);
     camera.aspect_ratio = main_window.aspect_ratio();
-    camera.near_plane = 0.01f;
-    camera.far_plane = 1000.0f;
+    camera.near_plane = 1.0f;
+    camera.far_plane = 10000.0f;
     camera.compute_view_proj();
 
     int64_t previous_tick = bul::current_tick();
@@ -110,30 +81,31 @@ int main(int, char**)
         {
             break;
         }
-
+        
+        constexpr float speed = 500.0f;
         if (bul::key_down(bul::key::Q))
         {
-            camera.move_right(-5.0f * delta_time);
+            camera.move_right(-speed * delta_time);
         }
         if (bul::key_down(bul::key::D))
         {
-            camera.move_right(5.0f * delta_time);
+            camera.move_right(speed * delta_time);
         }
         if (bul::key_down(bul::key::Z))
         {
-            camera.move_forward(5.0f * delta_time);
+            camera.move_forward(speed * delta_time);
         }
         if (bul::key_down(bul::key::S))
         {
-            camera.move_forward(-5.0f * delta_time);
+            camera.move_forward(-speed * delta_time);
         }
         if (bul::key_down(bul::key::space))
         {
-            camera.move_up(5.0f * delta_time);
+            camera.move_up(speed * delta_time);
         }
         if (bul::key_down(bul::key::C))
         {
-            camera.move_up(-5.0f * delta_time);
+            camera.move_up(-speed * delta_time);
         }
 
         if (!main_window.is_cursor_visible)

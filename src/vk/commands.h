@@ -73,8 +73,8 @@ struct command_buffer
 
     void push_constant(bul::handle<graphics_pipeline> handle, void* data, uint32_t size);
 
-    void bind_index_buffer(bul::handle<buffer> index_buffer_handle,
-                           uint32_t offset = 0, VkIndexType index_type = VK_INDEX_TYPE_UINT32);
+    void bind_index_buffer(bul::handle<buffer> index_buffer_handle, uint32_t offset = 0,
+                           VkIndexType index_type = VK_INDEX_TYPE_UINT32);
     void bind_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state);
 
     void set_scissor(const VkRect2D& rect);
@@ -84,6 +84,13 @@ struct command_buffer
     void draw_indexed(uint32_t index_count, uint32_t first_index = 0, uint32_t vertex_offset = 0);
 
     void barrier(bul::handle<image> handle, image_usage dst_usage);
+
+    void copy_buffer_to_buffer(bul::handle<buffer> buffer_handle_src, bul::handle<buffer> buffer_handle_dst,
+                               uint32_t size = 0, uint32_t src_offset = 0, uint32_t dst_offset = 0);
+    void copy_image_to_buffer(bul::handle<image> image_handle, bul::handle<buffer> buffer_handle,
+                              uint32_t dst_offset = 0);
+    void copy_buffer_to_image(bul::handle<buffer> buffer_handle, bul::handle<image> image_handle,
+                              uint32_t src_offset = 0);
 
     void upload_buffer(bul::handle<buffer> buffer_handle, bul::handle<buffer> staging_buffer_handle, void* data,
                        uint32_t size, uint32_t src_offset = 0, uint32_t dst_offset = 0);

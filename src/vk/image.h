@@ -5,8 +5,8 @@
 
 namespace vk
 {
-constexpr VkImageUsageFlags image_usage_depth_attachment =
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+constexpr VkImageUsageFlags image_usage_depth_attachment = VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+    | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 constexpr VkImageUsageFlags image_usage_sampled =
     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 constexpr VkImageUsageFlags image_usage_storage =
@@ -95,7 +95,7 @@ struct load_op
         return op;
     }
 
-    static load_op clear(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f)
+    static load_op clear_color(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 1.0f)
     {
         load_op op;
         op.vk_loadop = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -106,7 +106,7 @@ struct load_op
         return op;
     }
 
-    static load_op clear(float depth, uint32_t stencil)
+    static load_op clear_depth(float depth = 0.0f, uint32_t stencil = 0)
     {
         load_op op;
         op.vk_loadop = VK_ATTACHMENT_LOAD_OP_CLEAR;

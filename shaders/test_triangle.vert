@@ -4,7 +4,7 @@
 struct vertex
 {
     vec4 position;
-    vec4 color;
+    vec4 normal;
     vec2 uv;
     vec2 _padding;
 };
@@ -16,7 +16,7 @@ layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer ver
 
 layout(std430, buffer_reference, buffer_reference_align = 8) readonly buffer uniform_buffer
 {
-    mat4 view_proj;
+    mat4 mvp;
 };
 
 layout(std430, push_constant) uniform push_constant
@@ -25,12 +25,17 @@ layout(std430, push_constant) uniform push_constant
     uniform_buffer ubo;
 };
 
-layout(location = 0) out vec4 out_color;
+layout(set = 0, binding = 0) uniform sampler2D tex2D[];
+layout(set = 0, binding = 0) uniform sampler3D tex3D[];
+layout(set = 0, binding = 0, rgba8) uniform image2D image2D_rgba8;
+layout(set = 0, binding = 0, r8ui) uniform uimage3D image3D_r8;
+
+layout(location = 0) out vec4 out_normal;
 layout(location = 1) out vec2 out_uv;
 
 void main()
 {
-    out_color = vb.vertices[gl_VertexIndex].color;
+    out_normal = vb.vertices[gl_VertexIndex].normal;
     out_uv = vb.vertices[gl_VertexIndex].uv;
-    gl_Position = ubo.view_proj * vb.vertices[gl_VertexIndex].position;
+    gl_Position = ubo.mvp * vb.vertices[gl_VertexIndex].position;
 }

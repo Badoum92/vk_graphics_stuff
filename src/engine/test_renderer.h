@@ -2,6 +2,8 @@
 
 #include "vk/context.h"
 
+#include "bul/containers/vector.h"
+
 struct camera;
 
 struct test_renderer
@@ -16,8 +18,8 @@ struct test_renderer
     bul::handle<vk::shader> fragment_shader;
     bul::handle<vk::graphics_pipeline> graphics_pipeline_handle;
     bul::handle<vk::buffer> uniform_buffer_handle;
-    bul::handle<vk::buffer> index_buffer_handle;
-    bul::handle<vk::buffer> vertex_buffer_handle;
+    bul::vector<bul::handle<vk::buffer>> index_buffer_handle;
+    bul::vector<bul::handle<vk::buffer>> vertex_buffer_handle;
     bul::handle<vk::image> depth_handle;
 
     float y_rotation_deg;

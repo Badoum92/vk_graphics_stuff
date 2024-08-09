@@ -65,7 +65,7 @@ void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachm
         depth_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         depth_attachment_info.pNext = nullptr;
         depth_attachment_info.imageView = image.full_view.vk_handle;
-        depth_attachment_info.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        depth_attachment_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         depth_attachment_info.loadOp = depth_load_op.vk_loadop;
         depth_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         depth_attachment_info.clearValue = depth_load_op.clear_value;
@@ -154,31 +154,52 @@ void command_buffer::barrier(bul::handle<image> handle, image_usage dst_usage)
     image.usage = dst_usage;
 }
 
-void command_buffer::upload_buffer(bul::handle<buffer> buffer_handle, bul::handle<buffer> staging_buffer_handle,
-                                   void* data, uint32_t size, uint32_t src_offset, uint32_t dst_offset)
+void command_buffer::copy_buffer_to_buffer(bul::handle<buffer> buffer_handle_src, bul::handle<buffer> buffer_handle_dst,
+                                           uint32_t size, uint32_t src_offset, uint32_t dst_offset)
 {
-    vk::buffer& buffer = context->buffers.get(buffer_handle);
-    vk::buffer& staging_buffer = context->buffers.get(staging_buffer_handle);
-
-    std::memcpy(staging_buffer.mapped_data, data, size);
+    buffer& buffer_src = context->buffers.get(buffer_handle_src);
+    buffer& buffer_dst = context->buffers.get(buffer_handle_dst);
 
     VkBufferCopy buffer_copy = {};
     buffer_copy.srcOffset = src_offset;
     buffer_copy.dstOffset = dst_offset;
     buffer_copy.size = size;
-    vkCmdCopyBuffer(vk_handle, staging_buffer.vk_handle, buffer.vk_handle, 1, &buffer_copy);
+
+    vkCmdCopyBuffer(vk_handle, buffer_src.vk_handle, buffer_dst.vk_handle, 1, &buffer_copy);
 }
 
-void command_buffer::upload_image(bul::handle<image> image_handle, bul::handle<buffer> staging_buffer_handle,
-                                  void* data, uint32_t size)
+void command_buffer::copy_image_to_buffer(bul::handle<image> image_handle, bul::handle<buffer> buffer_handle,
+                                          uint32_t dst_offset)
 {
     image& image = context->images.get(image_handle);
-    buffer& staging_buffer = context->buffers.get(staging_buffer_handle);
-
-    memcpy(staging_buffer.mapped_data, data, size);
+    buffer& buffer = context->buffers.get(buffer_handle);
 
     VkBufferImageCopy buffer_image_copy = {};
-    buffer_image_copy.bufferOffset = 0;
+    buffer_image_copy.bufferOffset = dst_offset;
+    buffer_image_copy.bufferRowLength = 0;
+    buffer_image_copy.bufferImageHeight = 0;
+    buffer_image_copy.imageSubresource.aspectMask =
+        image.usage == image_usage::depth_attachment ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    buffer_image_copy.imageSubresource.mipLevel = 0;
+    buffer_image_copy.imageSubresource.baseArrayLayer = 0;
+    buffer_image_copy.imageSubresource.layerCount = 1;
+    buffer_image_copy.imageOffset = {0, 0, 0};
+    buffer_image_copy.imageExtent = {image.description.width, image.description.height, image.description.depth};
+
+    barrier(image_handle, vk::image_usage::transfer_src);
+
+    vkCmdCopyImageToBuffer(vk_handle, image.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer.vk_handle, 1,
+                           &buffer_image_copy);
+}
+
+void command_buffer::copy_buffer_to_image(bul::handle<buffer> buffer_handle, bul::handle<image> image_handle,
+                                          uint32_t src_offset)
+{
+    image& image = context->images.get(image_handle);
+    buffer& buffer = context->buffers.get(buffer_handle);
+
+    VkBufferImageCopy buffer_image_copy = {};
+    buffer_image_copy.bufferOffset = src_offset;
     buffer_image_copy.bufferRowLength = 0;
     buffer_image_copy.bufferImageHeight = 0;
     buffer_image_copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -189,8 +210,25 @@ void command_buffer::upload_image(bul::handle<image> image_handle, bul::handle<b
     buffer_image_copy.imageExtent = {image.description.width, image.description.height, image.description.depth};
 
     barrier(image_handle, vk::image_usage::transfer_dst);
-    vkCmdCopyBufferToImage(vk_handle, staging_buffer.vk_handle, image.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                           1, &buffer_image_copy);
+
+    vkCmdCopyBufferToImage(vk_handle, buffer.vk_handle, image.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+                           &buffer_image_copy);
+}
+
+void command_buffer::upload_buffer(bul::handle<buffer> buffer_handle, bul::handle<buffer> staging_buffer_handle,
+                                   void* data, uint32_t size, uint32_t src_offset, uint32_t dst_offset)
+{
+    vk::buffer& staging_buffer = context->buffers.get(staging_buffer_handle);
+    memcpy(staging_buffer.mapped_data, data, size);
+    copy_buffer_to_buffer(staging_buffer_handle, buffer_handle, size, src_offset, dst_offset);
+}
+
+void command_buffer::upload_image(bul::handle<image> image_handle, bul::handle<buffer> staging_buffer_handle,
+                                  void* data, uint32_t size)
+{
+    buffer& staging_buffer = context->buffers.get(staging_buffer_handle);
+    memcpy(staging_buffer.mapped_data, data, size);
+    copy_buffer_to_image(staging_buffer_handle, image_handle);
 }
 
 void command_pool::destroy()

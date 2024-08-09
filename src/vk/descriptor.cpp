@@ -57,13 +57,23 @@ void descriptor_set::destroy(context* context)
     vkDestroyDescriptorSetLayout(context->device, layout, nullptr);
 }
 
-uint32_t descriptor_set::insert_descriptor(context* context, bul::handle<image> image_handle,
+uint32_t descriptor_set::create_descriptor(context* context, bul::handle<image> image_handle,
                                            bul::handle<sampler> sampler_handle, VkDescriptorType type)
 {
     ASSERT(free_descriptors.size > 0);
-
     uint32_t index = free_descriptors.pop_back();
+    update_descriptor(context, index, image_handle, sampler_handle, type);
+    return index;
+}
 
+uint32_t descriptor_set::create_empty_descriptor(context* context, VkDescriptorType type)
+{
+    return create_descriptor(context, context->undefined_image_handle, context->default_sampler, type);
+}
+
+void descriptor_set::update_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
+                                       bul::handle<sampler> sampler_handle, VkDescriptorType type)
+{
     image& image = context->images.get(image_handle);
 
     VkDescriptorImageInfo descriptor = {};
@@ -110,11 +120,9 @@ uint32_t descriptor_set::insert_descriptor(context* context, bul::handle<image> 
     buffer& buffer = context->buffers.get(buffer_handle);
     vkGetDescriptorEXT(context->device, &descriptor_info, descriptor_size,
                        (uint8_t*)buffer.mapped_data + index * descriptor_size + offset);
-
-    return index;
 }
 
-void descriptor_set::remove_descriptor(context*, uint32_t index)
+void descriptor_set::destroy_descriptor(context*, uint32_t index)
 {
     free_descriptors.push_back(index);
 }

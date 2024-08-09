@@ -299,24 +299,27 @@ inline mat4f lookat(bul::vec3f pos, bul::vec3f target, bul::vec3f up, mat4f* inv
 
 inline mat4f perspective(float fov_y, float aspect_ratio, float _near, float _far, mat4f* inv = nullptr)
 {
-    float A = tanf(fov_y / 2.0f);
-    float B = A * aspect_ratio;
+    float focal_length = 1.0f / tanf(fov_y * 0.5f);
+    float w = focal_length / aspect_ratio;
+    float h = -focal_length;
+    float a = _near / (_far - _near);
+    float b = (_far * _near) / (_far - _near);
 
     // clang-format off
     mat4f proj = mat4f::create({
-        1.0f / B, 0.0f,      0.0f,                  0.0f,
-        0.0f,     -1.0f / A, 0.0f,                  0.0f,
-        0.0f,     0.0f,      _far / (_near - _far), -(_far * _near) / (_far - _near),
-        0.0f,     0.0f,      -1.0f,                 0.0f,
+        w,    0.0f, 0.0f,  0.0f,
+        0.0f, h,    0.0f,  0.0f,
+        0.0f, 0.0f, a,     b,
+        0.0f, 0.0f, -1.0f, 0.0f,
     });
 
     if (inv)
     {
         *inv = mat4f::create({
-            B,    0.0f, 0.0f,                            0.0f,
-            0.0f, -A,   0.0f,                            0.0f,
-            0.0f, 0.0f, 0.0f,                            -1.0f,
-            0.0f, 0.0f, -(_far - _near) / (_far * _near), 1.0f / _near,
+            1.0f / w, 0.0f,     0.0f,     0.0f,
+            0.0f,     1.0f / h, 0.0f,     0.0f,
+            0.0f,     0.0f,     0.0f,     -1.0f,
+            0.0f,     0.0f,     1.0f / b, a / b,
         });
     }
     // clang-format on
