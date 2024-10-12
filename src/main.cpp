@@ -81,7 +81,7 @@ int main(int, char**)
         {
             break;
         }
-        
+
         constexpr float speed = 500.0f;
         if (bul::key_down(bul::key::Q))
         {
