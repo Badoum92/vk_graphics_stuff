@@ -26,7 +26,6 @@ file(GLOB IMGUI_SOURCES
 add_library(imgui STATIC ${IMGUI_SOURCES})
 target_include_directories(imgui PRIVATE
     imgui/
-    imgui/backends
     ${Vulkan_INCLUDE_DIRS}
 )
 set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)

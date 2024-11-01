@@ -13,6 +13,9 @@
 #include "bul/input.h"
 #include "bul/log.h"
 
+#include "imgui/imgui_impl_vulkan.h"
+#include "imgui/imgui_impl_win32.h"
+
 int main(int, char**)
 {
     image image = image::from_file("resources/undefined.png");
@@ -20,6 +23,20 @@ int main(int, char**)
     bul::window main_window;
     bul::window::create(&main_window, "window", {1280, 720});
     vk::context vk_context = vk::context::create(&main_window, true);
+
+    ImGui::CreateContext();
+    ImGui_ImplVulkan_InitInfo imgui_vulkan = {};
+    imgui_vulkan.Instance = vk_context.instance;
+    imgui_vulkan.PhysicalDevice = vk_context.physical_device;
+    imgui_vulkan.Device = vk_context.device;
+    imgui_vulkan.Queue = vk_context.graphics_queue;
+    imgui_vulkan.DescriptorPool = vk_context.descriptor_pool;
+    imgui_vulkan.MinImageCount = vk_context.surface.images.size;
+    imgui_vulkan.ImageCount = vk_context.surface.images.size;
+    imgui_vulkan.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    imgui_vulkan.UseDynamicRendering = true;
+    ImGui_ImplVulkan_Init(&imgui_vulkan);
+    ImGui_ImplWin32_Init(main_window.handle);
 
     vk::buffer_description buffer_description = {};
     buffer_description.size = image.size_bytes();

@@ -69,7 +69,6 @@ target_include_directories(main
 
 target_include_directories(main
     SYSTEM PRIVATE ${Vulkan_INCLUDE_DIRS}
-    SYSTEM PRIVATE third_party/imgui
     SYSTEM PRIVATE third_party
 )
 
