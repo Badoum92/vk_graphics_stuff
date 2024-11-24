@@ -5,8 +5,13 @@
 #include <stdlib.h>
 
 #include "bul/bul.h"
+#include "bul/log.h"
 #include "bul/input.h"
 #include "bul/containers/enum_array.h"
+
+#include "imgui/imgui_impl_win32.h"
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace bul
 {
@@ -48,8 +53,6 @@ void window::create(window* window, const char* title, vec2i size)
 
     RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
     ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
-    window->raw_input = nullptr;
-    window->raw_input_size = 0;
 }
 
 void window::destroy()
@@ -57,9 +60,6 @@ void window::destroy()
     DestroyWindow((HWND)handle);
     handle = nullptr;
     size = {0, 0};
-    free(raw_input);
-    raw_input = nullptr;
-    raw_input_size = 0;
 }
 
 void window::set_title(const char* title_)
@@ -86,6 +86,7 @@ void window::show_cursor(bool show)
         visible_cursor_position = cursor_position;
         cursor_position = invisible_cursor_position;
 
+        SetCursorPos(0, 0);
         ClipCursor(&rect);
         SetCursor(nullptr);
 
@@ -167,6 +168,10 @@ static bool is_right_alt()
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     window* w = (window*)GetProp(hwnd, "bul");
+    if (w && w->is_cursor_visible && ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+    {
+        DefWindowProc(hwnd, uMsg, wParam, lParam);
+    }
 
     switch (uMsg)
     {
@@ -189,6 +194,13 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         return 0;
     }
 
+    case WM_ACTIVATE: {
+        if (wParam != WA_INACTIVE && !w->is_cursor_visible)
+        {
+            w->show_cursor(w->is_cursor_visible);
+        }
+    }
+
         // Key events
 
     case WM_SYSKEYDOWN:
@@ -204,7 +216,6 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
                 key = bul::key::r_alt;
             }
             keys[key] = !(HIWORD(lParam) & KF_UP);
-            // events.emplace_back(key, HIWORD(lParam) & KF_UP ? button_state::up : button_state::down);
         }
         return 0;
     }
@@ -217,53 +228,45 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
             bul::vec2i new_cursor_position = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
             mouse_position_delta.x = new_cursor_position.x - w->cursor_position.x;
             mouse_position_delta.y = new_cursor_position.y - w->cursor_position.y;
+            mouse_position = new_cursor_position;
             w->cursor_position = new_cursor_position;
-            // events.emplace_back(cursor_pos_.x, cursor_pos_.y);
         }
         return 0;
     }
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
         bul::mouse_buttons[mouse_button::mouse_1] = true;
-        // events.emplace_back(mouse_button::mouse_1, button_state::down);
         return 0;
     }
     case WM_LBUTTONUP: {
         bul::mouse_buttons[mouse_button::mouse_1] = false;
-        // events.emplace_back(mouse_button::mouse_1, button_state::up);
         return 0;
     }
     case WM_RBUTTONDOWN:
     case WM_RBUTTONDBLCLK: {
         bul::mouse_buttons[mouse_button::mouse_2] = true;
-        // events.emplace_back(mouse_button::mouse_2, button_state::down);
         return 0;
     }
     case WM_RBUTTONUP: {
         bul::mouse_buttons[mouse_button::mouse_2] = false;
-        // events.emplace_back(mouse_button::mouse_2, button_state::up);
         return 0;
     }
     case WM_MBUTTONDOWN: {
         bul::mouse_buttons[mouse_button::mouse_3] = true;
-        // events.emplace_back(mouse_button::mouse_3, button_state::down);
         return 0;
     }
     case WM_MBUTTONUP: {
         bul::mouse_buttons[mouse_button::mouse_3] = false;
-        // events.emplace_back(mouse_button::mouse_3, button_state::up);
         return 0;
     }
     case WM_XBUTTONDOWN: {
         if (lParam & MK_XBUTTON1)
         {
             bul::mouse_buttons[mouse_button::mouse_4] = true;
-            // events.emplace_back(mouse_button::mouse_4, button_state::down);
         }
         else
         {
             bul::mouse_buttons[mouse_button::mouse_5] = true;
-            // events.emplace_back(mouse_button::mouse_5, button_state::down);
         }
         return 0;
     }
@@ -271,12 +274,10 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         if (lParam & MK_XBUTTON1)
         {
             bul::mouse_buttons[mouse_button::mouse_4] = false;
-            // events.emplace_back(mouse_button::mouse_4, button_state::up);
         }
         else
         {
             bul::mouse_buttons[mouse_button::mouse_5] = false;
-            // events.emplace_back(mouse_button::mouse_5, button_state::up);
         }
         return 0;
     }
@@ -284,31 +285,13 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         // Raw input
 
     case WM_INPUT: {
-        UINT size = 0;
-        HRAWINPUT raw_input_handle = (HRAWINPUT)lParam;
-        RAWINPUT* raw_input;
-
-        GetRawInputData(raw_input_handle, RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER));
-        if (size > w->raw_input_size)
+        UINT size = sizeof(RAWINPUT);
+        static RAWINPUT raw_input;
+        ENSURE(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &raw_input, &size, sizeof(RAWINPUTHEADER)));
+        if (raw_input.header.dwType == RIM_TYPEMOUSE)
         {
-            w->raw_input_size = size;
-            w->raw_input = (RAWINPUT*)realloc(w->raw_input, size);
-            ENSURE(w->raw_input != nullptr);
-        }
-
-        size = w->raw_input_size;
-        raw_input = (RAWINPUT*)w->raw_input;
-        ENSURE(GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &size, sizeof(RAWINPUTHEADER)) != UINT32_MAX);
-
-        if (raw_input->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
-        {
-            mouse_position_delta.x = raw_input->data.mouse.lLastX - w->cursor_position.x;
-            mouse_position_delta.y = raw_input->data.mouse.lLastY - w->cursor_position.y;
-        }
-        else
-        {
-            mouse_position_delta.x = raw_input->data.mouse.lLastX;
-            mouse_position_delta.y = raw_input->data.mouse.lLastY;
+            mouse_position_delta.x = raw_input.data.mouse.lLastX;
+            mouse_position_delta.y = raw_input.data.mouse.lLastY;
         }
         w->cursor_position += mouse_position_delta;
         return 0;

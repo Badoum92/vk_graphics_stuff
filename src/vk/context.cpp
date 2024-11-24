@@ -273,6 +273,21 @@ static void create_device(context* context)
     size_t image_sampler_size = context->descriptor_buffer_properties.combinedImageSamplerDescriptorSize;
     size_t storage_image_size = context->descriptor_buffer_properties.storageImageDescriptorSize;
     ENSURE(image_sampler_size == storage_image_size);
+
+    static constexpr uint32_t descriptor_count = 8;
+    VkDescriptorPoolSize descriptor_pool_sizes[] = {
+        VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, .descriptorCount = descriptor_count},
+        VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = descriptor_count},
+        VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = descriptor_count},
+        VkDescriptorPoolSize{.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = descriptor_count},
+    };
+    VkDescriptorPoolCreateInfo decriptor_pool_info = {};
+    decriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    decriptor_pool_info.poolSizeCount = BUL_ARRAY_SIZE(descriptor_pool_sizes);
+    decriptor_pool_info.pPoolSizes = descriptor_pool_sizes;
+    decriptor_pool_info.maxSets = descriptor_count;
+    decriptor_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    VK_CHECK(vkCreateDescriptorPool(context->device, &decriptor_pool_info, nullptr, &context->descriptor_pool));
 }
 
 static void create_frame_contexts(context* context)
@@ -320,6 +335,8 @@ void context::destroy()
 {
     destroy_image(undefined_image_handle);
     destroy_sampler(default_sampler);
+
+    vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
 
     for (auto& fc : frame_contexts)
     {

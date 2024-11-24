@@ -79,6 +79,8 @@ struct context
     bul::pool<shader> shaders;
     bul::pool<graphics_pipeline> graphics_pipelines;
 
+    VkDescriptorPool descriptor_pool; // only used for ImGui
+
     bul::handle<image> create_image(const image_description& description, VkImage vk_image = VK_NULL_HANDLE);
     void destroy_image(bul::handle<image> handle);
 

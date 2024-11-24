@@ -13,6 +13,7 @@ enum_array<key, bool> keys = {false};
 static enum_array<key, bool> keys_prev = {false};
 
 vec2i mouse_position_delta = {0, 0};
+vec2i mouse_position = {0, 0};
 
 void input_new_frame()
 {

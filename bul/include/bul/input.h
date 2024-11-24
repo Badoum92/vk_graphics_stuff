@@ -57,6 +57,7 @@ void input_new_frame();
 
 extern enum_array<mouse_button, bool> mouse_buttons;
 extern vec2i mouse_position_delta;
+extern vec2i mouse_position;
 extern enum_array<key, bool> keys;
 
 bool mouse_button_down(mouse_button button);

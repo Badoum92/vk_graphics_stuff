@@ -23,13 +23,10 @@ struct window
     vec2i cursor_position;
     vec2i visible_cursor_position;
     vec2i invisible_cursor_position;
-    vec2i delta_cursor;
     const char* title;
 
 #if defined(_WIN32)
     void* handle;
-    void* raw_input;
-    uint32_t raw_input_size;
 #else
 #error window not implemented for this platform
 #endif

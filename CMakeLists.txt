@@ -29,7 +29,6 @@ find_package(Vulkan REQUIRED)
 
 # --- Subdirectories ---
 
-add_subdirectory(bul)
 add_subdirectory(third_party)
 
 # --- Executable ---
@@ -57,12 +56,24 @@ add_executable(main
     src/vk/pipeline.cpp
     src/vk/descriptor.cpp
     src/vk/commands.cpp
+
+    bul/src/bul.cpp
+    bul/src/input.cpp
+    bul/src/hash.cpp
+    bul/src/log.cpp
+    bul/src/platform/file_win32.cpp
+    bul/src/platform/window_win32.cpp
+    bul/src/platform/time_win32.cpp
+    bul/src/allocators/linear_allocator.cpp
+    bul/src/allocators/scope_allocator.cpp
+    bul/src/xxhash/xxhash.c
 )
 
 target_include_directories(main
     PRIVATE src
     PRIVATE src/util
     PRIVATE src/engine
+    PRIVATE bul/include
 
     PRIVATE .
 )
@@ -75,7 +86,6 @@ target_include_directories(main
 target_link_libraries(main
     default_interface
     imgui
-    bul
     volk
     ufbx
 )

@@ -24,11 +24,15 @@ file(GLOB IMGUI_SOURCES
     imgui/*.cpp
 )
 add_library(imgui STATIC ${IMGUI_SOURCES})
+target_link_libraries(imgui PRIVATE third_party_interface volk)
 target_include_directories(imgui PRIVATE
     imgui/
     ${Vulkan_INCLUDE_DIRS}
 )
 set_target_properties(imgui PROPERTIES LINKER_LANGUAGE CXX)
+target_compile_definitions(imgui PUBLIC
+    IMGUI_IMPL_VULKAN_USE_VOLK
+)
 
 # --- ufbx ---
 

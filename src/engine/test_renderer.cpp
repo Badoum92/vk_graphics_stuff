@@ -4,7 +4,11 @@
 
 #include "bul/math/math.h"
 #include "bul/log.h"
+#include "bul/time.h"
 #include "ufbx/ufbx.h"
+
+#include "imgui/imgui_impl_vulkan.h"
+#include "imgui/imgui_impl_win32.h"
 
 struct push_constant
 {
@@ -132,7 +136,7 @@ test_renderer test_renderer::create(vk::context* _context)
     // Use and inspect `scene`, it's just plain data!
 
     // Let's just list all objects within the scene for example:
-    for (size_t i = 0; i < scene->nodes.count; i++)
+    for (uint32_t i = 0; i < scene->nodes.count; i++)
     {
         ufbx_node* node = scene->nodes.data[i];
         if (node->is_root)
@@ -146,12 +150,12 @@ test_renderer test_renderer::create(vk::context* _context)
         ufbx_mesh* mesh = node->mesh;
 
         // Count the number of needed parts and temporary buffers
-        size_t max_parts = 0;
-        size_t max_triangles = 0;
+        uint32_t max_parts = 0;
+        uint32_t max_triangles = 0;
 
         // We need to render each material of the mesh in a separate part, so let's
         // count the number of parts and maximum number of triangles needed.
-        for (size_t pi = 0; pi < mesh->material_parts.count; pi++)
+        for (uint32_t pi = 0; pi < mesh->material_parts.count; pi++)
         {
             ufbx_mesh_part* part = &mesh->material_parts.data[pi];
             if (part->num_triangles == 0)
@@ -160,37 +164,37 @@ test_renderer test_renderer::create(vk::context* _context)
             max_triangles = bul_max(max_triangles, part->num_triangles);
         }
 
-        for (size_t i = 0; i < mesh->materials.count; ++i)
+        for (uint32_t j = 0; j < mesh->materials.count; ++j)
         {
-            ufbx_material* material = mesh->materials[i];
-            for (size_t j = 0; j < material->textures.count; ++j)
+            ufbx_material* material = mesh->materials[j];
+            for (uint32_t k = 0; k < material->textures.count; ++k)
             {
-                ufbx_texture* texture = material->textures[j].texture;
+                ufbx_texture* texture = material->textures[k].texture;
             }
         }
 
-        size_t num_tri_indices = mesh->max_face_triangles * 3;
+        uint32_t num_tri_indices = mesh->max_face_triangles * 3;
         uint32_t* tri_indices = (uint32_t*)malloc(num_tri_indices * sizeof(uint32_t));
         vertex* vertices = (vertex*)malloc(max_triangles * 3 * sizeof(vertex));
         uint32_t* indices = (uint32_t*)malloc(max_triangles * 3 * sizeof(uint32_t));
 
-        for (size_t pi = 0; pi < mesh->material_parts.count; pi++)
+        for (uint32_t pi = 0; pi < mesh->material_parts.count; pi++)
         {
             ufbx_mesh_part* mesh_part = &mesh->material_parts.data[pi];
             if (mesh_part->num_triangles == 0)
                 continue;
 
-            size_t num_indices = 0;
+            uint32_t num_indices = 0;
 
-            for (size_t fi = 0; fi < mesh_part->num_faces; fi++)
+            for (uint32_t fi = 0; fi < mesh_part->num_faces; fi++)
             {
                 ufbx_face face = mesh->faces.data[mesh_part->face_indices.data[fi]];
-                size_t num_tris = ufbx_triangulate_face(tri_indices, num_tri_indices, mesh, face);
+                uint32_t num_tris = ufbx_triangulate_face(tri_indices, num_tri_indices, mesh, face);
 
                 ufbx_vec2 default_uv = {0};
 
                 // Iterate through every vertex of every triangle in the triangulated result
-                for (size_t vi = 0; vi < num_tris * 3; vi++)
+                for (uint32_t vi = 0; vi < num_tris * 3; vi++)
                 {
                     uint32_t ix = tri_indices[vi];
                     vertex* vert = &vertices[num_indices];
@@ -208,13 +212,13 @@ test_renderer test_renderer::create(vk::context* _context)
             }
 
             ufbx_vertex_stream streams[1];
-            size_t num_streams = 1;
+            uint32_t num_streams = 1;
 
             streams[0].data = vertices;
             streams[0].vertex_count = num_indices;
             streams[0].vertex_size = sizeof(vertex);
 
-            size_t num_vertices = ufbx_generate_indices(streams, num_streams, indices, num_indices, NULL, &error);
+            uint32_t num_vertices = ufbx_generate_indices(streams, num_streams, indices, num_indices, NULL, &error);
             ASSERT(error.type == UFBX_ERROR_NONE);
 
             vk::buffer_description buffer_description = {};
@@ -306,7 +310,7 @@ void test_renderer::resize()
     depth_handle = context->create_image(image_description);
 }
 
-void test_renderer::draw(vk::frame_context* frame_context, camera* camera, float delta_time)
+void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
 {
     vk::command_buffer* command_buffer = frame_context->graphics_commands.get_command_buffer();
 
@@ -354,6 +358,17 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera, float
         command_buffer->draw_indexed(index_buffer.description.size / sizeof(uint32_t));
     }
 
+    command_buffer->end_rendering();
+
+    command_buffer->begin_rendering({{frame_context->image}}, {{vk::load_op::load()}}, bul::handle<vk::image>::invalid(),
+                                    vk::load_op::dont_care());
+    ImGui::Begin("Stats");
+    ImGui::Text("frame time: %g ms", bul::ticks_to_ms_f(bul::avg_frame_delta_ticks));
+    ImGui::Text("FPS: %g", 1.0f / bul::ticks_to_s_f(bul::avg_frame_delta_ticks));
+    ImGui::Text("%d %d", bul::mouse_position.x, bul::mouse_position.y);
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer->vk_handle);
     command_buffer->end_rendering();
 
     command_buffer->barrier(frame_context->image, vk::image_usage::present);

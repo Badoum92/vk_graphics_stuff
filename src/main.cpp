@@ -35,8 +35,15 @@ int main(int, char**)
     imgui_vulkan.ImageCount = vk_context.surface.images.size;
     imgui_vulkan.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     imgui_vulkan.UseDynamicRendering = true;
+    imgui_vulkan.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    imgui_vulkan.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
+    imgui_vulkan.PipelineRenderingCreateInfo.pColorAttachmentFormats =
+        &vk_context.images.get(vk_context.surface.images[0]).description.format;
     ImGui_ImplVulkan_Init(&imgui_vulkan);
     ImGui_ImplWin32_Init(main_window.handle);
+    ImGui_ImplVulkan_CreateFontsTexture();
+    ImGui::GetIO().DisplaySize.x = (float)main_window.size.x;
+    ImGui::GetIO().DisplaySize.y = (float)main_window.size.y;
 
     vk::buffer_description buffer_description = {};
     buffer_description.size = image.size_bytes();
@@ -59,6 +66,7 @@ int main(int, char**)
     vk_context.submit(command_buffer);
     vk_context.wait_idle();
     vk_context.destroy_buffer(staging_buffer_handle);
+    image.destroy();
 
     vk_context.undefined_descriptor = vk_context.descriptor_set.create_descriptor(
         &vk_context, vk_context.undefined_image_handle, vk_context.default_sampler,
@@ -78,14 +86,9 @@ int main(int, char**)
     camera.far_plane = 10000.0f;
     camera.compute_view_proj();
 
-    int64_t previous_tick = bul::current_tick();
-    int64_t current_tick = previous_tick;
-
     while (!main_window.should_close)
     {
-        current_tick = bul::current_tick();
-        float delta_time = bul::ticks_to_s_f(current_tick - previous_tick);
-        previous_tick = current_tick;
+        bul::time_update();
 
         bul::window::poll_events();
 
@@ -102,34 +105,38 @@ int main(int, char**)
         constexpr float speed = 500.0f;
         if (bul::key_down(bul::key::Q))
         {
-            camera.move_right(-speed * delta_time);
+            camera.position -= camera.right * speed * bul::frame_delta_s;
         }
         if (bul::key_down(bul::key::D))
         {
-            camera.move_right(speed * delta_time);
+            camera.position += camera.right * speed * bul::frame_delta_s;
         }
         if (bul::key_down(bul::key::Z))
         {
-            camera.move_forward(speed * delta_time);
+            bul::vec3f direction = {camera.forward.x, 0, camera.forward.z};
+            direction = bul::normalize(direction);
+            camera.position += direction * speed * bul::frame_delta_s;
         }
         if (bul::key_down(bul::key::S))
         {
-            camera.move_forward(-speed * delta_time);
+            bul::vec3f direction = {camera.forward.x, 0, camera.forward.z};
+            direction = bul::normalize(direction);
+            camera.position -= direction * speed * bul::frame_delta_s;
         }
         if (bul::key_down(bul::key::space))
         {
-            camera.move_up(speed * delta_time);
+            camera.position += camera::WORLD_UP * speed * bul::frame_delta_s;
         }
         if (bul::key_down(bul::key::C))
         {
-            camera.move_up(-speed * delta_time);
+            camera.position -= camera::WORLD_UP * speed * bul::frame_delta_s;
         }
 
         if (!main_window.is_cursor_visible)
         {
             bul::vec3f camera_rotation;
-            camera_rotation.x = bul::mouse_position_delta.y * delta_time * 10.0f;
-            camera_rotation.y = bul::mouse_position_delta.x * delta_time * 10.0f;
+            camera_rotation.x = bul::mouse_position_delta.y * bul::frame_delta_s * 10.0f;
+            camera_rotation.y = bul::mouse_position_delta.x * bul::frame_delta_s * 10.0f;
             camera_rotation.z = 0.0f;
             camera.rotate(camera_rotation);
             camera.compute_view_proj();
@@ -141,7 +148,13 @@ int main(int, char**)
             test_renderer.resize();
         }
 
-        test_renderer.draw(frame_context, &camera, delta_time);
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+
+        test_renderer.draw(frame_context, &camera);
+
+        ImGui::EndFrame();
 
         if (!vk_context.present(frame_context))
         {
@@ -152,6 +165,10 @@ int main(int, char**)
     vk_context.wait_idle();
 
     test_renderer.destroy();
+
+    ImGui_ImplWin32_Shutdown();
+    ImGui_ImplVulkan_Shutdown();
+    ImGui::DestroyContext();
 
     vk_context.destroy();
     main_window.destroy();

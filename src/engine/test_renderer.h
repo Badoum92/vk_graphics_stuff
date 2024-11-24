@@ -12,7 +12,7 @@ struct test_renderer
     void destroy();
 
     void resize();
-    void draw(vk::frame_context* frame_context, camera* camera, float delta_time);
+    void draw(vk::frame_context* frame_context, camera* camera);
 
     bul::handle<vk::shader> vertex_shader;
     bul::handle<vk::shader> fragment_shader;
