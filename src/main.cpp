@@ -135,25 +135,48 @@ int main(int, char**)
         frame_context = vk_context.acquire_next_image();
         if (!frame_context)
         {
-            test_renderer.resize(vk_context.surface.extent.width, vk_context.surface.extent.height);
+            // test_renderer.resize(vk_context.surface.extent.width, vk_context.surface.extent.height);
         }
 
         imgui_begin_frame();
 
+        // Actual rendering
         test_renderer.draw(frame_context, &camera);
 
-        frame_context->command_buffer->begin_rendering({{frame_context->image}}, {{vk::load_op::load()}},
+        // ImGui stuff
+        frame_context->command_buffer->barrier(frame_context->image, vk::image_usage::color_attachment);
+        frame_context->command_buffer->begin_rendering({{frame_context->image}}, {{vk::load_op::clear_color()}},
                                                        bul::handle<vk::image>::invalid(), vk::load_op::dont_care());
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::Begin("Viewport");
+        float window_width = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
+        float window_height = ImGui::GetWindowContentRegionMax().y - ImGui::GetWindowContentRegionMin().y;
+        vk::image& render_target_image = vk_context.images.get(test_renderer.render_target.image);
+        ImGui::Image((ImTextureID)test_renderer.render_target.vk_descriptorset,
+                     ImVec2(render_target_image.description.width, render_target_image.description.height));
+        ImGui::End();
+        ImGui::PopStyleVar();
+
         ImGui::Begin("Stats");
-        ImGui::Text("frame time: %g ms", bul::ticks_to_ms_f(bul::avg_frame_delta_ticks));
-        ImGui::Text("FPS: %g", 1.0f / bul::ticks_to_s_f(bul::avg_frame_delta_ticks));
-        ImGui::Text("%d %d", bul::mouse_position.x, bul::mouse_position.y);
-        ImGui::Text("%g %g", ImGui::GetWindowSize().x, ImGui::GetWindowSize().y);
+        float avg_frame_time_ms = bul::ticks_to_ms_f(bul::avg_frame_delta_ticks);
+        ImGui::Text("FPS:  %u", (uint32_t)(1000.0f / avg_frame_time_ms));
+        ImGui::Text("Time: %g ms", avg_frame_time_ms);
+        ImGui::End();
+
+        ImGui::Begin("Debug");
+        if (ImGui::TreeNode("Input"))
+        {
+            ImGui::Text("Mouse");
+            ImGui::Text("%d %d", bul::mouse_position.x, bul::mouse_position.y);
+            ImGui::TreePop();
+        }
         ImGui::End();
 
         imgui_end_frame(frame_context->command_buffer);
         frame_context->command_buffer->end_rendering();
 
+        // End frame
         frame_context->command_buffer->barrier(frame_context->image, vk::image_usage::present);
         vk_context.submit(frame_context->command_buffer, frame_context);
 
@@ -162,7 +185,14 @@ int main(int, char**)
 
         if (!vk_context.present(frame_context))
         {
-            test_renderer.resize(vk_context.surface.extent.width, vk_context.surface.extent.height);
+            // test_renderer.resize(vk_context.surface.extent.width, vk_context.surface.extent.height);
+        }
+
+        if (window_width != test_renderer.width || window_height != test_renderer.height)
+        {
+            camera.aspect_ratio = window_width / window_height;
+            test_renderer.resize(window_width, window_height);
+            camera.compute_view_proj();
         }
 
         FrameMark;

@@ -13,6 +13,7 @@ struct log_data
     const char* file;
     char* text;
     uint32_t text_size;
+    uint32_t text_capacity;
 };
 
 static constexpr uint32_t max_logs = 128;
@@ -23,7 +24,7 @@ static bool show_debug = true;
 static bool show_info = true;
 static bool show_warning = true;
 static bool show_error = true;
-static bool show_file = true;
+static bool show_file = false;
 
 static void imgui_log(bul::log_level level, const char* time, const char* file, int line, const char* fmt,
                       va_list va_args)
@@ -39,12 +40,13 @@ static void imgui_log(bul::log_level level, const char* time, const char* file, 
     va_copy(args_copy, va_args);
     uint32_t text_size = vsnprintf(nullptr, 0, fmt, args_copy);
     va_end(args_copy);
-    if (text_size >= log_data->text_size)
+    if (text_size >= log_data->text_capacity)
     {
         free(log_data->text);
         log_data->text = (char*)malloc(text_size + 1);
-        log_data->text_size = text_size;
+        log_data->text_capacity = text_size;
     }
+    log_data->text_size = text_size;
     vsnprintf(log_data->text, text_size + 1, fmt, va_args);
     va_end(va_args);
 }
@@ -113,7 +115,13 @@ static void _imgui_log()
 {
     ImGui::Begin("Logs");
 
+    ImGui::BeginChild("show_file", ImVec2(0, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY);
     ImGui::Checkbox("Show file", &show_file);
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+
+    ImGui::BeginChild("filters", ImVec2(0, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY);
     ImGui::Checkbox("Debug", &show_debug);
     ImGui::SameLine();
     ImGui::Checkbox("Info", &show_info);
@@ -121,6 +129,23 @@ static void _imgui_log()
     ImGui::Checkbox("Warning", &show_warning);
     ImGui::SameLine();
     ImGui::Checkbox("Error", &show_error);
+    ImGui::EndChild();
+
+    ImGui::SameLine();
+    ImGui::BeginChild("actions", ImVec2(0, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY);
+    if (ImGui::Button("Clear"))
+    {
+        for (log_data& log_data : logs)
+        {
+            log_data.text_size = 0;
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Test"))
+    {
+        log_info("test");
+    }
+    ImGui::EndChild();
 
     ImGui::BeginChild("logs");
     static ImGuiTableFlags flags = ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_Resizable
@@ -209,7 +234,7 @@ void imgui_init(vk::context* context, bul::window* window)
     style->Colors[ImGuiCol_HeaderHovered] = ImVec4(0.769f, 0.392f, 0.031f, 0.8f);
     style->Colors[ImGuiCol_HeaderActive] = ImVec4(0.769f, 0.392f, 0.031f, 1.0f);
     style->Colors[ImGuiCol_Tab] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_TabHovered] = ImVec4(0.2f, 0.2f, 0.2f, 0.5f);
+    style->Colors[ImGuiCol_TabHovered] = ImVec4(0.552f, 0.552f, 0.552f, 0.5f);
     style->Colors[ImGuiCol_TabActive] = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
     style->Colors[ImGuiCol_TabUnfocused] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
     style->Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
@@ -242,7 +267,7 @@ void imgui_begin_frame()
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
-    // ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 }
 
 void imgui_end_frame(vk::command_buffer* command_buffer)

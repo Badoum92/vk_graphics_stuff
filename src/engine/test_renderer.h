@@ -10,11 +10,14 @@ struct camera;
 
 struct test_renderer
 {
-    static test_renderer create(vk::context* _context, uint32_t width, uint32_t height);
+    static test_renderer create(vk::context* _context, uint32_t _width, uint32_t _height);
     void destroy();
 
-    void resize(uint32_t width, uint32_t height);
+    void resize(uint32_t _width, uint32_t _height);
     void draw(vk::frame_context* frame_context, camera* camera);
+
+    uint32_t width;
+    uint32_t height;
 
     bul::handle<vk::shader> vertex_shader;
     bul::handle<vk::shader> fragment_shader;

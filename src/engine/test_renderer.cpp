@@ -28,10 +28,12 @@ struct uniform_buffer_data
     bul::mat4f view_proj;
 };
 
-test_renderer test_renderer::create(vk::context* _context, uint32_t width, uint32_t height)
+test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint32_t _height)
 {
     test_renderer test_renderer;
 
+    test_renderer.width = _width;
+    test_renderer.height = _height;
     test_renderer.context = _context;
 
     test_renderer.vertex_shader = _context->create_shader("shaders/test_triangle.vert.spv");
@@ -262,8 +264,8 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t width, uint3
     test_renderer.uniform_buffer_handle = _context->create_buffer(buffer_description);
 
     vk::image_description image_description = {};
-    image_description.width = width;
-    image_description.height = height;
+    image_description.width = test_renderer.width;
+    image_description.height = test_renderer.height;
     image_description.format = VK_FORMAT_D32_SFLOAT;
     image_description.usage = vk::image_usage_depth_attachment;
     image_description.name = "depth image";
@@ -311,8 +313,18 @@ void test_renderer::destroy()
     context->destroy_image(render_target.image);
 }
 
-void test_renderer::resize(uint32_t width, uint32_t height)
+void test_renderer::resize(uint32_t _width, uint32_t _height)
 {
+    if (_width == width && _height == height)
+    {
+        return;
+    }
+
+    context->wait_idle();
+
+    width = _width;
+    height = _height;
+
     vk::image_description image_description = {};
     image_description.width = width;
     image_description.height = height;
@@ -321,6 +333,18 @@ void test_renderer::resize(uint32_t width, uint32_t height)
     image_description.name = "depth image";
     context->destroy_image(depth_handle);
     depth_handle = context->create_image(image_description);
+
+    image_description.format = context->images.get(context->surface.images[0]).description.format;
+    image_description.usage = vk::image_usage_color_attachment;
+    image_description.name = "imgui render target";
+    ImGui_ImplVulkan_RemoveTexture(render_target.vk_descriptorset);
+    context->destroy_image(render_target.image);
+    render_target.image = context->create_image(image_description);
+    vk::image& render_target_image = context->images.get(render_target.image);
+    vk::sampler& render_target_sampler = context->samplers.get(context->default_sampler);
+    render_target.vk_descriptorset =
+        ImGui_ImplVulkan_AddTexture(render_target_sampler.vk_handle, render_target_image.full_view.vk_handle,
+                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
@@ -336,20 +360,20 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
 
     VkRect2D scissor = {};
     scissor.offset = {0, 0};
-    scissor.extent = context->surface.extent;
+    scissor.extent = {width, height};
     command_buffer->set_scissor(scissor);
 
     VkViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = (float)context->surface.extent.width;
-    viewport.height = (float)context->surface.extent.height;
+    viewport.width = (float)width;
+    viewport.height = (float)height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     command_buffer->set_viewport(viewport);
 
-    command_buffer->barrier(frame_context->image, vk::image_usage::color_attachment);
-    command_buffer->begin_rendering({{frame_context->image}}, {{vk::load_op::clear_color()}}, depth_handle,
+    command_buffer->barrier(render_target.image, vk::image_usage::color_attachment);
+    command_buffer->begin_rendering({{render_target.image}}, {{vk::load_op::clear_color()}}, depth_handle,
                                     vk::load_op::clear_depth());
 
     vk::graphics_state graphics_state = vk::graphics_state::create();
@@ -372,4 +396,6 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
     }
 
     command_buffer->end_rendering();
+
+    command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read);
 }
