@@ -31,8 +31,8 @@ struct graphics_pipeline_description
     bul::handle<shader> vertex_shader;
     bul::handle<shader> fragment_shader;
     bul::static_vector<VkFormat, max_color_attachments> color_attachment_formats;
-    VkFormat depth_attachment_format = VK_FORMAT_UNDEFINED;
-    uint32_t push_constant_size = 0;
+    VkFormat depth_attachment_format;
+    uint32_t push_constant_size;
     const char* name;
 };
 
@@ -42,5 +42,19 @@ struct graphics_pipeline
     bul::static_vector<VkPipeline, max_graphics_states> pipelines;
     bul::static_vector<graphics_state, max_graphics_states> graphics_states;
     graphics_pipeline_description description;
+};
+
+struct compute_pipeline_description
+{
+    bul::handle<shader> shader;
+    uint32_t push_constant_size;
+    const char* name;
+};
+
+struct compute_pipeline
+{
+    VkPipelineLayout layout;
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    compute_pipeline_description description;
 };
 } // namespace vk

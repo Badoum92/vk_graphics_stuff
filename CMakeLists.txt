@@ -46,6 +46,7 @@ add_executable(main
     src/engine/test_renderer.cpp
     src/engine/gltf.cpp
     src/engine/vox_loader.cpp
+    src/engine/imgui.cpp
 
     src/vk/vk_tools.cpp
     src/vk/context.cpp
@@ -71,6 +72,7 @@ add_executable(main
 
 target_include_directories(main
     PRIVATE src
+    PRIVATE src/tracy
     PRIVATE src/util
     PRIVATE src/engine
     PRIVATE bul/include
@@ -88,6 +90,7 @@ target_link_libraries(main
     imgui
     volk
     ufbx
+    tracy
 )
 
 set_target_properties(main PROPERTIES

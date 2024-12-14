@@ -102,10 +102,16 @@ void command_buffer::bind_index_buffer(bul::handle<buffer> index_buffer_handle, 
     vkCmdBindIndexBuffer(vk_handle, index_buffer.vk_handle, offset, index_type);
 }
 
-void command_buffer::bind_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state)
+void command_buffer::bind_graphics_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state)
 {
     VkPipeline pipeline = context->compile_graphics_pipeline(handle, graphics_state);
     vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+}
+
+void command_buffer::bind_compute_pipeline(bul::handle<compute_pipeline> handle)
+{
+    VkPipeline pipeline = context->compute_pipelines.get(handle).pipeline;
+    vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 }
 
 void command_buffer::set_scissor(const VkRect2D& rect)
@@ -126,6 +132,11 @@ void command_buffer::draw(uint32_t vertex_count, uint32_t first_vertex)
 void command_buffer::draw_indexed(uint32_t index_count, uint32_t first_index, uint32_t vertex_offset)
 {
     vkCmdDrawIndexed(vk_handle, index_count, 1, first_index, vertex_offset, 0);
+}
+
+void command_buffer::compute_dispatch(uint32_t x, uint32_t y, uint32_t z)
+{
+    vkCmdDispatch(vk_handle, x, y, z);
 }
 
 command_pool command_pool::create(vk::context* context, uint32_t queue_index, VkQueue vk_queue)

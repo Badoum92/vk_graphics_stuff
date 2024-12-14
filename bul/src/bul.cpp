@@ -18,15 +18,14 @@ void _assert(bool condition, const char* str, const char* file, unsigned line, c
         return;
     }
 
-
-    _log(log_level::error, file, line, "Assertion failed: %s", str);
+    _log(log_level_error, file, line, "Assertion failed: %s", str);
     if (fmt)
     {
         va_list args;
         va_start(args, fmt);
         char msg_buf[1024];
         vsnprintf(msg_buf, sizeof(msg_buf), fmt, args);
-        _log(log_level::error, file, line, "%s", msg_buf);
+        _log(log_level_error, file, line, "%s", msg_buf);
         va_end(args);
     }
 

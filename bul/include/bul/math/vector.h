@@ -421,8 +421,4 @@ constexpr inline vec3f cross(const vec3f& a, const vec3f& b)
 {
     return {a.y * b.z - b.y * a.z, a.z * b.x - b.z * a.x, a.x * b.y - b.x * a.y};
 }
-
-inline constexpr vec3f RIGHT = {1, 0, 0};
-inline constexpr vec3f UP = {0, 1, 0};
-inline constexpr vec3f FRONT = {0, 0, -1};
 } // namespace bul

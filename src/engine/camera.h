@@ -13,12 +13,12 @@ struct camera
     void rotate(bul::vec3f angles);
 
     bul::vec3f position;
-    bul::vec3f forward;
-    bul::vec3f up;
     bul::vec3f right;
+    bul::vec3f up;
+    bul::vec3f forward;
 
-    float yaw;
     float pitch;
+    float yaw;
     float roll;
     union
     {

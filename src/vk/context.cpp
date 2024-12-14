@@ -15,15 +15,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         switch (msg_severity)
         {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            return bul::log_level::debug;
+            return bul::log_level_debug;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            return bul::log_level::info;
+            return bul::log_level_info;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            return bul::log_level::warning;
+            return bul::log_level_warning;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            return bul::log_level::error;
+            return bul::log_level_error;
         default:
-            return bul::log_level::_count;
+            return bul::_log_level_count;
         }
     }(msg_severity);
 
@@ -310,6 +310,7 @@ static void create_frame_contexts(context* context)
         VK_CHECK(vkCreateFence(context->device, &fence_info, nullptr, &fc.rendering_finished_fence));
         fc.graphics_commands = command_pool::create(context, context->graphics_queue_index, context->graphics_queue);
         fc.compute_commands = command_pool::create(context, context->compute_queue_index, context->compute_queue);
+        fc.image_index = 0;
     }
 }
 
@@ -394,6 +395,8 @@ frame_context* context::acquire_next_image()
     }
 
     VK_CHECK(res);
+
+    frame_context.command_buffer = frame_context.graphics_commands.get_command_buffer();
 
     return &frame_context;
 }

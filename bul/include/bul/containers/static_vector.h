@@ -36,6 +36,25 @@ struct static_vector
         return element;
     }
 
+    constexpr void swap_remove(uint32_t index)
+    {
+        ASSERT(index < size);
+        data[index] = back();
+        size--;
+    }
+
+    constexpr uint32_t find(const T& value)
+    {
+        for (uint32_t i = 0; i < size; ++i)
+        {
+            if (data[i] == value)
+            {
+                return i;
+            }
+        }
+        return UINT32_MAX;
+    }
+
     constexpr void clear()
     {
         size = 0;

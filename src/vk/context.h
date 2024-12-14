@@ -25,7 +25,8 @@ struct frame_context
     VkFence rendering_finished_fence = VK_NULL_HANDLE;
     command_pool graphics_commands;
     command_pool compute_commands;
-    uint32_t image_index = 0;
+    command_buffer* command_buffer;
+    uint32_t image_index;
     bul::handle<image> image;
 };
 
@@ -78,6 +79,7 @@ struct context
     bul::pool<buffer> buffers;
     bul::pool<shader> shaders;
     bul::pool<graphics_pipeline> graphics_pipelines;
+    bul::pool<compute_pipeline> compute_pipelines;
 
     VkDescriptorPool descriptor_pool; // only used for ImGui
 
@@ -96,5 +98,8 @@ struct context
     bul::handle<graphics_pipeline> create_graphics_pipeline(const graphics_pipeline_description& description);
     VkPipeline compile_graphics_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state);
     void destroy_graphics_pipeline(bul::handle<graphics_pipeline> handle);
+
+    bul::handle<compute_pipeline> create_compute_pipeline(const compute_pipeline_description& description);
+    void destroy_compute_pipeline(bul::handle<compute_pipeline> handle);
 };
 } // namespace vk

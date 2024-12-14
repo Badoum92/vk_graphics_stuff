@@ -211,4 +211,49 @@ void context::destroy_graphics_pipeline(bul::handle<graphics_pipeline> handle)
     graphics_pipeline.pipelines.clear();
     graphics_pipeline.graphics_states.clear();
 }
+
+bul::handle<compute_pipeline> context::create_compute_pipeline(const compute_pipeline_description& description)
+{
+    compute_pipeline compute_pipeline;
+    compute_pipeline.description = description;
+
+    VkPushConstantRange push_constant_range = {};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
+    push_constant_range.offset = 0;
+    push_constant_range.size = description.push_constant_size;
+
+    VkPipelineLayoutCreateInfo layout_create_info = {};
+    layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layout_create_info.setLayoutCount = 1;
+    layout_create_info.pSetLayouts = &descriptor_set.layout;
+    if (push_constant_range.size != 0)
+    {
+        layout_create_info.pushConstantRangeCount = 1;
+        layout_create_info.pPushConstantRanges = &push_constant_range;
+    }
+
+    VK_CHECK(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &compute_pipeline.layout));
+
+    VkComputePipelineCreateInfo pipeline_create_info = {};
+    pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipeline_create_info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    pipeline_create_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    pipeline_create_info.stage.module = shaders.get(description.shader).vk_handle;
+    pipeline_create_info.stage.pName = "main";
+    pipeline_create_info.layout = compute_pipeline.layout;
+
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr,
+                                      &compute_pipeline.pipeline));
+
+    return compute_pipelines.insert(compute_pipeline);
+}
+
+void context::destroy_compute_pipeline(bul::handle<compute_pipeline> handle)
+{
+    compute_pipeline& compute_pipeline = compute_pipelines.get(handle);
+    vkDestroyPipelineLayout(device, compute_pipeline.layout, nullptr);
+    compute_pipeline.layout = VK_NULL_HANDLE;
+    vkDestroyPipeline(device, compute_pipeline.pipeline, nullptr);
+    compute_pipeline.pipeline = VK_NULL_HANDLE;
+}
 } // namespace vk

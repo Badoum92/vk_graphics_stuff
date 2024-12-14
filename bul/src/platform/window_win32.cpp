@@ -38,7 +38,9 @@ void window::create(window* window, const char* title, vec2i size)
     wc.lpfnWndProc = window_proc;
     wc.hInstance = GetModuleHandle(nullptr);
     wc.lpszClassName = "Win32 Window Class";
+    wc.cbWndExtra = (DWLP_USER + 1) * sizeof(void*);
     RegisterClass(&wc);
+
 
     RECT rect = {0, 0, size.x, size.y};
     AdjustWindowRectEx(&rect, WS_BORDER | WS_OVERLAPPEDWINDOW, false, 0);
@@ -48,7 +50,7 @@ void window::create(window* window, const char* title, vec2i size)
                                     CW_USEDEFAULT, size.x, size.y, nullptr, nullptr, wc.hInstance, nullptr);
 
     ENSURE(window->handle != nullptr);
-    SetProp((HWND)window->handle, "bul", window);
+    SetWindowLongPtr((HWND)window->handle, DWLP_USER, (uint64_t)window);
     ShowWindow((HWND)window->handle, SW_SHOW);
 
     RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
@@ -167,10 +169,10 @@ static bool is_right_alt()
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    window* w = (window*)GetProp(hwnd, "bul");
+    window* w = (bul::window*)GetWindowLongPtr(hwnd, DWLP_USER);
     if (w && w->is_cursor_visible && ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
     {
-        DefWindowProc(hwnd, uMsg, wParam, lParam);
+        return DefWindowProc(hwnd, uMsg, wParam, lParam);
     }
 
     switch (uMsg)

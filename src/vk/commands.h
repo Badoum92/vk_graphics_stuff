@@ -75,13 +75,15 @@ struct command_buffer
 
     void bind_index_buffer(bul::handle<buffer> index_buffer_handle, uint32_t offset = 0,
                            VkIndexType index_type = VK_INDEX_TYPE_UINT32);
-    void bind_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state);
+    void bind_graphics_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state);
+    void bind_compute_pipeline(bul::handle<compute_pipeline> handle);
 
     void set_scissor(const VkRect2D& rect);
     void set_viewport(const VkViewport& viewport);
 
     void draw(uint32_t vertex_count, uint32_t first_vertex = 0);
     void draw_indexed(uint32_t index_count, uint32_t first_index = 0, uint32_t vertex_offset = 0);
+    void compute_dispatch(uint32_t x, uint32_t y, uint32_t z);
 
     void barrier(bul::handle<image> handle, image_usage dst_usage);
 

@@ -7,8 +7,7 @@
 #include "bul/time.h"
 #include "ufbx/ufbx.h"
 
-#include "imgui/imgui_impl_vulkan.h"
-#include "imgui/imgui_impl_win32.h"
+#include "imgui.h"
 
 struct push_constant
 {
@@ -29,7 +28,7 @@ struct uniform_buffer_data
     bul::mat4f view_proj;
 };
 
-test_renderer test_renderer::create(vk::context* _context)
+test_renderer test_renderer::create(vk::context* _context, uint32_t width, uint32_t height)
 {
     test_renderer test_renderer;
 
@@ -107,8 +106,8 @@ test_renderer test_renderer::create(vk::context* _context)
     bul::handle<vk::buffer> vertex_staging_buffer = _context->create_buffer(buffer_description);
 
     vk::image_description image_description = {};
-    image_description.width = _context->surface.extent.width;
-    image_description.height = _context->surface.extent.height;
+    image_description.width = width;
+    image_description.height = height;
     image_description.format = VK_FORMAT_D32_SFLOAT;
     image_description.usage = vk::image_usage_depth_attachment;
     image_description.name = "depth image";
@@ -263,12 +262,24 @@ test_renderer test_renderer::create(vk::context* _context)
     test_renderer.uniform_buffer_handle = _context->create_buffer(buffer_description);
 
     vk::image_description image_description = {};
-    image_description.width = _context->surface.extent.width;
-    image_description.height = _context->surface.extent.height;
+    image_description.width = width;
+    image_description.height = height;
     image_description.format = VK_FORMAT_D32_SFLOAT;
     image_description.usage = vk::image_usage_depth_attachment;
     image_description.name = "depth image";
     test_renderer.depth_handle = _context->create_image(image_description);
+
+    image_description.format = _context->images.get(_context->surface.images[0]).description.format;
+    image_description.usage = vk::image_usage_color_attachment;
+    image_description.name = "imgui render target";
+    test_renderer.render_target.image = _context->create_image(image_description);
+
+    vk::image& render_target_image = _context->images.get(test_renderer.render_target.image);
+    vk::sampler& render_target_sampler = _context->samplers.get(_context->default_sampler);
+    test_renderer.render_target.vk_descriptorset =
+        ImGui_ImplVulkan_AddTexture(render_target_sampler.vk_handle, render_target_image.full_view.vk_handle,
+                                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
     vk::command_buffer* cmd = _context->transfer_commands.get_command_buffer();
     cmd->barrier(test_renderer.depth_handle, vk::image_usage::depth_attachment);
     _context->submit(cmd);
@@ -296,13 +307,15 @@ void test_renderer::destroy()
         context->destroy_buffer(handle);
     }
     context->destroy_image(depth_handle);
+    ImGui_ImplVulkan_RemoveTexture(render_target.vk_descriptorset);
+    context->destroy_image(render_target.image);
 }
 
-void test_renderer::resize()
+void test_renderer::resize(uint32_t width, uint32_t height)
 {
     vk::image_description image_description = {};
-    image_description.width = context->surface.extent.width;
-    image_description.height = context->surface.extent.height;
+    image_description.width = width;
+    image_description.height = height;
     image_description.format = VK_FORMAT_D32_SFLOAT;
     image_description.usage = vk::image_usage_depth_attachment;
     image_description.name = "depth image";
@@ -312,7 +325,7 @@ void test_renderer::resize()
 
 void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
 {
-    vk::command_buffer* command_buffer = frame_context->graphics_commands.get_command_buffer();
+    vk::command_buffer* command_buffer = frame_context->command_buffer;
 
     // y_rotation_deg += 36 * delta_time;
 
@@ -342,7 +355,7 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
     vk::graphics_state graphics_state = vk::graphics_state::create();
     graphics_state.cull_back_faces = false;
     graphics_state.depth_compare_op = VK_COMPARE_OP_GREATER;
-    command_buffer->bind_pipeline(graphics_pipeline_handle, graphics_state);
+    command_buffer->bind_graphics_pipeline(graphics_pipeline_handle, graphics_state);
 
     command_buffer->bind_descriptor_buffer(graphics_pipeline_handle);
 
@@ -359,19 +372,4 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
     }
 
     command_buffer->end_rendering();
-
-    command_buffer->begin_rendering({{frame_context->image}}, {{vk::load_op::load()}}, bul::handle<vk::image>::invalid(),
-                                    vk::load_op::dont_care());
-    ImGui::Begin("Stats");
-    ImGui::Text("frame time: %g ms", bul::ticks_to_ms_f(bul::avg_frame_delta_ticks));
-    ImGui::Text("FPS: %g", 1.0f / bul::ticks_to_s_f(bul::avg_frame_delta_ticks));
-    ImGui::Text("%d %d", bul::mouse_position.x, bul::mouse_position.y);
-    ImGui::End();
-    ImGui::Render();
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer->vk_handle);
-    command_buffer->end_rendering();
-
-    command_buffer->barrier(frame_context->image, vk::image_usage::present);
-
-    context->submit(command_buffer, frame_context);
 }

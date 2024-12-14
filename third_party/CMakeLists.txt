@@ -40,3 +40,10 @@ add_library(ufbx STATIC ufbx/ufbx.c)
 target_link_libraries(ufbx PRIVATE third_party_interface)
 target_include_directories(ufbx SYSTEM PRIVATE ufbx)
 target_compile_definitions(ufbx PUBLIC UFBX_REAL_IS_FLOAT)
+
+# --- tracy ---
+
+add_library(tracy STATIC tracy/TracyClient.cpp)
+target_link_libraries(tracy PRIVATE third_party_interface)
+target_include_directories(tracy SYSTEM PUBLIC tracy)
+#target_compile_definitions(tracy PUBLIC TRACY_ENABLE)

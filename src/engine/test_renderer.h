@@ -4,14 +4,16 @@
 
 #include "bul/containers/vector.h"
 
+#include "imgui.h"
+
 struct camera;
 
 struct test_renderer
 {
-    static test_renderer create(vk::context* _context);
+    static test_renderer create(vk::context* _context, uint32_t width, uint32_t height);
     void destroy();
 
-    void resize();
+    void resize(uint32_t width, uint32_t height);
     void draw(vk::frame_context* frame_context, camera* camera);
 
     bul::handle<vk::shader> vertex_shader;
@@ -21,6 +23,8 @@ struct test_renderer
     bul::vector<bul::handle<vk::buffer>> index_buffer_handle;
     bul::vector<bul::handle<vk::buffer>> vertex_buffer_handle;
     bul::handle<vk::image> depth_handle;
+
+    imgui_texture render_target;
 
     float y_rotation_deg;
 
