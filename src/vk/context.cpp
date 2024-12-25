@@ -206,6 +206,15 @@ static void create_device(context* context)
         queue_create_infos.push_back(queue_info);
     }
 
+    if (context->compute_queue_index == UINT32_MAX)
+    {
+        context->compute_queue_index = context->graphics_queue_index;
+    }
+    if (context->transfer_queue_index == UINT32_MAX)
+    {
+        context->transfer_queue_index = context->graphics_queue_index;
+    }
+
     VkPhysicalDeviceFeatures2 vulkan2_features = {};
     vulkan2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     vulkan2_features.features.shaderInt64 = true;

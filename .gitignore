@@ -4,3 +4,4 @@ CMakeSettings.json
 build
 models
 resources
+*.7z
