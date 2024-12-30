@@ -2,7 +2,7 @@
 
 namespace bul
 {
-constexpr uint32_t linear_allocator_size = 256_KB;
+constexpr uint32_t linear_allocator_size = 2_MB;
 static thread_local uint8_t linear_allocator_buffer[linear_allocator_size];
 thread_local linear_allocator g_linear_allocator =
     linear_allocator::create(linear_allocator_buffer, linear_allocator_size);

@@ -10,7 +10,7 @@ add_compile_options(
 
 add_library(default_interface INTERFACE)
 target_compile_options(default_interface INTERFACE
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -pedantic -msse4.1>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -msse4.1>
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /Zc:preprocessor>
 )
 target_compile_definitions(default_interface INTERFACE
@@ -45,7 +45,7 @@ add_executable(main
     # src/engine/path_tracing_renderer.cpp
     src/engine/test_renderer.cpp
     src/engine/gltf.cpp
-    src/engine/vox_loader.cpp
+    src/engine/vox.cpp
     src/engine/imgui.cpp
 
     src/vk/vk_tools.cpp

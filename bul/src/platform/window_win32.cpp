@@ -88,7 +88,11 @@ void window::show_cursor(bool show)
         visible_cursor_position = cursor_position;
         cursor_position = invisible_cursor_position;
 
-        SetCursorPos(0, 0);
+        rect.left++;
+        rect.right--;
+        rect.top++;
+        rect.bottom--;
+
         ClipCursor(&rect);
         SetCursor(nullptr);
 

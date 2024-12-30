@@ -10,7 +10,8 @@
 #define ASSERT(CONDITION, ...)
 #define ENSURE(EXPR) [[maybe_unused]] bool BUL_CONCAT(_, __COUNTER__) = (EXPR)
 #else
-#define ASSERT(CONDITION, ...) bul::_assert((CONDITION), #CONDITION, __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+// #define ASSERT(CONDITION, ...) bul::_assert((CONDITION), #CONDITION, __FILE__, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+#define ASSERT(CONDITION, ...) bul::_assert((CONDITION), #CONDITION, __FILE__, __LINE__, ##__VA_ARGS__)
 #define ENSURE(EXPR)           bul::_assert((EXPR), #EXPR, __FILE__, __LINE__, nullptr)
 #endif
 
