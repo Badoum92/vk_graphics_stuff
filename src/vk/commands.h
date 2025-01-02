@@ -66,12 +66,14 @@ struct command_buffer
     void end();
 
     void bind_descriptor_buffer(bul::handle<graphics_pipeline> pipeline_handle);
+    void bind_descriptor_buffer(bul::handle<compute_pipeline> pipeline_handle);
 
     void begin_rendering(bul::span<bul::handle<image>> color_attachments, bul::span<load_op> color_load_ops,
                          bul::handle<image> depth_attachment, load_op depth_load_op);
     void end_rendering();
 
     void push_constant(bul::handle<graphics_pipeline> handle, void* data, uint32_t size);
+    void push_constant(bul::handle<compute_pipeline> handle, void* data, uint32_t size);
 
     void bind_index_buffer(bul::handle<buffer> index_buffer_handle, uint32_t offset = 0,
                            VkIndexType index_type = VK_INDEX_TYPE_UINT32);

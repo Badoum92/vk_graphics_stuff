@@ -41,12 +41,14 @@ add_executable(main
     src/engine/camera.cpp
     src/engine/image.cpp
     src/engine/texture.cpp
-    # src/engine/renderer.cpp
-    # src/engine/path_tracing_renderer.cpp
-    src/engine/test_renderer.cpp
     src/engine/gltf.cpp
     src/engine/vox.cpp
     src/engine/imgui.cpp
+
+    # src/engine/renderer.cpp
+    # src/engine/path_tracing_renderer.cpp
+    src/engine/test_renderer.cpp
+    src/engine/test_compute.cpp
 
     src/vk/vk_tools.cpp
     src/vk/context.cpp

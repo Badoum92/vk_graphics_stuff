@@ -37,6 +37,22 @@ void command_buffer::bind_descriptor_buffer(bul::handle<graphics_pipeline> pipel
                                        &context->descriptor_set.offset);
 }
 
+void command_buffer::bind_descriptor_buffer(bul::handle<compute_pipeline> pipeline_handle)
+{
+    buffer& descriptor_buffer = context->buffers.get(context->descriptor_set.buffer_handle);
+    compute_pipeline& pipeline = context->compute_pipelines.get(pipeline_handle);
+
+    VkDescriptorBufferBindingInfoEXT descriptor_buffer_binding_info = {};
+    descriptor_buffer_binding_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    descriptor_buffer_binding_info.address = descriptor_buffer.device_address;
+    descriptor_buffer_binding_info.usage = descriptor_buffer_usage;
+    vkCmdBindDescriptorBuffersEXT(vk_handle, 1, &descriptor_buffer_binding_info);
+
+    uint32_t buffer_index = 0;
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 0, 1, &buffer_index,
+                                       &context->descriptor_set.offset);
+}
+
 void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachments, bul::span<load_op> color_load_ops,
                                      bul::handle<image> depth_attachment, load_op depth_load_op)
 {
@@ -93,6 +109,12 @@ void command_buffer::end_rendering()
 void command_buffer::push_constant(bul::handle<graphics_pipeline> handle, void* data, uint32_t size)
 {
     graphics_pipeline& graphics_pipeline = context->graphics_pipelines.get(handle);
+    vkCmdPushConstants(vk_handle, graphics_pipeline.layout, VK_SHADER_STAGE_ALL, 0, size, data);
+}
+
+void command_buffer::push_constant(bul::handle<compute_pipeline> handle, void* data, uint32_t size)
+{
+    compute_pipeline& graphics_pipeline = context->compute_pipelines.get(handle);
     vkCmdPushConstants(vk_handle, graphics_pipeline.layout, VK_SHADER_STAGE_ALL, 0, size, data);
 }
 

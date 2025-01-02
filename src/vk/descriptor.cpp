@@ -11,7 +11,8 @@ descriptor_set descriptor_set::create(context* context)
 
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = 0;
-    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    // layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     layout_binding.descriptorCount = max_binless_descriptors;
     layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
@@ -122,7 +123,7 @@ void descriptor_set::update_descriptor(context* context, uint32_t index, bul::ha
                        (uint8_t*)buffer.mapped_data + index * descriptor_size + offset);
 }
 
-void descriptor_set::destroy_descriptor(context*, uint32_t index)
+void descriptor_set::destroy_descriptor(uint32_t index)
 {
     free_descriptors.push_back(index);
 }

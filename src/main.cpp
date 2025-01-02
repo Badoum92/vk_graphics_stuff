@@ -2,6 +2,7 @@
 #include "vk/surface.h"
 
 #include "test_renderer.h"
+#include "test_compute.h"
 // #include "renderer.h"
 // #include "path_tracing_renderer.h"
 #include "camera.h"
@@ -57,8 +58,10 @@ int main(int, char**)
         ASSERT(vk_context.undefined_descriptor == 0);
     }
 
-    test_renderer test_renderer =
-        test_renderer::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
+    // test_renderer test_renderer =
+    //     test_renderer::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
+    test_compute test_renderer =
+        test_compute::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
 
     camera camera;
     camera.position = {0.0f, 0.0f, 1.0f};
@@ -70,6 +73,7 @@ int main(int, char**)
     camera.near_plane = 1.0f;
     camera.far_plane = 10000.0f;
     camera.compute_view_proj();
+    float speed = 50;
 
     while (!main_window.should_close)
     {
@@ -79,17 +83,16 @@ int main(int, char**)
 
         bul::window::poll_events();
 
-        if (bul::key_pressed(bul::key::l_alt))
-        {
-            main_window.show_cursor(!main_window.is_cursor_visible);
-        }
-
         if (bul::key_pressed(bul::key::escape))
         {
             break;
         }
 
-        static constexpr float speed = 500;
+        if (bul::key_pressed(bul::key::l_alt))
+        {
+            main_window.show_cursor(!main_window.is_cursor_visible);
+        }
+
         bul::vec3f direction = {0, 0, 0};
         if (bul::key_down(bul::key::Q))
         {
@@ -165,6 +168,7 @@ int main(int, char**)
         ImGui::End();
 
         ImGui::Begin("Debug");
+        ImGui::InputFloat("Speed", &speed);
         if (ImGui::TreeNode("Input"))
         {
             ImGui::Text("Mouse");
@@ -191,8 +195,8 @@ int main(int, char**)
         if (window_width != test_renderer.width || window_height != test_renderer.height)
         {
             camera.aspect_ratio = window_width / window_height;
-            test_renderer.resize(window_width, window_height);
             camera.compute_view_proj();
+            test_renderer.resize(window_width, window_height);
         }
 
         FrameMark;

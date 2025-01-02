@@ -23,7 +23,7 @@ struct descriptor_set
     uint32_t create_empty_descriptor(context* context, VkDescriptorType type);
     void update_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
                            bul::handle<sampler> sampler_handle, VkDescriptorType type);
-    void destroy_descriptor(context* context, uint32_t index);
+    void destroy_descriptor(uint32_t index);
 
     VkDescriptorSetLayout layout;
     bul::handle<buffer> buffer_handle;

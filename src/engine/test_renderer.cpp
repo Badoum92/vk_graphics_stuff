@@ -124,7 +124,7 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
     _context->destroy_buffer(index_staging_buffer);
     _context->destroy_buffer(vertex_staging_buffer);*/
 
-    ufbx_load_opts opts = {0}; // Optional, pass NULL for defaults
+    ufbx_load_opts opts = {}; // Optional, pass NULL for defaults
     ufbx_error error; // Optional, pass NULL if you don't care about errors
     // ufbx_scene* scene = ufbx_load_file("resources/cube.fbx", &opts, &error);
     ufbx_scene* scene = ufbx_load_file("resources/sponza.fbx", &opts, &error);
@@ -151,7 +151,6 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
         ufbx_mesh* mesh = node->mesh;
 
         // Count the number of needed parts and temporary buffers
-        uint32_t max_parts = 0;
         uint32_t max_triangles = 0;
 
         // We need to render each material of the mesh in a separate part, so let's
@@ -161,18 +160,17 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
             ufbx_mesh_part* part = &mesh->material_parts.data[pi];
             if (part->num_triangles == 0)
                 continue;
-            max_parts += 1;
             max_triangles = bul_max(max_triangles, part->num_triangles);
         }
 
-        for (uint32_t j = 0; j < mesh->materials.count; ++j)
+        /* for (uint32_t j = 0; j < mesh->materials.count; ++j)
         {
             ufbx_material* material = mesh->materials[j];
             for (uint32_t k = 0; k < material->textures.count; ++k)
             {
                 ufbx_texture* texture = material->textures[k].texture;
             }
-        }
+        } */
 
         uint32_t num_tri_indices = mesh->max_face_triangles * 3;
         uint32_t* tri_indices = (uint32_t*)malloc(num_tri_indices * sizeof(uint32_t));
@@ -192,7 +190,7 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
                 ufbx_face face = mesh->faces.data[mesh_part->face_indices.data[fi]];
                 uint32_t num_tris = ufbx_triangulate_face(tri_indices, num_tri_indices, mesh, face);
 
-                ufbx_vec2 default_uv = {0};
+                ufbx_vec2 default_uv = {};
 
                 // Iterate through every vertex of every triangle in the triangulated result
                 for (uint32_t vi = 0; vi < num_tris * 3; vi++)

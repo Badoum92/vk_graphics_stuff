@@ -236,6 +236,7 @@ bul::handle<compute_pipeline> context::create_compute_pipeline(const compute_pip
 
     VkComputePipelineCreateInfo pipeline_create_info = {};
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    pipeline_create_info.flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
     pipeline_create_info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     pipeline_create_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     pipeline_create_info.stage.module = shaders.get(description.shader).vk_handle;
