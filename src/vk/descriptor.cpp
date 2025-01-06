@@ -16,12 +16,12 @@ descriptor_set descriptor_set::create(context* context)
     layout_binding.descriptorCount = max_binless_descriptors;
     layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
-    VkDescriptorBindingFlags bindling_flags =
+    VkDescriptorBindingFlags binding_flags =
         VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
     VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info = {};
     binding_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
     binding_flags_info.bindingCount = 1;
-    binding_flags_info.pBindingFlags = &bindling_flags;
+    binding_flags_info.pBindingFlags = &binding_flags;
 
     VkDescriptorSetLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

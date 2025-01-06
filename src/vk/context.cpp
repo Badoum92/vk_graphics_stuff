@@ -222,15 +222,17 @@ static void create_device(context* context)
     VkPhysicalDeviceVulkan12Features vulkan12_features = {};
     vulkan12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
     vulkan12_features.pNext = &vulkan2_features;
+    vulkan12_features.timelineSemaphore = true;
     vulkan12_features.bufferDeviceAddress = true;
     vulkan12_features.descriptorIndexing = true;
     vulkan12_features.runtimeDescriptorArray = true;
     vulkan12_features.descriptorBindingPartiallyBound = true;
     vulkan12_features.shaderSampledImageArrayNonUniformIndexing = true;
+    vulkan12_features.shaderStorageImageArrayNonUniformIndexing = true;
     vulkan12_features.descriptorBindingVariableDescriptorCount = true;
     vulkan12_features.descriptorBindingSampledImageUpdateAfterBind = true;
-    vulkan12_features.descriptorBindingUpdateUnusedWhilePending = true;
     vulkan12_features.descriptorBindingStorageImageUpdateAfterBind = true;
+    vulkan12_features.descriptorBindingUpdateUnusedWhilePending = true;
 
     VkPhysicalDeviceVulkan13Features vulkan13_features = {};
     vulkan13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;

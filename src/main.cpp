@@ -20,8 +20,6 @@
 
 int main(int, char**)
 {
-    image image = image::from_file("resources/undefined.png");
-
     bul::window main_window;
     bul::window::create(&main_window, "window", {1280, 720});
     vk::context vk_context = vk::context::create(&main_window, true);
@@ -29,6 +27,7 @@ int main(int, char**)
     imgui_init(&vk_context, &main_window);
 
     {
+        image image = image::from_file("resources/undefined.png");
         vk::buffer_description buffer_description = {};
         buffer_description.size = image.size_bytes();
         buffer_description.usage = vk::transfer_buffer_usage;
@@ -58,10 +57,13 @@ int main(int, char**)
         ASSERT(vk_context.undefined_descriptor == 0);
     }
 
-    // test_renderer test_renderer =
-    //     test_renderer::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
+#if 0
+    test_renderer test_renderer =
+        test_renderer::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
+#else
     test_compute test_renderer =
         test_compute::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
+#endif
 
     camera camera;
     camera.position = {0.0f, 0.0f, 1.0f};

@@ -79,19 +79,21 @@ void test_compute::resize(uint32_t _width, uint32_t _height)
     width = _width;
     height = _height;
 
+    ImGui_ImplVulkan_RemoveTexture(render_target.vk_descriptorset);
+    context->descriptor_set.destroy_descriptor(render_target_descriptor_index);
+    context->destroy_image(render_target.image);
+
     vk::image_description image_description = {};
     image_description.width = width;
     image_description.height = height;
     image_description.format = context->images.get(context->surface.images[0]).description.format;
     image_description.usage = vk::image_usage_color_attachment;
     image_description.name = "imgui render target";
-    ImGui_ImplVulkan_RemoveTexture(render_target.vk_descriptorset);
-    context->descriptor_set.destroy_descriptor(render_target_descriptor_index);
-    context->destroy_image(render_target.image);
     render_target.image = context->create_image(image_description);
+
     render_target_descriptor_index =
         context->descriptor_set.create_descriptor(context, render_target.image, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    log_info("desc index: %u", render_target_descriptor_index);
+
     vk::image& render_target_image = context->images.get(render_target.image);
     vk::sampler& render_target_sampler = context->samplers.get(context->default_sampler);
     render_target.vk_descriptorset =
@@ -117,7 +119,7 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     command_buffer->bind_compute_pipeline(compute_pipeline_handle);
     command_buffer->bind_descriptor_buffer(compute_pipeline_handle);
     command_buffer->push_constant(compute_pipeline_handle, &push_constant, sizeof(push_constant));
-    command_buffer->compute_dispatch(width, height, 0);
+    command_buffer->compute_dispatch(width, height, 1);
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read);
 }
