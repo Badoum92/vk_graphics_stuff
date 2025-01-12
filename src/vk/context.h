@@ -64,7 +64,8 @@ struct context
 
     surface surface;
 
-    descriptor_set descriptor_set;
+    descriptor_set texture_descriptor_set;
+    descriptor_set image_descriptor_set;
 
     command_pool transfer_commands;
 

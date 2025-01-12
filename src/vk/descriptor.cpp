@@ -5,14 +5,13 @@
 
 namespace vk
 {
-descriptor_set descriptor_set::create(context* context)
+descriptor_set descriptor_set::create(context* context, VkDescriptorType type)
 {
     descriptor_set descriptor_set = {};
 
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = 0;
-    // layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    layout_binding.descriptorType = type;
     layout_binding.descriptorCount = max_binless_descriptors;
     layout_binding.stageFlags = VK_SHADER_STAGE_ALL;
 
@@ -39,7 +38,15 @@ descriptor_set descriptor_set::create(context* context)
 
     buffer_description buffer_description = {};
     buffer_description.size = descriptor_set.size;
-    buffer_description.usage = descriptor_buffer_usage | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    buffer_description.usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    if (type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+    {
+        buffer_description.usage |= image_descriptor_buffer_usage;
+    }
+    else
+    {
+        buffer_description.usage |= texture_descriptor_buffer_usage;
+    }
     buffer_description.memory_usage = VMA_MEMORY_USAGE_AUTO;
     buffer_description.name = "descriptor buffer";
     descriptor_set.buffer_handle = context->create_buffer(buffer_description);
@@ -58,66 +65,62 @@ void descriptor_set::destroy(context* context)
     vkDestroyDescriptorSetLayout(context->device, layout, nullptr);
 }
 
-uint32_t descriptor_set::create_descriptor(context* context, bul::handle<image> image_handle,
-                                           bul::handle<sampler> sampler_handle, VkDescriptorType type)
+uint32_t descriptor_set::create_texture_descriptor(context* context, bul::handle<image> image_handle,
+                                                   bul::handle<sampler> sampler_handle)
 {
     ASSERT(free_descriptors.size > 0);
     uint32_t index = free_descriptors.pop_back();
-    update_descriptor(context, index, image_handle, sampler_handle, type);
+    update_texture_descriptor(context, index, image_handle, sampler_handle);
     return index;
 }
 
-uint32_t descriptor_set::create_empty_descriptor(context* context, VkDescriptorType type)
-{
-    return create_descriptor(context, context->undefined_image_handle, context->default_sampler, type);
-}
-
-void descriptor_set::update_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
-                                       bul::handle<sampler> sampler_handle, VkDescriptorType type)
+void descriptor_set::update_texture_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
+                                               bul::handle<sampler> sampler_handle)
 {
     image& image = context->images.get(image_handle);
 
     VkDescriptorImageInfo descriptor = {};
-    descriptor.sampler = sampler_handle ? context->samplers.get(sampler_handle).vk_handle : VK_NULL_HANDLE;
+    descriptor.sampler = context->samplers.get(sampler_handle).vk_handle;
     descriptor.imageView = image.full_view.vk_handle;
-
-    switch (type)
-    {
-    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-        descriptor.imageLayout = is_depth(image.description.format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-                                                                    : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        break;
-    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-        descriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-        break;
-    default:
-        ASSERT(!"Unhandled descriptor type");
-        break;
-    }
+    descriptor.imageLayout = is_depth(image.description.format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+                                                                : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkDescriptorGetInfoEXT descriptor_info = {};
     descriptor_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT;
     descriptor_info.pNext = nullptr;
-    descriptor_info.type = type;
-
-    switch (type)
-    {
-    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-        descriptor_info.data.pCombinedImageSampler = &descriptor;
-        break;
-    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-        descriptor_info.data.pInputAttachmentImage = &descriptor;
-        break;
-    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-        descriptor_info.data.pStorageImage = &descriptor;
-        break;
-    default:
-        ASSERT(!"Unhandled descriptor type");
-        break;
-    }
+    descriptor_info.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptor_info.data.pCombinedImageSampler = &descriptor;
 
     size_t descriptor_size = context->descriptor_buffer_properties.combinedImageSamplerDescriptorSize;
+    buffer& buffer = context->buffers.get(buffer_handle);
+    vkGetDescriptorEXT(context->device, &descriptor_info, descriptor_size,
+                       (uint8_t*)buffer.mapped_data + index * descriptor_size + offset);
+}
+
+uint32_t descriptor_set::create_image_descriptor(context* context, bul::handle<image> image_handle)
+{
+    ASSERT(free_descriptors.size > 0);
+    uint32_t index = free_descriptors.pop_back();
+    update_image_descriptor(context, index, image_handle);
+    return index;
+}
+
+void descriptor_set::update_image_descriptor(context* context, uint32_t index, bul::handle<image> image_handle)
+{
+    image& image = context->images.get(image_handle);
+
+    VkDescriptorImageInfo descriptor = {};
+    descriptor.sampler = VK_NULL_HANDLE;
+    descriptor.imageView = image.full_view.vk_handle;
+    descriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    VkDescriptorGetInfoEXT descriptor_info = {};
+    descriptor_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT;
+    descriptor_info.pNext = nullptr;
+    descriptor_info.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    descriptor_info.data.pStorageImage = &descriptor;
+
+    size_t descriptor_size = context->descriptor_buffer_properties.storageImageDescriptorSize;
     buffer& buffer = context->buffers.get(buffer_handle);
     vkGetDescriptorEXT(context->device, &descriptor_info, descriptor_size,
                        (uint8_t*)buffer.mapped_data + index * descriptor_size + offset);

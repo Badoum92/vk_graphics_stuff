@@ -15,14 +15,17 @@ struct context;
 
 struct descriptor_set
 {
-    static descriptor_set create(context* context);
+    static descriptor_set create(context* context, VkDescriptorType type);
     void destroy(context* context);
 
-    uint32_t create_descriptor(context* context, bul::handle<image> image_handle, bul::handle<sampler> sampler_handle,
-                               VkDescriptorType type);
-    uint32_t create_empty_descriptor(context* context, VkDescriptorType type);
-    void update_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
-                           bul::handle<sampler> sampler_handle, VkDescriptorType type);
+    uint32_t create_texture_descriptor(context* context, bul::handle<image> image_handle,
+                                       bul::handle<sampler> sampler_handle);
+    void update_texture_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
+                                   bul::handle<sampler> sampler_handle);
+
+    uint32_t create_image_descriptor(context* context, bul::handle<image> image_handle);
+    void update_image_descriptor(context* context, uint32_t index, bul::handle<image> image_handle);
+
     void destroy_descriptor(uint32_t index);
 
     VkDescriptorSetLayout layout;

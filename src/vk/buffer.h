@@ -14,8 +14,9 @@ constexpr VkBufferUsageFlags vertex_buffer_usage = VK_BUFFER_USAGE_VERTEX_BUFFER
 constexpr VkBufferUsageFlags uniform_buffer_usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 constexpr VkBufferUsageFlags transfer_buffer_usage =
     VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-constexpr VkBufferUsageFlags descriptor_buffer_usage =
+constexpr VkBufferUsageFlags texture_descriptor_buffer_usage =
     VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT | VK_BUFFER_USAGE_SAMPLER_DESCRIPTOR_BUFFER_BIT_EXT;
+constexpr VkBufferUsageFlags image_descriptor_buffer_usage = VK_BUFFER_USAGE_RESOURCE_DESCRIPTOR_BUFFER_BIT_EXT;
 
 struct buffer_description
 {

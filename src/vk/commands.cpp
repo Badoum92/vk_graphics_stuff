@@ -23,34 +23,52 @@ void command_buffer::end()
 
 void command_buffer::bind_descriptor_buffer(bul::handle<graphics_pipeline> pipeline_handle)
 {
-    buffer& descriptor_buffer = context->buffers.get(context->descriptor_set.buffer_handle);
+    buffer& texture_descriptor_buffer = context->buffers.get(context->texture_descriptor_set.buffer_handle);
+    buffer& image_descriptor_buffer = context->buffers.get(context->image_descriptor_set.buffer_handle);
     graphics_pipeline& pipeline = context->graphics_pipelines.get(pipeline_handle);
 
-    VkDescriptorBufferBindingInfoEXT descriptor_buffer_binding_info = {};
-    descriptor_buffer_binding_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    descriptor_buffer_binding_info.address = descriptor_buffer.device_address;
-    descriptor_buffer_binding_info.usage = descriptor_buffer_usage;
-    vkCmdBindDescriptorBuffersEXT(vk_handle, 1, &descriptor_buffer_binding_info);
+    VkDescriptorBufferBindingInfoEXT descriptor_buffer_binding_infos[2] = {};
+    descriptor_buffer_binding_infos[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    descriptor_buffer_binding_infos[0].address = texture_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[0].usage = texture_descriptor_buffer_usage;
+    descriptor_buffer_binding_infos[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    descriptor_buffer_binding_infos[1].address = image_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[1].usage = image_descriptor_buffer_usage;
+    vkCmdBindDescriptorBuffersEXT(vk_handle, BUL_ARRAY_SIZE(descriptor_buffer_binding_infos),
+                                  descriptor_buffer_binding_infos);
 
-    uint32_t buffer_index = 0;
-    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.layout, 0, 1, &buffer_index,
-                                       &context->descriptor_set.offset);
+    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    uint32_t index = 0;
+    VkDeviceSize offset = 0;
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 0, 1, &index, &offset);
+    index = 1;
+    offset += context->texture_descriptor_set.size;
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 1, 1, &index, &offset);
 }
 
 void command_buffer::bind_descriptor_buffer(bul::handle<compute_pipeline> pipeline_handle)
 {
-    buffer& descriptor_buffer = context->buffers.get(context->descriptor_set.buffer_handle);
+    buffer& texture_descriptor_buffer = context->buffers.get(context->texture_descriptor_set.buffer_handle);
+    buffer& image_descriptor_buffer = context->buffers.get(context->image_descriptor_set.buffer_handle);
     compute_pipeline& pipeline = context->compute_pipelines.get(pipeline_handle);
 
-    VkDescriptorBufferBindingInfoEXT descriptor_buffer_binding_info = {};
-    descriptor_buffer_binding_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    descriptor_buffer_binding_info.address = descriptor_buffer.device_address;
-    descriptor_buffer_binding_info.usage = descriptor_buffer_usage;
-    vkCmdBindDescriptorBuffersEXT(vk_handle, 1, &descriptor_buffer_binding_info);
+    VkDescriptorBufferBindingInfoEXT descriptor_buffer_binding_infos[2] = {};
+    descriptor_buffer_binding_infos[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    descriptor_buffer_binding_infos[0].address = texture_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[0].usage = texture_descriptor_buffer_usage;
+    descriptor_buffer_binding_infos[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
+    descriptor_buffer_binding_infos[1].address = image_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[1].usage = image_descriptor_buffer_usage;
+    vkCmdBindDescriptorBuffersEXT(vk_handle, BUL_ARRAY_SIZE(descriptor_buffer_binding_infos),
+                                  descriptor_buffer_binding_infos);
 
-    uint32_t buffer_index = 0;
-    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.layout, 0, 1, &buffer_index,
-                                       &context->descriptor_set.offset);
+    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+    uint32_t index = 0;
+    VkDeviceSize offset = 0;
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 0, 1, &index, &offset);
+    // index = 1; // for some reason this is does not work for compute shaders ?
+    offset += context->texture_descriptor_set.size;
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 1, 1, &index, &offset);
 }
 
 void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachments, bul::span<load_op> color_load_ops,

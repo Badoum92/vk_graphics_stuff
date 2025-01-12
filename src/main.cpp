@@ -51,9 +51,8 @@ int main(int, char**)
         vk_context.destroy_buffer(staging_buffer_handle);
         image.destroy();
 
-        vk_context.undefined_descriptor = vk_context.descriptor_set.create_descriptor(
-            &vk_context, vk_context.undefined_image_handle, vk_context.default_sampler,
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        vk_context.undefined_descriptor = vk_context.texture_descriptor_set.create_texture_descriptor(
+            &vk_context, vk_context.undefined_image_handle, vk_context.default_sampler);
         ASSERT(vk_context.undefined_descriptor == 0);
     }
 
@@ -154,7 +153,7 @@ int main(int, char**)
                                                        bul::handle<vk::image>::invalid(), vk::load_op::dont_care());
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::Begin("Viewport");
+        ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
         float window_width = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
         float window_height = ImGui::GetWindowContentRegionMax().y - ImGui::GetWindowContentRegionMin().y;
         vk::image& render_target_image = vk_context.images.get(test_renderer.render_target.image);

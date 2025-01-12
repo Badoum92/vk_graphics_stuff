@@ -31,10 +31,12 @@ bul::handle<graphics_pipeline> context::create_graphics_pipeline(const graphics_
     push_constant_range.offset = 0;
     push_constant_range.size = description.push_constant_size;
 
+    VkDescriptorSetLayout layouts[2] = {texture_descriptor_set.layout, image_descriptor_set.layout};
+
     VkPipelineLayoutCreateInfo layout_create_info = {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_create_info.setLayoutCount = 1;
-    layout_create_info.pSetLayouts = &descriptor_set.layout;
+    layout_create_info.setLayoutCount = 2;
+    layout_create_info.pSetLayouts = layouts;
     if (push_constant_range.size != 0)
     {
         layout_create_info.pushConstantRangeCount = 1;
@@ -46,7 +48,7 @@ bul::handle<graphics_pipeline> context::create_graphics_pipeline(const graphics_
     set_resource_name(this, (uint64_t)graphics_pipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, description.name);
 
     return graphics_pipelines.insert(graphics_pipeline);
-}
+} // namespace vk
 
 VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state)
 {
@@ -222,10 +224,12 @@ bul::handle<compute_pipeline> context::create_compute_pipeline(const compute_pip
     push_constant_range.offset = 0;
     push_constant_range.size = description.push_constant_size;
 
+    VkDescriptorSetLayout layouts[2] = {texture_descriptor_set.layout, image_descriptor_set.layout};
+
     VkPipelineLayoutCreateInfo layout_create_info = {};
     layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_create_info.setLayoutCount = 1;
-    layout_create_info.pSetLayouts = &descriptor_set.layout;
+    layout_create_info.setLayoutCount = 2;
+    layout_create_info.pSetLayouts = layouts;
     if (push_constant_range.size != 0)
     {
         layout_create_info.pushConstantRangeCount = 1;

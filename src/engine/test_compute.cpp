@@ -8,12 +8,14 @@
 struct push_constant
 {
     VkDeviceAddress uniform_buffer;
-    uint32_t render_target_descriptor_index;
+    uint32_t image_index;
 };
 
 struct uniform_buffer_data
 {
     bul::mat4f view_proj;
+    uint32_t width;
+    uint32_t height;
 };
 
 test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32_t _height)
@@ -46,8 +48,8 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
     image_description.name = "imgui render target";
     test_compute.render_target.image = _context->create_image(image_description);
 
-    test_compute.render_target_descriptor_index = _context->descriptor_set.create_descriptor(
-        _context, test_compute.render_target.image, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    test_compute.render_target_descriptor_index =
+        _context->image_descriptor_set.create_image_descriptor(_context, test_compute.render_target.image);
 
     vk::image& render_target_image = _context->images.get(test_compute.render_target.image);
     vk::sampler& render_target_sampler = _context->samplers.get(_context->default_sampler);
@@ -80,7 +82,7 @@ void test_compute::resize(uint32_t _width, uint32_t _height)
     height = _height;
 
     ImGui_ImplVulkan_RemoveTexture(render_target.vk_descriptorset);
-    context->descriptor_set.destroy_descriptor(render_target_descriptor_index);
+    context->image_descriptor_set.destroy_descriptor(render_target_descriptor_index);
     context->destroy_image(render_target.image);
 
     vk::image_description image_description = {};
@@ -92,7 +94,7 @@ void test_compute::resize(uint32_t _width, uint32_t _height)
     render_target.image = context->create_image(image_description);
 
     render_target_descriptor_index =
-        context->descriptor_set.create_descriptor(context, render_target.image, {}, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        context->image_descriptor_set.create_image_descriptor(context, render_target.image);
 
     vk::image& render_target_image = context->images.get(render_target.image);
     vk::sampler& render_target_sampler = context->samplers.get(context->default_sampler);
@@ -108,18 +110,20 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     vk::buffer& uniform_buffer = context->buffers.get(uniform_buffer_handle);
     uniform_buffer_data uniform_buffer_data = {};
     uniform_buffer_data.view_proj = camera->proj * camera->view;
+    uniform_buffer_data.width = width;
+    uniform_buffer_data.height = height;
     memcpy(uniform_buffer.mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
 
     push_constant push_constant = {};
     push_constant.uniform_buffer = context->buffers.get(uniform_buffer_handle).device_address;
-    push_constant.render_target_descriptor_index = render_target_descriptor_index;
+    push_constant.image_index = render_target_descriptor_index;
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read_write);
 
     command_buffer->bind_compute_pipeline(compute_pipeline_handle);
     command_buffer->bind_descriptor_buffer(compute_pipeline_handle);
     command_buffer->push_constant(compute_pipeline_handle, &push_constant, sizeof(push_constant));
-    command_buffer->compute_dispatch(width, height, 1);
+    command_buffer->compute_dispatch((width + 7) / 8, (height + 7) / 8, 1);
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read);
 }

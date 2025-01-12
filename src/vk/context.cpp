@@ -333,7 +333,8 @@ context context::create(bul::window* _window, bool enable_validation)
     create_physical_device(&context);
     create_device(&context);
     context.surface = surface::create(&context);
-    context.descriptor_set = descriptor_set::create(&context);
+    context.texture_descriptor_set = descriptor_set::create(&context, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    context.image_descriptor_set = descriptor_set::create(&context, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
     context.transfer_commands = command_pool::create(&context, context.graphics_queue_index, context.graphics_queue);
     create_frame_contexts(&context);
 
@@ -360,7 +361,8 @@ void context::destroy()
     }
 
     transfer_commands.destroy();
-    descriptor_set.destroy(this);
+    texture_descriptor_set.destroy(this);
+    image_descriptor_set.destroy(this);
     surface.destroy(this);
 
     vmaDestroyAllocator(allocator);
