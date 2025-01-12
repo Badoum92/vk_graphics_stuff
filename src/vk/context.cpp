@@ -64,31 +64,6 @@ static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfo
     // clang-format on
 }
 
-static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-                                             const VkAllocationCallbacks* pAllocator,
-                                             VkDebugUtilsMessengerEXT* pDebugMessenger)
-{
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr)
-    {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-    }
-    else
-    {
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-}
-
-static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger,
-                                          const VkAllocationCallbacks* pAllocator)
-{
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr)
-    {
-        func(instance, debugMessenger, pAllocator);
-    }
-}
-
 static void create_instance(context* context, bool enable_validation)
 {
     bul::static_vector<const char*, 1> validation_layers;
@@ -136,7 +111,7 @@ static void create_instance(context* context, bool enable_validation)
     if (enable_validation)
     {
         VK_CHECK(
-            CreateDebugUtilsMessengerEXT(context->instance, &debug_create_info, nullptr, &context->debug_messenger));
+            vkCreateDebugUtilsMessengerEXT(context->instance, &debug_create_info, nullptr, &context->debug_messenger));
     }
 }
 
@@ -372,7 +347,7 @@ void context::destroy()
 
     if (debug_messenger != VK_NULL_HANDLE)
     {
-        DestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
+        vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
     }
     vkDestroyInstance(instance, nullptr);
     instance = VK_NULL_HANDLE;
