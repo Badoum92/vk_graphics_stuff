@@ -2,9 +2,9 @@
 
 #include <volk.h>
 
-#include "vk/buffer.h"
-#include "vk/image.h"
-#include "vk/constants.h"
+#include "vk/vk_buffer.h"
+#include "vk/vk_image.h"
+#include "vk/vk_constants.h"
 
 #include "bul/containers/handle.h"
 #include "bul/containers/static_vector.h"

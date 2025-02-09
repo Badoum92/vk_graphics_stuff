@@ -1,6 +1,6 @@
-#include "vk/image.h"
+#include "vk/vk_image.h"
 
-#include "vk/context.h"
+#include "vk/vk_context.h"
 
 namespace vk
 {

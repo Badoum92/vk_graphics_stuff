@@ -2,7 +2,7 @@
 
 #include <volk.h>
 
-#include "vk/image.h"
+#include "vk/vk_image.h"
 
 #include "bul/bul.h"
 
@@ -25,7 +25,7 @@ void set_resource_name(context* context, uint64_t vk_handle, VkObjectType object
     do                                                                                                                 \
     {                                                                                                                  \
         VkResult _result__ = (RESULT);                                                                                 \
-        ASSERT(_result__ == VK_SUCCESS, "%s (%s)", #RESULT, vk_result_to_str(_result__));                          \
+        ASSERT(_result__ == VK_SUCCESS, "%s (%s)", #RESULT, vk_result_to_str(_result__));                              \
     } while (0)
 
 } // namespace vk

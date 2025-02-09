@@ -327,7 +327,7 @@ constexpr bool operator==(const vec4<T>& a, const vec4<T>& b)
 }
 
 template <typename V>
-constexpr auto min(const V& v)
+constexpr auto vec_min(const V& v)
 {
     auto res = v[0];
     for (uint32_t i = 1; i < V::SIZE; ++i)
@@ -338,7 +338,7 @@ constexpr auto min(const V& v)
 }
 
 template <typename V>
-constexpr auto max(const V& v)
+constexpr auto vec_max(const V& v)
 {
     auto res = v[0];
     for (uint32_t i = 1; i < V::SIZE; ++i)
@@ -349,7 +349,7 @@ constexpr auto max(const V& v)
 }
 
 template <typename V>
-constexpr uint32_t min_index(const V& v)
+constexpr uint32_t vec_min_index(const V& v)
 {
     uint32_t index = 0;
     for (uint32_t i = 1; i < V::SIZE; ++i)
@@ -363,7 +363,7 @@ constexpr uint32_t min_index(const V& v)
 }
 
 template <typename V>
-constexpr uint32_t max_index(const V& v)
+constexpr uint32_t vec_max_index(const V& v)
 {
     uint32_t index = 0;
     for (uint32_t i = 1; i < V::SIZE; ++i)
@@ -377,7 +377,7 @@ constexpr uint32_t max_index(const V& v)
 }
 
 template <typename V>
-constexpr auto dot(const V& a, const V& b)
+constexpr auto vec_dot(const V& a, const V& b)
 {
     typename V::value_t res = 0;
     for (uint32_t i = 0; i < V::SIZE; ++i)
@@ -388,21 +388,21 @@ constexpr auto dot(const V& a, const V& b)
 }
 
 template <typename V>
-constexpr auto length(const V& v)
+constexpr auto vec_length(const V& v)
 {
-    return sqrtf((float)dot(v, v));
+    return sqrtf((float)vec_dot(v, v));
 }
 
 template <typename V>
-constexpr auto distance(const V& a, const V& b)
+constexpr auto vec_distance(const V& a, const V& b)
 {
     return length(a - b);
 }
 
 template <typename V>
-constexpr V normalize(const V& v)
+constexpr V vec_normalize(const V& v)
 {
-    return v / length(v);
+    return v / vec_length(v);
 }
 
 using vec2f = vec2<float>;
@@ -417,7 +417,7 @@ using vec4f = vec4<float>;
 using vec4i = vec4<int32_t>;
 using vec4u = vec4<uint32_t>;
 
-constexpr inline vec3f cross(const vec3f& a, const vec3f& b)
+constexpr inline vec3f vec_cross(const vec3f& a, const vec3f& b)
 {
     return {a.y * b.z - b.y * a.z, a.z * b.x - b.z * a.x, a.x * b.y - b.x * a.y};
 }

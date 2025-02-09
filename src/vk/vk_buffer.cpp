@@ -1,7 +1,7 @@
-#include "vk/buffer.h"
+#include "vk/vk_buffer.h"
 
 #include "vk/vk_tools.h"
-#include "vk/context.h"
+#include "vk/vk_context.h"
 
 #include "bul/bul.h"
 

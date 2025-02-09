@@ -1,7 +1,7 @@
-#include "vk/descriptor.h"
+#include "vk/vk_descriptor.h"
 
 #include "vk/vk_tools.h"
-#include "vk/context.h"
+#include "vk/vk_context.h"
 
 namespace vk
 {

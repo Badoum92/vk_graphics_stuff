@@ -1,6 +1,6 @@
-#include "shader.h"
+#include "vk/vk_shader.h"
 
-#include "vk/context.h"
+#include "vk/vk_context.h"
 
 #include "bul/bul.h"
 #include "bul/file.h"

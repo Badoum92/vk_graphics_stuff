@@ -2,7 +2,7 @@
 
 #include <volk.h>
 
-#include "vk/constants.h"
+#include "vk/vk_constants.h"
 
 #include "bul/containers/handle.h"
 #include "bul/containers/static_vector.h"

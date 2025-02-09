@@ -1,30 +1,27 @@
 #include "imgui.h"
 
-#include "vk/context.h"
+#include "vk/vk_context.h"
 #include "bul/containers/vector.h"
 #include "bul/input.h"
 #include "bul/log.h"
 
+ImGuiID imgui_global_dockspace;
+
 struct log_data
 {
     bul::log_level log_level;
-    char time[16];
+    uint32_t text_size;
+    uint32_t text_capacity;
     int line;
     const char* file;
     char* text;
-    uint32_t text_size;
-    uint32_t text_capacity;
+    char time[16];
 };
 
 static constexpr uint32_t max_logs = 128;
 static log_data logs[max_logs];
 static uint32_t log_index = 0;
-
-static bool show_debug = true;
-static bool show_info = true;
-static bool show_warning = true;
-static bool show_error = true;
-static bool show_file = false;
+static uint32_t log_count = 0;
 
 static void imgui_log(bul::log_level level, const char* time, const char* file, int line, const char* fmt,
                       va_list va_args)
@@ -49,130 +46,78 @@ static void imgui_log(bul::log_level level, const char* time, const char* file, 
     log_data->text_size = text_size;
     vsnprintf(log_data->text, text_size + 1, fmt, va_args);
     va_end(va_args);
+
+    log_count += log_count < max_logs;
 }
 
-static void _imgui_log_line(log_data* log_data)
+static void log_window()
 {
-    if (log_data->text_size == 0)
+    if (ImGui::Begin("Logs"))
     {
-        return;
-    }
-
-    ImVec4 level_color = {1, 1, 1, 1};
-    const char* level_text = "";
-    switch (log_data->log_level)
-    {
-    case bul::log_level_debug:
-        if (!show_debug)
+        if (ImGui::Button("Clear"))
         {
-            return;
+            for (log_data& log_data : logs)
+            {
+                log_data.text_size = 0;
+            }
+            log_count = 0;
         }
-        level_color = {0, 0, 1, 1};
-        level_text = "D";
-        break;
-    case bul::log_level_info:
-        if (!show_info)
+        ImGui::SameLine();
+        if (ImGui::Button("Test"))
         {
-            return;
+            log_debug("debug");
+            log_info("info");
+            log_warning("warn");
+            log_error("error");
         }
-        level_color = {0, 1, 0, 1};
-        level_text = "I";
-        break;
-    case bul::log_level_warning:
-        if (!show_warning)
+
+        ImGui::BeginChild("Text");
+        for (uint32_t i = 0; i < log_count; ++i)
         {
-            return;
+            log_data* log_data = &logs[(log_index - log_count + max_logs + i) % max_logs];
+
+            if (log_data->text_size == 0)
+            {
+                continue;
+            }
+
+            ImVec4 level_color = {1, 1, 1, 1};
+            const char* level_text = "";
+            switch (log_data->log_level)
+            {
+            case bul::log_level_debug:
+                level_color = {0.16f, 0.65f, 0.93f, 1.0f};
+                level_text = "[DEBUG]";
+                break;
+            case bul::log_level_info:
+                level_color = {0.15f, 0.93f, 0.30f, 1.0f};
+                level_text = "[INFO] ";
+                break;
+            case bul::log_level_warning:
+                level_color = {0.96f, 0.8f, 0.09f, 1.0f};
+                level_text = "[WARN] ";
+                break;
+            case bul::log_level_error:
+                level_color = {0.9f, 0.2f, 0.2f, 1.0f};
+                level_text = "[ERROR]";
+                break;
+            default:
+                break;
+            }
+
+            ImGui::Text("[%s] ", log_data->time);
+            ImGui::SameLine();
+            ImGui::TextColored(level_color, "%s ", level_text);
+            ImGui::SameLine();
+            ImGui::Text("%s", log_data->text);
+            ImGui::SetItemTooltip("%s(%d)", log_data->file, log_data->line);
         }
-        level_color = {1, 1, 0, 1};
-        level_text = "W";
-        break;
-    case bul::log_level_error:
-        if (!show_error)
-        {
-            return;
-        }
-        level_color = {1, 0, 0, 1};
-        level_text = "E";
-        break;
-    default:
-        break;
-    }
-
-    ImGui::TableNextColumn();
-    ImGui::Text("%s", log_data->time);
-    ImGui::TableNextColumn();
-    ImGui::TextColored(level_color, "%s", level_text);
-    if (show_file)
-    {
-        ImGui::TableNextColumn();
-        ImGui::Text("%s (%d)", log_data->file, log_data->line);
-    }
-    ImGui::TableNextColumn();
-    ImGui::TextUnformatted(log_data->text);
-}
-
-static void _imgui_log()
-{
-    ImGui::Begin("Logs");
-
-    ImGui::BeginChild("show_file", ImVec2(0, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY);
-    ImGui::Checkbox("Show file", &show_file);
-    ImGui::EndChild();
-
-    ImGui::SameLine();
-
-    ImGui::BeginChild("filters", ImVec2(0, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY);
-    ImGui::Checkbox("Debug", &show_debug);
-    ImGui::SameLine();
-    ImGui::Checkbox("Info", &show_info);
-    ImGui::SameLine();
-    ImGui::Checkbox("Warning", &show_warning);
-    ImGui::SameLine();
-    ImGui::Checkbox("Error", &show_error);
-    ImGui::EndChild();
-
-    ImGui::SameLine();
-    ImGui::BeginChild("actions", ImVec2(0, 0), ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY);
-    if (ImGui::Button("Clear"))
-    {
-        for (log_data& log_data : logs)
-        {
-            log_data.text_size = 0;
-        }
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Test"))
-    {
-        log_info("test");
-    }
-    ImGui::EndChild();
-
-    ImGui::BeginChild("logs");
-    static ImGuiTableFlags flags = ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_Resizable
-        | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_ContextMenuInBody
-        | ImGuiTableFlags_RowBg;
-    if (ImGui::BeginTable("logs_table", 3 + show_file, flags))
-    {
-        ImGui::TableSetupColumn("time", ImGuiTableColumnFlags_WidthFixed);
-        ImGui::TableSetupColumn("level", ImGuiTableColumnFlags_WidthFixed);
-        if (show_file)
-        {
-            ImGui::TableSetupColumn("file", ImGuiTableColumnFlags_WidthStretch);
-        }
-        ImGui::TableSetupColumn("text", ImGuiTableColumnFlags_WidthStretch);
-
-        for (uint32_t i = (log_index + 1) % max_logs; i != log_index; i = (i + 1) % max_logs)
-        {
-            _imgui_log_line(&logs[i]);
-        }
-        _imgui_log_line(&logs[log_index]);
-        ImGui::EndTable();
         if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
         {
             ImGui::SetScrollHereY(1.0f);
         }
+        ImGui::EndChild();
     }
-    ImGui::EndChild();
     ImGui::End();
 }
 
@@ -198,6 +143,7 @@ void imgui_init(vk::context* context, bul::window* window)
         &context->images.get(context->surface.images[0]).description.format;
     ImGui_ImplVulkan_Init(&imgui_vulkan);
     ImGui_ImplWin32_Init(window->handle);
+    ImGui::GetIO().Fonts->AddFontFromFileTTF("resources/CascadiaCode.ttf", 15);
     ImGui_ImplVulkan_CreateFontsTexture();
     ImGui::GetIO().DisplaySize.x = (float)window->size.x;
     ImGui::GetIO().DisplaySize.y = (float)window->size.y;
@@ -206,45 +152,77 @@ void imgui_init(vk::context* context, bul::window* window)
 
     ImGui::StyleColorsDark();
 
-    ImGuiStyle* style = &ImGui::GetStyle();
+    // ImGuiStyle& style = ImGui::GetStyle();
+    // style.WindowMenuButtonPosition = ImGuiDir_None;
+    // style.WindowBorderSize = 0.0f;
+    // style.GrabRounding = 4.0f;
+    // style.WindowRounding = 6.0f;
+    // style.FrameRounding = 4.0f;
+    // style.FramePadding = ImVec2(5.0f, 5.0f);
+    // style.PopupBorderSize = 0.0f;
+    // style.PopupRounding = 4.0f;
+    // style.SeparatorTextPadding = ImVec2(5.0f, 5.0f);
+    // style.TabBarBorderSize = 2.0f;
 
-    style->WindowMenuButtonPosition = ImGuiDir_None;
-    style->WindowBorderSize = 0.0f;
-    style->WindowMenuButtonPosition = ImGuiDir::ImGuiDir_Right;
-    style->GrabRounding = 4.0f;
-    style->WindowRounding = 6.0f;
-    style->FrameRounding = 4.0f;
-    style->FramePadding = ImVec2(5.0f, 5.0f);
-    style->PopupBorderSize = 0.0f;
-    style->PopupRounding = 4.0f;
-    style->SeparatorTextPadding = ImVec2(5.0f, 5.0f);
-    style->TabBarBorderSize = 2.0f;
-
-    style->Colors[ImGuiCol_WindowBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.0f);
-    style->Colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_Border] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_PopupBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_FrameBg] = ImVec4(0.09f, 0.09f, 0.09f, 1.0f);
-    style->Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.03f, 0.03f, 0.03f, 0.8f);
-    style->Colors[ImGuiCol_FrameBgActive] = ImVec4(0.03f, 0.03f, 0.03f, 1.0f);
-    style->Colors[ImGuiCol_TitleBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_TitleBgActive] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_MenuBarBg] = ImVec4(0.11f, 0.11f, 0.11f, 1.0f);
-    style->Colors[ImGuiCol_Header] = ImVec4(0.08f, 0.08f, 0.08f, 1.0f);
-    style->Colors[ImGuiCol_HeaderHovered] = ImVec4(0.769f, 0.392f, 0.031f, 0.8f);
-    style->Colors[ImGuiCol_HeaderActive] = ImVec4(0.769f, 0.392f, 0.031f, 1.0f);
-    style->Colors[ImGuiCol_Tab] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_TabHovered] = ImVec4(0.552f, 0.552f, 0.552f, 0.5f);
-    style->Colors[ImGuiCol_TabActive] = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-    style->Colors[ImGuiCol_TabUnfocused] = ImVec4(0.06f, 0.06f, 0.06f, 1.0f);
-    style->Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-    style->Colors[ImGuiCol_CheckMark] = ImVec4(0.769f, 0.392f, 0.031f, 1.0f);
-    style->Colors[ImGuiCol_SliderGrab] = ImVec4(0.769f, 0.392f, 0.031f, 0.8f);
-    style->Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.769f, 0.392f, 0.031f, 1.0f);
-    style->Colors[ImGuiCol_Button] = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
-    style->Colors[ImGuiCol_ButtonHovered] = ImVec4(0.769f, 0.392f, 0.031f, 0.5f);
-    style->Colors[ImGuiCol_ButtonActive] = ImVec4(0.769f, 0.392f, 0.031f, 1.0f);
-    style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.769f, 0.392f, 0.031f, 0.35f);
+    ImVec4* colors = ImGui::GetStyle().Colors;
+    colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_WindowBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+    colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_PopupBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_Border] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_FrameBg] = ImVec4(0.09f, 0.09f, 0.09f, 1.00f);
+    colors[ImGuiCol_FrameBgHovered] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_FrameBgActive] = ImVec4(0.03f, 0.03f, 0.03f, 1.00f);
+    colors[ImGuiCol_TitleBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_TitleBgActive] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+    colors[ImGuiCol_MenuBarBg] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+    colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
+    colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
+    colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
+    colors[ImGuiCol_CheckMark] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_SliderGrab] = ImVec4(0.50f, 0.50f, 0.50f, 0.80f);
+    colors[ImGuiCol_SliderGrabActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
+    colors[ImGuiCol_Button] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_ButtonHovered] = ImVec4(0.50f, 0.50f, 0.50f, 0.50f);
+    colors[ImGuiCol_ButtonActive] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+    colors[ImGuiCol_Header] = ImVec4(0.08f, 0.08f, 0.08f, 1.00f);
+    colors[ImGuiCol_HeaderHovered] = ImVec4(0.51f, 0.51f, 0.51f, 0.80f);
+    colors[ImGuiCol_HeaderActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
+    colors[ImGuiCol_Separator] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+    colors[ImGuiCol_SeparatorHovered] = ImVec4(0.50f, 0.50f, 0.50f, 0.78f);
+    colors[ImGuiCol_SeparatorActive] = ImVec4(0.56f, 0.56f, 0.56f, 1.00f);
+    colors[ImGuiCol_ResizeGrip] = ImVec4(0.43f, 0.43f, 0.43f, 0.20f);
+    colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.50f, 0.50f, 0.50f, 0.67f);
+    colors[ImGuiCol_ResizeGripActive] = ImVec4(0.56f, 0.56f, 0.56f, 0.95f);
+    colors[ImGuiCol_TabHovered] = ImVec4(0.55f, 0.55f, 0.55f, 0.50f);
+    colors[ImGuiCol_Tab] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_TabSelected] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_TabSelectedOverline] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_TabDimmed] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+    colors[ImGuiCol_TabDimmedSelected] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+    colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_DockingPreview] = ImVec4(0.26f, 0.59f, 0.98f, 0.70f);
+    colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.66f);
+    colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
+    colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+    colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+    colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.19f, 0.20f, 1.00f);
+    colors[ImGuiCol_TableBorderStrong] = ImVec4(0.31f, 0.31f, 0.35f, 1.00f);
+    colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.23f, 0.25f, 1.00f);
+    colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
+    colors[ImGuiCol_TextLink] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_TextSelectedBg] = ImVec4(0.77f, 0.39f, 0.03f, 0.35f);
+    colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+    colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+    colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+    colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 }
 
 void imgui_shutdown()
@@ -267,7 +245,7 @@ void imgui_begin_frame()
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
-    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+    imgui_global_dockspace = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
 }
 
 void imgui_end_frame(vk::command_buffer* command_buffer)
@@ -282,8 +260,46 @@ void imgui_end_frame(vk::command_buffer* command_buffer)
         ImGui::ShowDemoWindow(&show_demo_window);
     }
 
-    _imgui_log();
+    log_window();
 
     ImGui::Render();
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer->vk_handle);
+}
+
+imgui_docknode imgui_docknode::begin(uint32_t _id)
+{
+    imgui_docknode node{_id};
+    return node;
+}
+
+imgui_docknode imgui_docknode::begin_new(uint32_t _id)
+{
+    imgui_docknode node{_id};
+    ImGui::DockBuilderRemoveNode(_id);
+    ImGui::DockBuilderAddNode(_id, ImGuiDockNodeFlags_None);
+    return node;
+}
+
+void imgui_docknode::end()
+{
+    ImGui::DockBuilderFinish(id);
+}
+
+void imgui_docknode::dock_window(const char* name)
+{
+    ImGui::DockBuilderDockWindow(name, id);
+}
+
+imgui_docknode_split_h imgui_docknode::split_h(float a_fRatio)
+{
+    imgui_docknode_split_h split;
+    ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, a_fRatio, &split.left.id, &split.right.id);
+    return split;
+}
+
+imgui_docknode_split_v imgui_docknode::split_v(float a_fRatio)
+{
+    imgui_docknode_split_v split;
+    ImGui::DockBuilderSplitNode(id, ImGuiDir_Up, a_fRatio, &split.up.id, &split.down.id);
+    return split;
 }

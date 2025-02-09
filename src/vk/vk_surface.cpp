@@ -1,8 +1,8 @@
-#include "surface.h"
+#include "vk/vk_surface.h"
 
 #include "vk/vk_tools.h"
-#include "vk/context.h"
-#include "vk/image.h"
+#include "vk/vk_context.h"
+#include "vk/vk_image.h"
 
 #include "bul/bul.h"
 #include "bul/window.h"

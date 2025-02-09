@@ -51,14 +51,14 @@ add_executable(main
     src/engine/test_compute.cpp
 
     src/vk/vk_tools.cpp
-    src/vk/context.cpp
-    src/vk/surface.cpp
-    src/vk/image.cpp
-    src/vk/buffer.cpp
-    src/vk/shader.cpp
-    src/vk/pipeline.cpp
-    src/vk/descriptor.cpp
-    src/vk/commands.cpp
+    src/vk/vk_context.cpp
+    src/vk/vk_surface.cpp
+    src/vk/vk_image.cpp
+    src/vk/vk_buffer.cpp
+    src/vk/vk_shader.cpp
+    src/vk/vk_pipeline.cpp
+    src/vk/vk_descriptor.cpp
+    src/vk/vk_commands.cpp
 
     bul/src/bul.cpp
     bul/src/input.cpp

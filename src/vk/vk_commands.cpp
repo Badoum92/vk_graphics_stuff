@@ -1,8 +1,8 @@
-#include "vk/commands.h"
+#include "vk/vk_commands.h"
 
-#include "vk/constants.h"
-#include "vk/context.h"
-#include "vk/image.h"
+#include "vk/vk_constants.h"
+#include "vk/vk_context.h"
+#include "vk/vk_image.h"
 
 #include "bul/containers/static_vector.h"
 

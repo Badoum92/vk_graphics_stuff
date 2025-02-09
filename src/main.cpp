@@ -1,5 +1,5 @@
-#include "vk/context.h"
-#include "vk/surface.h"
+#include "vk/vk_context.h"
+#include "vk/vk_surface.h"
 
 #include "test_renderer.h"
 #include "test_compute.h"
@@ -21,7 +21,7 @@
 int main(int, char**)
 {
     bul::window main_window;
-    bul::window::create(&main_window, "window", {1280, 720});
+    bul::window::create(&main_window, "window", {1920, 1080});
     vk::context vk_context = vk::context::create(&main_window, true);
 
     imgui_init(&vk_context, &main_window);
@@ -56,7 +56,7 @@ int main(int, char**)
         ASSERT(vk_context.undefined_descriptor == 0);
     }
 
-#if 0
+#if 1
     test_renderer test_renderer =
         test_renderer::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
 #else
@@ -64,17 +64,33 @@ int main(int, char**)
         test_compute::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
 #endif
 
-    camera camera;
-    camera.position = {0.0f, 0.0f, 1.0f};
+    camera camera = camera::create();
+    camera.position = {0.0f, 1.0f, 1.0f};
     camera.yaw = 0;
     camera.pitch = 0;
     camera.roll = 0;
-    camera.fov_y = bul_radians(90.0f);
+    camera.fov_y = bul_radians(70.0f);
     camera.aspect_ratio = main_window.aspect_ratio();
     camera.near_plane = 1.0f;
     camera.far_plane = 10000.0f;
     camera.compute_view_proj();
     float speed = 50;
+
+    imgui_begin_frame();
+
+    imgui_docknode main_docknode = imgui_docknode::begin_new(imgui_global_dockspace);
+    auto [up, log_docknode] = main_docknode.split_v(0.8f);
+    auto [left, viewport_docknode] = up.split_h(0.1f);
+    auto [debug_docknode, stats_docknode] = left.split_v(0.5f);
+    viewport_docknode.dock_window("Viewport");
+    log_docknode.dock_window("Logs");
+    debug_docknode.dock_window("Debug");
+    stats_docknode.dock_window("Stats");
+    main_docknode.end();
+
+    ImGuiWindowClass viewport_window_class = {};
+    viewport_window_class.ClassId = ImGui::GetID("Viewport");
+    viewport_window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_AutoHideTabBar;
 
     while (!main_window.should_close)
     {
@@ -121,7 +137,7 @@ int main(int, char**)
         }
         if (direction != bul::vec3f{0, 0, 0})
         {
-            direction = bul::normalize(direction);
+            direction = bul::vec_normalize(direction);
             camera.position += direction * speed * bul::frame_delta_s;
         }
 
@@ -132,17 +148,13 @@ int main(int, char**)
             camera_rotation.y = bul::mouse_position_delta.x * bul::frame_delta_s * 10.0f;
             camera_rotation.z = 0.0f;
             camera.rotate(camera_rotation);
-            camera.compute_view_proj();
         }
+
+        camera.compute_view_proj();
 
         vk::frame_context* frame_context;
         frame_context = vk_context.acquire_next_image();
-        if (!frame_context)
-        {
-            // test_renderer.resize(vk_context.surface.extent.width, vk_context.surface.extent.height);
-        }
-
-        imgui_begin_frame();
+        ASSERT(frame_context != nullptr);
 
         // Actual rendering
         test_renderer.draw(frame_context, &camera);
@@ -153,7 +165,8 @@ int main(int, char**)
                                                        bul::handle<vk::image>::invalid(), vk::load_op::dont_care());
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoScrollbar);
+        ImGui::SetNextWindowClass(&viewport_window_class);
+        ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar);
         float window_width = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
         float window_height = ImGui::GetWindowContentRegionMax().y - ImGui::GetWindowContentRegionMin().y;
         vk::image& render_target_image = vk_context.images.get(test_renderer.render_target.image);
@@ -188,10 +201,7 @@ int main(int, char**)
         // ImGui::UpdatePlatformWindows();
         // ImGui::RenderPlatformWindowsDefault();
 
-        if (!vk_context.present(frame_context))
-        {
-            // test_renderer.resize(vk_context.surface.extent.width, vk_context.surface.extent.height);
-        }
+        vk_context.present(frame_context);
 
         if (window_width != test_renderer.width || window_height != test_renderer.height)
         {
@@ -199,6 +209,8 @@ int main(int, char**)
             camera.compute_view_proj();
             test_renderer.resize(window_width, window_height);
         }
+
+        imgui_begin_frame();
 
         FrameMark;
     }

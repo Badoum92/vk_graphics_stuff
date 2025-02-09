@@ -3,15 +3,15 @@
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 
-#include "vk/constants.h"
+#include "vk/vk_constants.h"
 #include "vk/vk_tools.h"
-#include "vk/surface.h"
-#include "vk/image.h"
-#include "vk/buffer.h"
-#include "vk/shader.h"
-#include "vk/pipeline.h"
-#include "vk/descriptor.h"
-#include "vk/commands.h"
+#include "vk/vk_surface.h"
+#include "vk/vk_image.h"
+#include "vk/vk_buffer.h"
+#include "vk/vk_shader.h"
+#include "vk/vk_pipeline.h"
+#include "vk/vk_descriptor.h"
+#include "vk/vk_commands.h"
 
 #include "bul/window.h"
 #include "bul/containers/pool.h"

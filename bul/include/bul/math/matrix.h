@@ -271,15 +271,15 @@ inline mat4f inverse(const mat4f& m)
 
 inline mat4f lookat(bul::vec3f pos, bul::vec3f target, bul::vec3f up, mat4f* inv = nullptr)
 {
-    vec3f z = normalize(target - pos);
-    vec3f x = normalize(cross(z, up));
-    vec3f y = cross(x, z);
+    vec3f z = vec_normalize(target - pos);
+    vec3f x = vec_normalize(vec_cross(z, up));
+    vec3f y = vec_cross(x, z);
 
     // clang-format off
     mat4f ret = mat4f::create({
-        x.x,  x.y,  x.z,  -dot(pos, x),
-        y.x,  y.y,  y.z,  -dot(pos, y),
-        -z.x, -z.y, -z.z, dot(pos, z),
+        x.x,  x.y,  x.z,  -vec_dot(pos, x),
+        y.x,  y.y,  y.z,  -vec_dot(pos, y),
+        -z.x, -z.y, -z.z, vec_dot(pos, z),
         0.0f, 0.0f, 0.0f, 1.0f,
     });
 

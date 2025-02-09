@@ -9,6 +9,8 @@ struct camera
     static constexpr bul::vec3f WORLD_UP = {0, 1, 0};
     static constexpr bul::vec3f WORLD_FORWARD = {0, 0, -1};
 
+    static camera create();
+
     void compute_view_proj();
     void rotate(bul::vec3f angles);
 

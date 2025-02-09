@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vk/image.h"
+#include "vk/vk_image.h"
 
 #include "bul/containers/handle.h"
 #include "bul/containers/static_vector.h"

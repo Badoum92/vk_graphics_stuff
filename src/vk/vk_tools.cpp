@@ -1,6 +1,6 @@
-#include "vk_tools.h"
+#include "vk/vk_tools.h"
 
-#include "vk/context.h"
+#include "vk/vk_context.h"
 
 #include "bul/bul.h"
 
@@ -220,7 +220,8 @@ const char* vk_result_to_str(VkResult result)
         CASE(VK_ERROR_COMPRESSION_EXHAUSTED_EXT);
         CASE(VK_ERROR_INCOMPATIBLE_SHADER_BINARY_EXT);
         CASE(VK_RESULT_MAX_ENUM);
-        default: return "UNKNOWN";
+    default:
+        return "UNKNOWN";
     }
     return "?";
 #undef CASE
