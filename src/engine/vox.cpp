@@ -186,7 +186,7 @@ static void parse_vox_model(uint8_t** data, vox_chunk_header* chunk_header, vox_
 
 bool vox_load(const char* path, vox* vox)
 {
-    bul::file file = bul::file::open(path, bul::file::mode::read);
+    bul::file file = bul::file::open(path, bul::file_mode::read);
     defer
     {
         file.close();
@@ -195,8 +195,8 @@ bool vox_load(const char* path, vox* vox)
     bul::scope_allocator allocator = bul::scope_allocator::create_global();
     uint32_t file_size = file.size();
     uint8_t* data = (uint8_t*)allocator.alloc(file_size);
-    void* end_of_data = data + file_size;
     file.read(data, file_size);
+    void* end_of_data = data + file_size;
 
     vox_header* vox_header = parse_vox_header(&data);
     if (strncmp(vox_header->magic, "VOX ", 4) != 0)
@@ -217,6 +217,7 @@ bool vox_load(const char* path, vox* vox)
     {
         vox->n_models = *(uint32_t*)data;
         data += sizeof(uint32_t);
+        vox->models = (vox_model*)malloc(vox->n_models * sizeof(*vox->models));
         current_model = vox->models;
         chunk = parse_vox_chunk_header(&data);
     }

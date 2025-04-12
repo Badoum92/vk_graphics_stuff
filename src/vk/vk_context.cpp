@@ -81,7 +81,7 @@ static void create_instance(context* context, bool enable_validation)
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "vk_graphics_stuff";
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion = VK_API_VERSION_1_3;
+    app_info.apiVersion = VK_API_VERSION_1_4;
 
     if (enable_validation)
     {

@@ -12,7 +12,7 @@ bul::handle<shader> context::create_shader(const char* path)
 {
     bul::scope_allocator scope_allocator = bul::scope_allocator::create_global();
 
-    bul::file file = bul::file::open(path, bul::file::mode::read);
+    bul::file file = bul::file::open(path, bul::file_mode::read);
     defer
     {
         file.close();

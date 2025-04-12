@@ -375,8 +375,6 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
                                     vk::load_op::clear_depth());
 
     vk::graphics_state graphics_state = vk::graphics_state::create();
-    graphics_state.cull_back_faces = false;
-    graphics_state.depth_compare_op = VK_COMPARE_OP_GREATER;
     command_buffer->bind_graphics_pipeline(graphics_pipeline_handle, graphics_state);
 
     command_buffer->bind_descriptor_buffer(graphics_pipeline_handle);

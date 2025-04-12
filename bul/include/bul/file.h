@@ -4,17 +4,17 @@
 
 namespace bul
 {
+enum class file_mode
+{
+    read,
+    write,
+    read_write
+};
+
 struct file
 {
-    enum class mode
-    {
-        read,
-        write,
-        read_write
-    };
-
-    static file open(const char* path, mode mode);
-    static file open_no_buffering(const char* path, mode mode);
+    static file open(const char* path, file_mode mode);
+    static file open_no_buffering(const char* path, file_mode mode);
 
     void close();
 

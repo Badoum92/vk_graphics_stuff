@@ -6,35 +6,35 @@
 
 namespace bul
 {
-static DWORD get_win32_access_mode(file::mode mode)
+static DWORD get_win32_access_mode(file_mode mode)
 {
     switch (mode)
     {
-    case file::mode::read:
+    case file_mode::read:
         return GENERIC_READ;
-    case file::mode::write:
+    case file_mode::write:
         return GENERIC_WRITE;
-    case file::mode::read_write:
+    case file_mode::read_write:
         return GENERIC_READ | GENERIC_WRITE;
     }
     return 0;
 }
 
-static DWORD get_win32_create_mode(file::mode mode)
+static DWORD get_win32_create_mode(file_mode mode)
 {
     switch (mode)
     {
-    case file::mode::read:
+    case file_mode::read:
         return OPEN_EXISTING;
-    case file::mode::write:
+    case file_mode::write:
         return OPEN_ALWAYS;
-    case file::mode::read_write:
+    case file_mode::read_write:
         return OPEN_ALWAYS;
     }
     return 0;
 }
 
-file file::open(const char* path, mode mode)
+file file::open(const char* path, file_mode mode)
 {
     HANDLE handle = CreateFileA(path, get_win32_access_mode(mode), 0, NULL, get_win32_create_mode(mode),
                                 FILE_ATTRIBUTE_NORMAL, NULL);
@@ -42,7 +42,7 @@ file file::open(const char* path, mode mode)
     return file{handle};
 }
 
-file file::open_no_buffering(const char* path, mode mode)
+file file::open_no_buffering(const char* path, file_mode mode)
 {
     HANDLE handle = CreateFileA(path, get_win32_access_mode(mode), 0, NULL, get_win32_create_mode(mode),
                                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING, NULL);

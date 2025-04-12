@@ -189,6 +189,7 @@ int main(int, char**)
             ImGui::Text("%d %d", bul::mouse_position.x, bul::mouse_position.y);
             ImGui::TreePop();
         }
+
         ImGui::End();
 
         imgui_end_frame(frame_context->command_buffer);
