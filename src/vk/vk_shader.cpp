@@ -2,33 +2,31 @@
 
 #include "vk/vk_context.h"
 
-#include "bul/bul.h"
-#include "bul/file.h"
-#include "bul/allocators/scope_allocator.h"
+#include "core/core.h"
+#include "core/file.h"
+#include "core/memory/linear_allocator.h"
 
 namespace vk
 {
 bul::handle<shader> context::create_shader(const char* path)
 {
-    bul::scope_allocator scope_allocator = bul::scope_allocator::create_global();
+    linear_allocator* allocator = linear_allocator_get_global();
 
-    bul::file file = bul::file::open(path, bul::file_mode::read);
-    defer
-    {
-        file.close();
-    };
-    uint32_t file_size = file.size();
-    uint8_t* file_data = (uint8_t*)scope_allocator.alloc(file_size);
-    file.read(file_data, file_size);
+    file file = file_open_read(path);
+    uint32_t size = (uint32_t)file_get_size(&file);
+    uint8_t* data = (uint8_t*)linear_alloc(allocator, size);
+    file_read(&file, data, size);
+    file_close(&file);
 
     VkShaderModuleCreateInfo shader_info = {};
     shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_info.codeSize = file_size;
-    shader_info.pCode = (uint32_t*)file_data;
+    shader_info.codeSize = size;
+    shader_info.pCode = (uint32_t*)data;
 
     VkShaderModule vk_shader = VK_NULL_HANDLE;
     VK_CHECK(vkCreateShaderModule(device, &shader_info, nullptr, &vk_shader));
 
+    linear_free(allocator, data);
     return shaders.insert(shader{vk_shader, path});
 }
 

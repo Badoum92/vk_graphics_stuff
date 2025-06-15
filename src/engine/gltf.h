@@ -3,8 +3,8 @@
 #include <string_view>
 #include <vector>
 
-#include "bul/math/vector.h"
-#include "bul/math/matrix.h"
+#include "core/math/vector.h"
+#include "core/math/matrix.h"
 
 namespace gltf
 {

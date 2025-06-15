@@ -13,8 +13,9 @@
 #include "vk/vk_descriptor.h"
 #include "vk/vk_commands.h"
 
-#include "bul/window.h"
-#include "bul/containers/pool.h"
+#include "core/containers/pool.h"
+
+struct window;
 
 namespace vk
 {
@@ -32,7 +33,7 @@ struct frame_context
 
 struct context
 {
-    static context create(bul::window* _window, bool enable_validation);
+    static context create(window* _window, bool enable_validation);
     void destroy();
 
     void wait_idle();
@@ -45,7 +46,7 @@ struct context
     frame_context frame_contexts[max_frames_in_flight];
     uint32_t current_frame = 0;
 
-    bul::window* window;
+    window* window;
 
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
@@ -69,7 +70,7 @@ struct context
 
     command_pool transfer_commands;
 
-    VmaAllocator allocator = VK_NULL_HANDLE;
+    VmaAllocator vma_allocator = VK_NULL_HANDLE;
 
     bul::handle<sampler> default_sampler;
     bul::handle<image> undefined_image_handle;

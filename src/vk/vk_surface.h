@@ -2,8 +2,7 @@
 
 #include "vk/vk_image.h"
 
-#include "bul/containers/handle.h"
-#include "bul/containers/static_vector.h"
+#include "core/containers/handle.h"
 
 namespace vk
 {
@@ -25,6 +24,7 @@ struct surface
     VkExtent2D extent;
     VkPresentModeKHR present_mode;
     VkSurfaceFormatKHR format;
-    bul::static_vector<bul::handle<image>, max_swapchain_images> images;
+    bul::handle<image> images[max_swapchain_images];
+    uint32_t num_images;
 };
 } // namespace vk

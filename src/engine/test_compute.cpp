@@ -2,8 +2,8 @@
 
 #include "camera.h"
 
-#include "bul/math/matrix.h"
-#include "bul/log.h"
+#include "core/math/matrix.h"
+#include "core/log.h"
 
 struct push_constant
 {
@@ -13,7 +13,7 @@ struct push_constant
 
 struct uniform_buffer_data
 {
-    bul::mat4f view_proj;
+    mat4f view_proj;
     uint32_t width;
     uint32_t height;
 };

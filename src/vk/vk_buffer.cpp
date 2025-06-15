@@ -3,7 +3,7 @@
 #include "vk/vk_tools.h"
 #include "vk/vk_context.h"
 
-#include "bul/bul.h"
+#include "core/core.h"
 
 namespace vk
 {
@@ -28,7 +28,7 @@ bul::handle<buffer> context::create_buffer(const buffer_description& description
 
     VkBuffer vk_buffer = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;
-    VK_CHECK(vmaCreateBuffer(allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr));
+    VK_CHECK(vmaCreateBuffer(vma_allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr));
 
     VkBufferDeviceAddressInfo buffer_device_address_info = {};
     buffer_device_address_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -38,7 +38,7 @@ bul::handle<buffer> context::create_buffer(const buffer_description& description
     void* mapped_data = nullptr;
     if (host_accessible)
     {
-        vmaMapMemory(allocator, allocation, &mapped_data);
+        vmaMapMemory(vma_allocator, allocation, &mapped_data);
     }
 
     if (description.name)
@@ -54,12 +54,12 @@ void context::destroy_buffer(bul::handle<buffer> handle)
     buffer& buffer = buffers.get(handle);
     if (buffer.mapped_data != nullptr)
     {
-        vmaUnmapMemory(allocator, buffer.allocation);
+        vmaUnmapMemory(vma_allocator, buffer.allocation);
         buffer.mapped_data = nullptr;
     }
     if (buffer.allocation != VK_NULL_HANDLE)
     {
-        vmaDestroyBuffer(allocator, buffer.vk_handle, buffer.allocation);
+        vmaDestroyBuffer(vma_allocator, buffer.vk_handle, buffer.allocation);
         buffer.allocation = VK_NULL_HANDLE;
         buffer.vk_handle = VK_NULL_HANDLE;
     }

@@ -4,8 +4,7 @@
 
 #include "vk/vk_constants.h"
 
-#include "bul/containers/handle.h"
-#include "bul/containers/static_vector.h"
+#include "core/containers/handle.h"
 
 namespace vk
 {
@@ -30,8 +29,9 @@ struct graphics_pipeline_description
 {
     bul::handle<shader> vertex_shader;
     bul::handle<shader> fragment_shader;
-    bul::static_vector<VkFormat, max_color_attachments> color_attachment_formats;
-    VkFormat depth_attachment_format;
+    VkFormat color_formats[max_color_attachments];
+    uint32_t num_color_formats;
+    VkFormat depth_format;
     uint32_t push_constant_size;
     const char* name;
 };
@@ -39,8 +39,9 @@ struct graphics_pipeline_description
 struct graphics_pipeline
 {
     VkPipelineLayout layout;
-    bul::static_vector<VkPipeline, max_graphics_states> pipelines;
-    bul::static_vector<graphics_state, max_graphics_states> graphics_states;
+    VkPipeline pipelines[max_graphics_states];
+    graphics_state graphics_states[max_graphics_states];
+    uint32_t num_graphics_states;
     graphics_pipeline_description description;
 };
 

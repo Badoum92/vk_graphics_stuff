@@ -8,11 +8,13 @@
 #include "camera.h"
 #include "image.h"
 
-#include "bul/math/math.h"
-#include "bul/time.h"
-#include "bul/window.h"
-#include "bul/input.h"
-#include "bul/log.h"
+#include "core/math/math.h"
+#include "core/time.h"
+#include "core/window.h"
+#include "core/input.h"
+#include "core/log.h"
+#include "core/memory/linear_allocator.h"
+#include "core/thread.h"
 
 #include "imgui.h"
 
@@ -20,8 +22,20 @@
 
 int main(int, char**)
 {
-    bul::window main_window;
-    bul::window::create(&main_window, "window", {1920, 1080});
+    thread_init();
+
+    char module_directory[256];
+    GetModuleFileNameA(nullptr, module_directory, sizeof(module_directory));
+    char* last_separator = strrchr(module_directory, '\\');
+    if (last_separator)
+        *last_separator = 0;
+    SetCurrentDirectoryA(module_directory);
+
+    linear_allocator linear_allocator = linear_allocator_create(MB(4));
+    linear_allocator_set_global(&linear_allocator);
+
+    window main_window;
+    window_create(&main_window, "window", {1920, 1080});
     vk::context vk_context = vk::context::create(&main_window, true);
 
     imgui_init(&vk_context, &main_window);
@@ -69,8 +83,8 @@ int main(int, char**)
     camera.yaw = 0;
     camera.pitch = 0;
     camera.roll = 0;
-    camera.fov_y = bul_radians(70.0f);
-    camera.aspect_ratio = main_window.aspect_ratio();
+    camera.fov_y = math_radians(70.0f);
+    camera.aspect_ratio = window_aspect_ratio(&main_window);
     camera.near_plane = 1.0f;
     camera.far_plane = 10000.0f;
     camera.compute_view_proj();
@@ -92,60 +106,65 @@ int main(int, char**)
     viewport_window_class.ClassId = ImGui::GetID("Viewport");
     viewport_window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_AutoHideTabBar;
 
+    float avg_frame_ms = 0.0f;
+
     while (!main_window.should_close)
     {
         ZoneScoped;
 
-        bul::time_update();
+        linear_reset_globals();
 
-        bul::window::poll_events();
+        time_update();
 
-        if (bul::key_pressed(bul::key::escape))
+        window_poll_events();
+
+        if (is_key_pressed(KEY_ESCAPE))
         {
             break;
         }
 
-        if (bul::key_pressed(bul::key::l_alt))
+        if (is_key_pressed(KEY_L_ALT))
         {
-            main_window.show_cursor(!main_window.is_cursor_visible);
+            window_show_cursor(&main_window, !main_window.is_cursor_visible);
         }
 
-        bul::vec3f direction = {0, 0, 0};
-        if (bul::key_down(bul::key::Q))
+        vec3f direction = {0, 0, 0};
+        if (is_key_down(KEY_Q))
         {
             direction -= camera.right;
         }
-        if (bul::key_down(bul::key::D))
+        if (is_key_down(KEY_D))
         {
             direction += camera.right;
         }
-        if (bul::key_down(bul::key::Z))
+        if (is_key_down(KEY_Z))
         {
             direction += {camera.forward.x, 0, camera.forward.z};
         }
-        if (bul::key_down(bul::key::S))
+        if (is_key_down(KEY_S))
         {
             direction -= {camera.forward.x, 0, camera.forward.z};
         }
-        if (bul::key_down(bul::key::space))
+        if (is_key_down(KEY_SPACE))
         {
             direction += camera::WORLD_UP;
         }
-        if (bul::key_down(bul::key::C))
+        if (is_key_down(KEY_C))
         {
             direction -= camera::WORLD_UP;
         }
-        if (direction != bul::vec3f{0, 0, 0})
+        if (direction != vec3f{0, 0, 0})
         {
-            direction = bul::vec_normalize(direction);
-            camera.position += direction * speed * bul::frame_delta_s;
+            direction = vec_normalize(direction);
+            camera.position += direction * speed * time_get_delta_s();
         }
 
         if (!main_window.is_cursor_visible)
         {
-            bul::vec3f camera_rotation;
-            camera_rotation.x = bul::mouse_position_delta.y * bul::frame_delta_s * 10.0f;
-            camera_rotation.y = bul::mouse_position_delta.x * bul::frame_delta_s * 10.0f;
+            vec2i mouse_delta = mouse_get_delta();
+            vec3f camera_rotation;
+            camera_rotation.x = mouse_delta.y * time_get_delta_s() * 10.0f;
+            camera_rotation.y = mouse_delta.x * time_get_delta_s() * 10.0f;
             camera_rotation.z = 0.0f;
             camera.rotate(camera_rotation);
         }
@@ -167,26 +186,29 @@ int main(int, char**)
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::SetNextWindowClass(&viewport_window_class);
         ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar);
-        float window_width = ImGui::GetWindowContentRegionMax().x - ImGui::GetWindowContentRegionMin().x;
-        float window_height = ImGui::GetWindowContentRegionMax().y - ImGui::GetWindowContentRegionMin().y;
+        ImVec2 window_size = ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin();
+        uint32_t window_width = (uint32_t)window_size.x;
+        uint32_t window_height = (uint32_t)window_size.y;
         vk::image& render_target_image = vk_context.images.get(test_renderer.render_target.image);
-        ImGui::Image((ImTextureID)test_renderer.render_target.vk_descriptorset,
-                     ImVec2(render_target_image.description.width, render_target_image.description.height));
+        ImGui::Image(
+            (ImTextureID)test_renderer.render_target.vk_descriptorset,
+            ImVec2((float)render_target_image.description.width, (float)render_target_image.description.height));
         ImGui::End();
         ImGui::PopStyleVar();
 
         ImGui::Begin("Stats");
-        float avg_frame_time_ms = bul::ticks_to_ms_f(bul::avg_frame_delta_ticks);
-        ImGui::Text("FPS:  %u", (uint32_t)(1000.0f / avg_frame_time_ms));
-        ImGui::Text("Time: %g ms", avg_frame_time_ms);
+        avg_frame_ms = avg_frame_ms * 0.9f + time_to_ms(time_get_delta()) * 0.1f;
+        ImGui::Text("FPS:  %u", (uint32_t)(1000.0f / avg_frame_ms));
+        ImGui::Text("Time: %g ms", avg_frame_ms);
         ImGui::End();
 
         ImGui::Begin("Debug");
         ImGui::InputFloat("Speed", &speed);
         if (ImGui::TreeNode("Input"))
         {
+            vec2i mouse_position = mouse_get_position();
             ImGui::Text("Mouse");
-            ImGui::Text("%d %d", bul::mouse_position.x, bul::mouse_position.y);
+            ImGui::Text("%d %d", mouse_position.x, mouse_position.y);
             ImGui::TreePop();
         }
 
@@ -206,7 +228,7 @@ int main(int, char**)
 
         if (window_width != test_renderer.width || window_height != test_renderer.height)
         {
-            camera.aspect_ratio = window_width / window_height;
+            camera.aspect_ratio = window_size.x / window_size.y;
             camera.compute_view_proj();
             test_renderer.resize(window_width, window_height);
         }
@@ -223,5 +245,7 @@ int main(int, char**)
     imgui_shutdown();
 
     vk_context.destroy();
-    main_window.destroy();
+    window_destroy(&main_window);
+
+    linear_allocator_destroy(&linear_allocator);
 }

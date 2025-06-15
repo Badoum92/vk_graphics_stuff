@@ -43,12 +43,8 @@ struct vox_model
 
 struct vox
 {
-    union
-    {
-        vox_model model;
-        vox_model* models;
-    };
-    uint32_t n_models;
+    uint32_t num_models;
+    vox_model* models;
     vox_matl materials[256];
 };
 

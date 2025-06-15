@@ -4,10 +4,9 @@
 #include "vk/vk_context.h"
 #include "vk/vk_image.h"
 
-#include "bul/bul.h"
-#include "bul/window.h"
-#include "bul/containers/handle.h"
-#include "bul/containers/static_vector.h"
+#include "core/core.h"
+#include "core/window.h"
+#include "core/containers/handle.h"
 
 namespace vk
 {
@@ -66,50 +65,50 @@ void surface::create_swapchain(context* context)
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context->physical_device, vk_handle, &capabilities));
     extent = capabilities.currentExtent;
 
-    uint32_t present_mode_count = 0;
+    uint32_t num_present_modes = 0;
     VK_CHECK(
-        vkGetPhysicalDeviceSurfacePresentModesKHR(context->physical_device, vk_handle, &present_mode_count, nullptr));
-    bul::static_vector<VkPresentModeKHR, 16> present_modes;
-    present_modes.resize(present_mode_count);
-    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(context->physical_device, vk_handle, &present_mode_count,
-                                                       present_modes.data));
+        vkGetPhysicalDeviceSurfacePresentModesKHR(context->physical_device, vk_handle, &num_present_modes, nullptr));
+    ASSERT(num_present_modes <= 16);
+    VkPresentModeKHR present_modes[16];
+    VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(context->physical_device, vk_handle, &num_present_modes,
+                                                       present_modes));
 
     present_mode = VK_PRESENT_MODE_FIFO_KHR;
-    for (const auto& mode : present_modes)
+    for (uint32_t i = 0; i < num_present_modes; ++i)
     {
-        if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+        if (present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
         {
-            present_mode = mode;
+            present_mode = present_modes[i];
             break;
         }
     }
 
-    uint32_t format_count = 0;
-    bul::static_vector<VkSurfaceFormatKHR, 16> formats;
-    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(context->physical_device, vk_handle, &format_count, nullptr));
-    formats.resize(format_count);
-    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(context->physical_device, vk_handle, &format_count, formats.data));
+    VkSurfaceFormatKHR formats[16];
+    uint32_t num_formats = 0;
+    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(context->physical_device, vk_handle, &num_formats, nullptr));
+    ASSERT(num_formats <= 16);
+    VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(context->physical_device, vk_handle, &num_formats, formats));
 
     format = formats[0];
-    for (const auto& surface_format : formats)
+    for (uint32_t i = 0; i < num_formats; ++i)
     {
-        if (surface_format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (formats[i].format == VK_FORMAT_B8G8R8A8_UNORM && formats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
-            format = surface_format;
+            format = formats[i];
             break;
         }
     }
 
-    uint32_t image_count = capabilities.minImageCount + 2;
-    if (capabilities.maxImageCount > 0 && image_count > capabilities.maxImageCount)
+    uint32_t min_image_count = capabilities.minImageCount + 2;
+    if (capabilities.maxImageCount > 0 && min_image_count > capabilities.maxImageCount)
     {
-        image_count = capabilities.maxImageCount;
+        min_image_count = capabilities.maxImageCount;
     }
 
     VkSwapchainCreateInfoKHR create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     create_info.surface = vk_handle;
-    create_info.minImageCount = image_count;
+    create_info.minImageCount = min_image_count;
     create_info.imageFormat = format.format;
     create_info.imageColorSpace = format.colorSpace;
     create_info.imageExtent = extent;
@@ -126,16 +125,12 @@ void surface::create_swapchain(context* context)
 
     VK_CHECK(vkCreateSwapchainKHR(context->device, &create_info, nullptr, &swapchain));
 
-    image_count = 0;
-    VK_CHECK(vkGetSwapchainImagesKHR(context->device, swapchain, &image_count, nullptr));
-    ASSERT(image_count <= max_swapchain_images);
-    bul::static_vector<VkImage, 16> vk_images;
-    vk_images.resize(image_count);
-    VK_CHECK(vkGetSwapchainImagesKHR(context->device, swapchain, &image_count, vk_images.data));
+    VK_CHECK(vkGetSwapchainImagesKHR(context->device, swapchain, &num_images, nullptr));
+    ASSERT(num_images <= max_swapchain_images);
+    VkImage vk_images[max_swapchain_images];
+    VK_CHECK(vkGetSwapchainImagesKHR(context->device, swapchain, &num_images, vk_images));
 
-    images.resize(image_count);
-
-    for (uint32_t i = 0; i < image_count; ++i)
+    for (uint32_t i = 0; i < num_images; ++i)
     {
         image_description image_desc = {};
         image_desc.width = extent.width;

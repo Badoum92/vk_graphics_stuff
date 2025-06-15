@@ -6,8 +6,8 @@
 #include "vk/vk_buffer.h"
 #include "vk/vk_pipeline.h"
 
-#include "bul/containers/handle.h"
-#include "bul/containers/vector.h"
+#include "core/containers/handle.h"
+#include "core/containers/vector.h"
 
 namespace vk
 {

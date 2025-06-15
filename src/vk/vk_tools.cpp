@@ -2,7 +2,7 @@
 
 #include "vk/vk_context.h"
 
-#include "bul/bul.h"
+#include "core/core.h"
 
 namespace vk
 {
@@ -223,7 +223,6 @@ const char* vk_result_to_str(VkResult result)
     default:
         return "UNKNOWN";
     }
-    return "?";
 #undef CASE
 }
 } // namespace vk

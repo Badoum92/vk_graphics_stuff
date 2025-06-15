@@ -2,7 +2,7 @@
 
 #include <stb/stb_image.h>
 
-#include "bul/bul.h"
+#include "core/core.h"
 
 image image::from_file(const char* path)
 {

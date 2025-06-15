@@ -3,7 +3,7 @@
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 
-#include "bul/containers/handle.h"
+#include "core/containers/handle.h"
 
 namespace vk
 {
@@ -20,7 +20,7 @@ constexpr VkBufferUsageFlags image_descriptor_buffer_usage = VK_BUFFER_USAGE_RES
 
 struct buffer_description
 {
-    VkDeviceSize size = 0;
+    uint32_t size = 0;
     VkBufferUsageFlags usage = storage_buffer_usage;
     VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_AUTO;
     const char* name = nullptr;

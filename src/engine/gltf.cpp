@@ -1,8 +1,8 @@
 #if 0
 #include "gltf.h"
 
-#include "bul/bul.h"
-#include "bul/file.h"
+#include "core/core.h"
+#include "core/file.h"
 
 #include <iostream>
 #include <rapidjson/rapidjson.h>

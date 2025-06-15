@@ -4,8 +4,6 @@
 #include "vk/vk_context.h"
 #include "vk/vk_image.h"
 
-#include "bul/containers/static_vector.h"
-
 namespace vk
 {
 void command_buffer::begin()
@@ -34,7 +32,7 @@ void command_buffer::bind_descriptor_buffer(bul::handle<graphics_pipeline> pipel
     descriptor_buffer_binding_infos[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
     descriptor_buffer_binding_infos[1].address = image_descriptor_buffer.device_address;
     descriptor_buffer_binding_infos[1].usage = image_descriptor_buffer_usage;
-    vkCmdBindDescriptorBuffersEXT(vk_handle, BUL_ARRAY_SIZE(descriptor_buffer_binding_infos),
+    vkCmdBindDescriptorBuffersEXT(vk_handle, ARRAY_SIZE(descriptor_buffer_binding_infos),
                                   descriptor_buffer_binding_infos);
 
     VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -59,7 +57,7 @@ void command_buffer::bind_descriptor_buffer(bul::handle<compute_pipeline> pipeli
     descriptor_buffer_binding_infos[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
     descriptor_buffer_binding_infos[1].address = image_descriptor_buffer.device_address;
     descriptor_buffer_binding_infos[1].usage = image_descriptor_buffer_usage;
-    vkCmdBindDescriptorBuffersEXT(vk_handle, BUL_ARRAY_SIZE(descriptor_buffer_binding_infos),
+    vkCmdBindDescriptorBuffersEXT(vk_handle, ARRAY_SIZE(descriptor_buffer_binding_infos),
                                   descriptor_buffer_binding_infos);
 
     VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
@@ -74,14 +72,15 @@ void command_buffer::bind_descriptor_buffer(bul::handle<compute_pipeline> pipeli
 void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachments, bul::span<load_op> color_load_ops,
                                      bul::handle<image> depth_attachment, load_op depth_load_op)
 {
-    bul::static_vector<VkRenderingAttachmentInfo, max_color_attachments> color_attachment_infos;
     ASSERT(color_attachments.size <= max_color_attachments);
     ASSERT(color_attachments.size == color_load_ops.size);
+
+    VkRenderingAttachmentInfo color_attachment_infos[max_color_attachments];
 
     for (uint32_t i = 0; i < color_attachments.size; ++i)
     {
         image& image = context->images.get(color_attachments[i]);
-        VkRenderingAttachmentInfo& attachment_info = color_attachment_infos.push_back();
+        VkRenderingAttachmentInfo& attachment_info = color_attachment_infos[i];
         memset(&attachment_info, 0, sizeof(attachment_info));
         attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         attachment_info.pNext = nullptr;
@@ -113,7 +112,7 @@ void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachm
     rendering_info.renderArea.extent = {image.description.width, image.description.height};
     rendering_info.layerCount = 1;
     rendering_info.colorAttachmentCount = color_attachments.size;
-    rendering_info.pColorAttachments = color_attachment_infos.data;
+    rendering_info.pColorAttachments = color_attachment_infos;
     rendering_info.pDepthAttachment = depth_attachment ? &depth_attachment_info : nullptr;
 
     vkCmdBeginRendering(vk_handle, &rendering_info);

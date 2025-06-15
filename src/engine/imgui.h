@@ -2,7 +2,7 @@
 
 #include <volk.h>
 
-#include "bul/containers/handle.h"
+#include "core/containers/handle.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
@@ -16,10 +16,7 @@ struct command_buffer;
 struct image;
 } // namespace vk
 
-namespace bul
-{
 struct window;
-}
 
 struct imgui_texture
 {
@@ -29,7 +26,7 @@ struct imgui_texture
 
 extern ImGuiID imgui_global_dockspace;
 
-void imgui_init(vk::context* context, bul::window* window);
+void imgui_init(vk::context* context, window* window);
 void imgui_shutdown();
 
 void imgui_begin_frame();

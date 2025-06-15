@@ -6,8 +6,7 @@
 #include "vk/vk_image.h"
 #include "vk/vk_constants.h"
 
-#include "bul/containers/handle.h"
-#include "bul/containers/static_vector.h"
+#include "core/containers/handle.h"
 
 namespace vk
 {
@@ -30,8 +29,9 @@ struct descriptor_set
 
     VkDescriptorSetLayout layout;
     bul::handle<buffer> buffer_handle;
-    VkDeviceSize size;
-    VkDeviceSize offset;
-    bul::static_vector<uint32_t, max_binless_descriptors> free_descriptors;
+    uint32_t size;
+    uint32_t offset;
+    uint32_t free_descriptors[max_binless_descriptors];
+    uint32_t num_free_descriptors;
 };
 } // namespace vk

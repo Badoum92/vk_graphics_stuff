@@ -1,15 +1,15 @@
 #include "imgui.h"
 
 #include "vk/vk_context.h"
-#include "bul/containers/vector.h"
-#include "bul/input.h"
-#include "bul/log.h"
+#include "core/input.h"
+#include "core/log.h"
+#include "core/window.h"
 
 ImGuiID imgui_global_dockspace;
 
 struct log_data
 {
-    bul::log_level log_level;
+    LOG_LEVEL log_level;
     uint32_t text_size;
     uint32_t text_capacity;
     int line;
@@ -23,8 +23,7 @@ static log_data logs[max_logs];
 static uint32_t log_index = 0;
 static uint32_t log_count = 0;
 
-static void imgui_log(bul::log_level level, const char* time, const char* file, int line, const char* fmt,
-                      va_list va_args)
+static void imgui_log(LOG_LEVEL level, const char* time, const char* file, int line, const char* fmt, va_list va_args)
 {
     log_data* log_data = &logs[log_index];
     log_index = (log_index + 1) % max_logs;
@@ -65,10 +64,10 @@ static void log_window()
         ImGui::SameLine();
         if (ImGui::Button("Test"))
         {
-            log_debug("debug");
-            log_info("info");
-            log_warning("warn");
-            log_error("error");
+            LOG_DEBUG("debug");
+            LOG_INFO("info");
+            LOG_WARNING("warn");
+            LOG_ERROR("error");
         }
 
         ImGui::BeginChild("Text");
@@ -85,19 +84,19 @@ static void log_window()
             const char* level_text = "";
             switch (log_data->log_level)
             {
-            case bul::log_level_debug:
+            case LOG_LEVEL_DEBUG:
                 level_color = {0.16f, 0.65f, 0.93f, 1.0f};
                 level_text = "[DEBUG]";
                 break;
-            case bul::log_level_info:
+            case LOG_LEVEL_INFO:
                 level_color = {0.15f, 0.93f, 0.30f, 1.0f};
                 level_text = "[INFO] ";
                 break;
-            case bul::log_level_warning:
+            case LOG_LEVEL_WARNING:
                 level_color = {0.96f, 0.8f, 0.09f, 1.0f};
                 level_text = "[WARN] ";
                 break;
-            case bul::log_level_error:
+            case LOG_LEVEL_ERROR:
                 level_color = {0.9f, 0.2f, 0.2f, 1.0f};
                 level_text = "[ERROR]";
                 break;
@@ -121,10 +120,10 @@ static void log_window()
     ImGui::End();
 }
 
-void imgui_init(vk::context* context, bul::window* window)
+void imgui_init(vk::context* context, window* window)
 {
     memset(logs, 0, sizeof(logs));
-    bul::add_log_function(imgui_log);
+    add_log_function(imgui_log);
 
     ImGui::CreateContext();
     ImGui_ImplVulkan_InitInfo imgui_vulkan = {};
@@ -133,8 +132,8 @@ void imgui_init(vk::context* context, bul::window* window)
     imgui_vulkan.Device = context->device;
     imgui_vulkan.Queue = context->graphics_queue;
     imgui_vulkan.DescriptorPool = context->descriptor_pool;
-    imgui_vulkan.MinImageCount = context->surface.images.size;
-    imgui_vulkan.ImageCount = context->surface.images.size;
+    imgui_vulkan.MinImageCount = context->surface.num_images;
+    imgui_vulkan.ImageCount = context->surface.num_images;
     imgui_vulkan.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     imgui_vulkan.UseDynamicRendering = true;
     imgui_vulkan.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
@@ -144,7 +143,6 @@ void imgui_init(vk::context* context, bul::window* window)
     ImGui_ImplVulkan_Init(&imgui_vulkan);
     ImGui_ImplWin32_Init(window->handle);
     ImGui::GetIO().Fonts->AddFontFromFileTTF("resources/CascadiaCode.ttf", 15);
-    ImGui_ImplVulkan_CreateFontsTexture();
     ImGui::GetIO().DisplaySize.x = (float)window->size.x;
     ImGui::GetIO().DisplaySize.y = (float)window->size.y;
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -251,7 +249,7 @@ void imgui_begin_frame()
 void imgui_end_frame(vk::command_buffer* command_buffer)
 {
     static bool show_demo_window = false;
-    if (bul::key_pressed(bul::key::F2))
+    if (is_key_pressed(KEY_F2))
     {
         show_demo_window = !show_demo_window;
     }

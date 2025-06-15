@@ -3,9 +3,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "bul/bul.h"
-#include "bul/file.h"
-#include "bul/allocators/scope_allocator.h"
+#include "core/core.h"
+#include "core/file.h"
+#include "core/memory/linear_allocator.h"
 
 struct vox_header
 {
@@ -125,7 +125,7 @@ static void parse_vox_matl(uint8_t** data, vox_chunk_header* chunk_header, vox* 
         memcpy(buf, *data, val_size);
         buf[val_size] = 0;
         *data += val_size;
-        float val = atof(buf);
+        float val = strtof(buf, nullptr);
         if (strncmp(key.str, "_rough", key.size) == 0)
         {
             matl.rough = val;
@@ -186,46 +186,41 @@ static void parse_vox_model(uint8_t** data, vox_chunk_header* chunk_header, vox_
 
 bool vox_load(const char* path, vox* vox)
 {
-    bul::file file = bul::file::open(path, bul::file_mode::read);
-    defer
-    {
-        file.close();
-    };
-
-    bul::scope_allocator allocator = bul::scope_allocator::create_global();
-    uint32_t file_size = file.size();
-    uint8_t* data = (uint8_t*)allocator.alloc(file_size);
-    file.read(data, file_size);
-    void* end_of_data = data + file_size;
+    file file = file_open_read(path);
+    linear_allocator* allocator = linear_allocator_get_global();
+    uint32_t size = (uint32_t)file_get_size(&file);
+    uint8_t* data = (uint8_t*)linear_alloc(allocator, size);
+    file_read(&file, data, size);
+    file_close(&file);
+    void* end_of_data = data + size;
 
     vox_header* vox_header = parse_vox_header(&data);
     if (strncmp(vox_header->magic, "VOX ", 4) != 0)
     {
+        linear_free(allocator, data);
         return false;
     }
 
     vox_chunk_header* chunk = parse_vox_chunk_header(&data);
     if (strncmp(chunk->id, "MAIN", 4) != 0)
     {
+        linear_free(allocator, data);
         return false;
     }
 
     vox_model* current_model;
 
+    vox->num_models = 1;
     chunk = parse_vox_chunk_header(&data);
     if (strncmp(chunk->id, "PACK", 4) == 0)
     {
-        vox->n_models = *(uint32_t*)data;
+        vox->num_models = *(uint32_t*)data;
         data += sizeof(uint32_t);
-        vox->models = (vox_model*)malloc(vox->n_models * sizeof(*vox->models));
-        current_model = vox->models;
         chunk = parse_vox_chunk_header(&data);
     }
-    else
-    {
-        vox->n_models = 1;
-        current_model = &vox->model;
-    }
+
+    vox->models = (vox_model*)malloc(vox->num_models * sizeof(*vox->models));
+    current_model = vox->models;
 
     memset(vox->materials, 0, 256 * sizeof(vox_matl));
 
@@ -255,22 +250,17 @@ bool vox_load(const char* path, vox* vox)
         }
     }
 
+    linear_free(allocator, data);
     return true;
 }
 
 void vox_unload(vox* vox)
 {
-    if (vox->n_models == 1)
+    for (uint32_t i = 0; i < vox->num_models; ++i)
     {
-        free(vox->model.voxels);
+        free(vox->models[i].voxels);
     }
-    else if (vox->n_models > 1)
-    {
-        for (uint32_t i = 0; i < vox->n_models; ++i)
-        {
-            free(vox->models[i].voxels);
-        }
-        free(vox->models);
-    }
-    vox->n_models = 0;
+    free(vox->models);
+    vox->models = nullptr;
+    vox->num_models = 0;
 }

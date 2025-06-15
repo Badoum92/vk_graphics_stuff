@@ -2,9 +2,9 @@
 
 #include "camera.h"
 
-#include "bul/math/math.h"
-#include "bul/log.h"
-#include "bul/time.h"
+#include "core/math/math.h"
+#include "core/log.h"
+#include "core/time.h"
 #include "ufbx/ufbx.h"
 
 #include "imgui.h"
@@ -17,15 +17,15 @@ struct push_constant
 
 struct vertex
 {
-    bul::vec4f position;
-    bul::vec4f normal;
-    bul::vec2f uv;
-    bul::vec2f _padding;
+    vec4f position;
+    vec4f normal;
+    vec2f uv;
+    vec2f _padding;
 };
 
 struct uniform_buffer_data
 {
-    bul::mat4f view_proj;
+    mat4f view_proj;
 };
 
 test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint32_t _height)
@@ -41,14 +41,14 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
 
     vk::image swapchain_image = _context->images.get(_context->surface.images[0]);
 
-    vk::graphics_pipeline_description graphics_pipeline_description = {};
-    graphics_pipeline_description.vertex_shader = test_renderer.vertex_shader;
-    graphics_pipeline_description.fragment_shader = test_renderer.fragment_shader;
-    graphics_pipeline_description.color_attachment_formats.push_back(swapchain_image.full_view.format);
-    graphics_pipeline_description.depth_attachment_format = VK_FORMAT_D32_SFLOAT;
-    graphics_pipeline_description.push_constant_size = sizeof(push_constant);
-    graphics_pipeline_description.name = "test triangle";
-    test_renderer.graphics_pipeline_handle = _context->create_graphics_pipeline(graphics_pipeline_description);
+    vk::graphics_pipeline_description pipeline_desc = {};
+    pipeline_desc.vertex_shader = test_renderer.vertex_shader;
+    pipeline_desc.fragment_shader = test_renderer.fragment_shader;
+    pipeline_desc.color_formats[pipeline_desc.num_color_formats++] = swapchain_image.full_view.format;
+    pipeline_desc.depth_format = VK_FORMAT_D32_SFLOAT;
+    pipeline_desc.push_constant_size = sizeof(push_constant);
+    pipeline_desc.name = "test pipeline";
+    test_renderer.graphics_pipeline_handle = _context->create_graphics_pipeline(pipeline_desc);
 
     /*uint32_t indices[] = {
         0,  3,  2,  2,  1,  0,  4,  5,  6,  6,  7,  4,  11, 8,  9,  9,  10, 11,
@@ -151,7 +151,7 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
         ufbx_mesh* mesh = node->mesh;
 
         // Count the number of needed parts and temporary buffers
-        uint32_t max_triangles = 0;
+        size_t max_triangles = 0;
 
         // We need to render each material of the mesh in a separate part, so let's
         // count the number of parts and maximum number of triangles needed.
@@ -160,7 +160,7 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
             ufbx_mesh_part* part = &mesh->material_parts.data[pi];
             if (part->num_triangles == 0)
                 continue;
-            max_triangles = bul_max(max_triangles, part->num_triangles);
+            max_triangles = math_max(max_triangles, part->num_triangles);
         }
 
         /* for (uint32_t j = 0; j < mesh->materials.count; ++j)
@@ -172,7 +172,7 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
             }
         } */
 
-        uint32_t num_tri_indices = mesh->max_face_triangles * 3;
+        size_t num_tri_indices = mesh->max_face_triangles * 3;
         uint32_t* tri_indices = (uint32_t*)malloc(num_tri_indices * sizeof(uint32_t));
         vertex* vertices = (vertex*)malloc(max_triangles * 3 * sizeof(vertex));
         uint32_t* indices = (uint32_t*)malloc(max_triangles * 3 * sizeof(uint32_t));
@@ -217,7 +217,8 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
             streams[0].vertex_count = num_indices;
             streams[0].vertex_size = sizeof(vertex);
 
-            uint32_t num_vertices = ufbx_generate_indices(streams, num_streams, indices, num_indices, NULL, &error);
+            uint32_t num_vertices =
+                (uint32_t)ufbx_generate_indices(streams, num_streams, indices, num_indices, NULL, &error);
             ASSERT(error.type == UFBX_ERROR_NONE);
 
             vk::buffer_description buffer_description = {};
@@ -353,7 +354,7 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
 
     vk::buffer& uniform_buffer = context->buffers.get(uniform_buffer_handle);
     uniform_buffer_data uniform_buffer_data = {};
-    uniform_buffer_data.view_proj = camera->proj * camera->view * bul::rotation_y(bul_radians(y_rotation_deg));
+    uniform_buffer_data.view_proj = camera->proj * camera->view * mat4_rotation_y(math_radians(y_rotation_deg));
     memcpy(uniform_buffer.mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
 
     VkRect2D scissor = {};
@@ -388,7 +389,7 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
 
         vk::buffer& index_buffer = context->buffers.get(index_buffer_handle[i]);
         command_buffer->bind_index_buffer(index_buffer_handle[i]);
-        command_buffer->draw_indexed(index_buffer.description.size / sizeof(uint32_t));
+        command_buffer->draw_indexed((uint32_t)index_buffer.description.size / sizeof(uint32_t));
     }
 
     command_buffer->end_rendering();

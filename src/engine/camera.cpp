@@ -1,6 +1,6 @@
 #include "camera.h"
 
-#include "bul/math/math.h"
+#include "core/math/math.h"
 
 camera camera::create()
 {
@@ -13,13 +13,13 @@ camera camera::create()
 
 void camera::compute_view_proj()
 {
-    view = bul::lookat(position, position + forward, up, &inv_view);
-    proj = bul::perspective(fov_y, aspect_ratio, near_plane, far_plane, &inv_proj);
+    view = mat4_lookat(position, position + forward, up, &inv_view);
+    proj = mat4_perspective(fov_y, aspect_ratio, near_plane, far_plane, &inv_proj);
 }
 
-void camera::rotate(bul::vec3f angles)
+void camera::rotate(vec3f angles)
 {
-    if (angles == bul::vec3f{0, 0, 0})
+    if (angles == vec3f{0, 0, 0})
     {
         return;
     }
@@ -28,10 +28,10 @@ void camera::rotate(bul::vec3f angles)
     yaw += angles.y;
     roll += angles.z;
 
-    pitch = bul_clamp(-bul::half_pi + 0.01f, pitch, bul::half_pi - 0.01f);
+    pitch = math_clamp(-math_half_pi + 0.01f, pitch, math_half_pi - 0.01f);
 
-    bul::mat4f rotation = bul::rotation_x(pitch) * bul::rotation_y(yaw) * bul::rotation_z(roll);
-    right = bul::vec_normalize(rotation * bul::vec4f{1, 0, 0, 0});
-    up = bul::vec_normalize(rotation * bul::vec4f{0, 1, 0, 0});
-    forward = bul::vec_normalize(rotation * bul::vec4f{0, 0, -1, 0});
+    mat4f rotation = mat4_rotation_x(pitch) * mat4_rotation_y(yaw) * mat4_rotation_z(roll);
+    right = vec_normalize(rotation * vec4f{1, 0, 0, 0});
+    up = vec_normalize(rotation * vec4f{0, 1, 0, 0});
+    forward = vec_normalize(rotation * vec4f{0, 0, -1, 0});
 }

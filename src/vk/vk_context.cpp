@@ -2,8 +2,8 @@
 
 #include "vk/vk_tools.h"
 
-#include "bul/log.h"
-#include "bul/containers/static_vector.h"
+#include "core/window.h"
+#include "core/log.h"
 
 namespace vk
 {
@@ -15,15 +15,15 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         switch (msg_severity)
         {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            return bul::log_level_debug;
+            return LOG_LEVEL_DEBUG;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            return bul::log_level_info;
+            return LOG_LEVEL_INFO;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            return bul::log_level_warning;
+            return LOG_LEVEL_WARNING;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            return bul::log_level_error;
+            return LOG_LEVEL_ERROR;
         default:
-            return bul::_log_level_count;
+            return LOG_LEVEL_COUNT;
         }
     }(msg_severity);
 
@@ -41,7 +41,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         }
     }(msg_type);
 
-    bul::log(log_level, "VULKAN [%s]: %s", msg_type_str, callback_data->pMessage);
+    LOG(log_level, "VULKAN [%s]: %s", msg_type_str, callback_data->pMessage);
 
     return VK_FALSE;
 }
@@ -66,12 +66,14 @@ static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfo
 
 static void create_instance(context* context, bool enable_validation)
 {
-    bul::static_vector<const char*, 1> validation_layers;
-    validation_layers.push_back("VK_LAYER_KHRONOS_validation");
-    bul::static_vector<const char*, 16> instance_extensions;
-    instance_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    instance_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-    instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    const char* validation_layers[] = {"VK_LAYER_KHRONOS_validation"};
+    const char* instance_extensions[] = {
+        VK_KHR_SURFACE_EXTENSION_NAME,
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+    };
+    uint32_t num_instance_extensions = ARRAY_SIZE(instance_extensions) - (!enable_validation);
 
     VK_CHECK(volkInitialize());
 
@@ -83,24 +85,19 @@ static void create_instance(context* context, bool enable_validation)
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.apiVersion = VK_API_VERSION_1_4;
 
-    if (enable_validation)
-    {
-        instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-
     VkInstanceCreateInfo instance_create_info{};
     instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_create_info.pApplicationInfo = &app_info;
-    instance_create_info.enabledExtensionCount = instance_extensions.size;
-    instance_create_info.ppEnabledExtensionNames = instance_extensions.data;
+    instance_create_info.enabledExtensionCount = num_instance_extensions;
+    instance_create_info.ppEnabledExtensionNames = instance_extensions;
     instance_create_info.enabledLayerCount = 0;
     instance_create_info.pNext = nullptr;
 
     VkDebugUtilsMessengerCreateInfoEXT debug_create_info;
     if (enable_validation)
     {
-        instance_create_info.enabledLayerCount = validation_layers.size;
-        instance_create_info.ppEnabledLayerNames = validation_layers.data;
+        instance_create_info.enabledLayerCount = ARRAY_SIZE(validation_layers);
+        instance_create_info.ppEnabledLayerNames = validation_layers;
         populate_debug_messenger_create_info(debug_create_info);
         instance_create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
     }
@@ -113,19 +110,18 @@ static void create_instance(context* context, bool enable_validation)
         VK_CHECK(
             vkCreateDebugUtilsMessengerEXT(context->instance, &debug_create_info, nullptr, &context->debug_messenger));
     }
-}
+} // namespace vk
 
 static void create_physical_device(context* context)
 {
     uint32_t physical_device_count;
     vkEnumeratePhysicalDevices(context->instance, &physical_device_count, nullptr);
-    bul::static_vector<VkPhysicalDevice, 4> physical_devices;
-    physical_devices.resize(physical_device_count);
-    vkEnumeratePhysicalDevices(context->instance, &physical_device_count, physical_devices.data);
+    ASSERT(physical_device_count != 0, "No physical device found");
+    ASSERT(physical_device_count <= 4);
+    VkPhysicalDevice physical_devices[4];
+    vkEnumeratePhysicalDevices(context->instance, &physical_device_count, physical_devices);
 
-    ASSERT(physical_devices.size != 0, "No physical device found");
-
-    for (uint32_t i = 0; i < physical_devices.size; ++i)
+    for (uint32_t i = 0; i < physical_device_count; ++i)
     {
         context->physical_device = physical_devices[i];
         vkGetPhysicalDeviceProperties(context->physical_device, &context->physical_device_properties);
@@ -135,7 +131,7 @@ static void create_physical_device(context* context)
         }
     }
 
-    bul::log_info("Physical device: %s", context->physical_device_properties.deviceName);
+    LOG_INFO("Physical device: %s", context->physical_device_properties.deviceName);
 }
 
 static void create_device(context* context)
@@ -147,14 +143,15 @@ static void create_device(context* context)
 
     uint32_t queue_family_count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(context->physical_device, &queue_family_count, nullptr);
-    bul::static_vector<VkQueueFamilyProperties, 8> queue_families;
-    queue_families.resize(queue_family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(context->physical_device, &queue_family_count, queue_families.data);
+    ASSERT(queue_family_count <= 8);
+    VkQueueFamilyProperties queue_families[8];
+    VkDeviceQueueCreateInfo queue_create_infos[8];
+    uint32_t num_queue_create_infos = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(context->physical_device, &queue_family_count, queue_families);
 
-    bul::static_vector<VkDeviceQueueCreateInfo, 8> queue_create_infos;
     float priority = 1.0;
 
-    for (uint32_t i = 0; i < queue_families.size; i++)
+    for (uint32_t i = 0; i < queue_family_count; i++)
     {
         VkDeviceQueueCreateInfo queue_info = {};
         queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -178,7 +175,7 @@ static void create_device(context* context)
         {
             continue;
         }
-        queue_create_infos.push_back(queue_info);
+        queue_create_infos[num_queue_create_infos++] = queue_info;
     }
 
     if (context->compute_queue_index == UINT32_MAX)
@@ -223,9 +220,9 @@ static void create_device(context* context)
     VkDeviceCreateInfo device_create_info = {};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pNext = &descriptor_buffer_feature;
-    device_create_info.pQueueCreateInfos = queue_create_infos.data;
-    device_create_info.queueCreateInfoCount = queue_create_infos.size;
-    device_create_info.enabledExtensionCount = BUL_ARRAY_SIZE(device_extensions);
+    device_create_info.pQueueCreateInfos = queue_create_infos;
+    device_create_info.queueCreateInfoCount = num_queue_create_infos;
+    device_create_info.enabledExtensionCount = ARRAY_SIZE(device_extensions);
     device_create_info.ppEnabledExtensionNames = device_extensions;
     device_create_info.enabledLayerCount = 0;
 
@@ -243,7 +240,7 @@ static void create_device(context* context)
     allocator_info.device = context->device;
     allocator_info.pVulkanFunctions = &vma_functions;
     allocator_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-    VK_CHECK(vmaCreateAllocator(&allocator_info, &context->allocator));
+    VK_CHECK(vmaCreateAllocator(&allocator_info, &context->vma_allocator));
 
     vkGetDeviceQueue(context->device, context->graphics_queue_index, 0, &context->graphics_queue);
     vkGetDeviceQueue(context->device, context->compute_queue_index, 0, &context->compute_queue);
@@ -269,7 +266,7 @@ static void create_device(context* context)
     };
     VkDescriptorPoolCreateInfo decriptor_pool_info = {};
     decriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    decriptor_pool_info.poolSizeCount = BUL_ARRAY_SIZE(descriptor_pool_sizes);
+    decriptor_pool_info.poolSizeCount = ARRAY_SIZE(descriptor_pool_sizes);
     decriptor_pool_info.pPoolSizes = descriptor_pool_sizes;
     decriptor_pool_info.maxSets = descriptor_count;
     decriptor_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -300,7 +297,7 @@ static void create_frame_contexts(context* context)
     }
 }
 
-context context::create(bul::window* _window, bool enable_validation)
+context context::create(::window* _window, bool enable_validation)
 {
     context context;
     context.window = _window;
@@ -340,8 +337,8 @@ void context::destroy()
     image_descriptor_set.destroy(this);
     surface.destroy(this);
 
-    vmaDestroyAllocator(allocator);
-    allocator = VK_NULL_HANDLE;
+    vmaDestroyAllocator(vma_allocator);
+    vma_allocator = VK_NULL_HANDLE;
     vkDestroyDevice(device, nullptr);
     device = VK_NULL_HANDLE;
 

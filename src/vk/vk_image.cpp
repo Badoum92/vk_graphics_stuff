@@ -54,7 +54,7 @@ bul::handle<image> context::create_image(const image_description& description, V
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = description.memory_usage;
 
-        VK_CHECK(vmaCreateImage(allocator, &image_info, &alloc_info, &vk_image, &allocation, nullptr));
+        VK_CHECK(vmaCreateImage(vma_allocator, &image_info, &alloc_info, &vk_image, &allocation, nullptr));
     }
 
     VkImageSubresourceRange full_range{};
@@ -85,7 +85,7 @@ void context::destroy_image(bul::handle<image> handle)
     }
     if (image.allocation != VK_NULL_HANDLE)
     {
-        vmaDestroyImage(allocator, image.vk_handle, image.allocation);
+        vmaDestroyImage(vma_allocator, image.vk_handle, image.allocation);
         image.allocation = VK_NULL_HANDLE;
         image.vk_handle = VK_NULL_HANDLE;
     }

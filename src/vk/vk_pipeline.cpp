@@ -25,6 +25,7 @@ bul::handle<graphics_pipeline> context::create_graphics_pipeline(const graphics_
 {
     graphics_pipeline graphics_pipeline = {};
     graphics_pipeline.description = description;
+    graphics_pipeline.num_graphics_states = 0;
 
     VkPushConstantRange push_constant_range = {};
     push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
@@ -54,7 +55,7 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
 {
     graphics_pipeline& graphics_pipeline = graphics_pipelines.get(handle);
 
-    for (uint32_t i = 0; i < graphics_pipeline.graphics_states.size; ++i)
+    for (uint32_t i = 0; i < graphics_pipeline.num_graphics_states; ++i)
     {
         if (graphics_pipeline.graphics_states[i] == graphics_state)
         {
@@ -62,13 +63,15 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
         }
     }
 
-    graphics_pipeline.graphics_states.push_back(graphics_state);
+    ASSERT(graphics_pipeline.num_graphics_states < max_graphics_states);
+
+    graphics_pipeline.graphics_states[graphics_pipeline.num_graphics_states] = graphics_state;
 
     VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
     VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
     dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state_info.dynamicStateCount = BUL_ARRAY_SIZE(dynamic_states);
+    dynamic_state_info.dynamicStateCount = ARRAY_SIZE(dynamic_states);
     dynamic_state_info.pDynamicStates = dynamic_states;
 
     VkPipelineVertexInputStateCreateInfo vertex_input_state_info = {};
@@ -93,10 +96,11 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
     rasterization_state_info.depthBiasSlopeFactor = 0;
     rasterization_state_info.lineWidth = 1.0f;
 
-    bul::static_vector<VkPipelineColorBlendAttachmentState, max_color_attachments> color_attachment_states;
-    for (uint32_t i = 0; i < graphics_pipeline.description.color_attachment_formats.size; ++i)
+    VkPipelineColorBlendAttachmentState color_attachment_states[max_color_attachments];
+    uint32_t num_color_attachment_states = 0;
+    for (uint32_t i = 0; i < graphics_pipeline.description.num_color_formats; ++i)
     {
-        VkPipelineColorBlendAttachmentState& attachment_state = color_attachment_states.push_back();
+        VkPipelineColorBlendAttachmentState& attachment_state = color_attachment_states[num_color_attachment_states++];
         attachment_state.colorWriteMask =
             VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         attachment_state.blendEnable = false;
@@ -111,8 +115,8 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
     VkPipelineColorBlendStateCreateInfo color_blend_state_info = {};
     color_blend_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     color_blend_state_info.flags = 0;
-    color_blend_state_info.attachmentCount = color_attachment_states.size;
-    color_blend_state_info.pAttachments = color_attachment_states.data;
+    color_blend_state_info.attachmentCount = num_color_attachment_states;
+    color_blend_state_info.pAttachments = color_attachment_states;
     color_blend_state_info.logicOpEnable = false;
     color_blend_state_info.logicOp = VK_LOGIC_OP_COPY;
     color_blend_state_info.blendConstants[0] = 0.0f;
@@ -171,9 +175,9 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
 
     VkPipelineRenderingCreateInfo rendering_create_info = {};
     rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    rendering_create_info.colorAttachmentCount = graphics_pipeline.description.color_attachment_formats.size;
-    rendering_create_info.pColorAttachmentFormats = graphics_pipeline.description.color_attachment_formats.data;
-    rendering_create_info.depthAttachmentFormat = graphics_pipeline.description.depth_attachment_format;
+    rendering_create_info.colorAttachmentCount = graphics_pipeline.description.num_color_formats;
+    rendering_create_info.pColorAttachmentFormats = graphics_pipeline.description.color_formats;
+    rendering_create_info.depthAttachmentFormat = graphics_pipeline.description.depth_format;
 
     VkGraphicsPipelineCreateInfo pipeline_create_info = {};
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -191,11 +195,11 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
     pipeline_create_info.pDynamicState = &dynamic_state_info;
     pipeline_create_info.pViewportState = &viewport_state_info;
     pipeline_create_info.pDepthStencilState = &depth_state_info;
-    pipeline_create_info.stageCount = BUL_ARRAY_SIZE(shader_stages);
+    pipeline_create_info.stageCount = ARRAY_SIZE(shader_stages);
     pipeline_create_info.pStages = shader_stages;
     pipeline_create_info.subpass = 0;
 
-    VkPipeline& pipeline = graphics_pipeline.pipelines.push_back();
+    VkPipeline& pipeline = graphics_pipeline.pipelines[graphics_pipeline.num_graphics_states++];
     VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline));
     set_resource_name(this, (uint64_t)pipeline, VK_OBJECT_TYPE_PIPELINE, graphics_pipeline.description.name);
     return pipeline;
@@ -210,8 +214,7 @@ void context::destroy_graphics_pipeline(bul::handle<graphics_pipeline> handle)
     {
         vkDestroyPipeline(device, pipeline, nullptr);
     }
-    graphics_pipeline.pipelines.clear();
-    graphics_pipeline.graphics_states.clear();
+    graphics_pipeline.num_graphics_states = 0;
 }
 
 bul::handle<compute_pipeline> context::create_compute_pipeline(const compute_pipeline_description& description)

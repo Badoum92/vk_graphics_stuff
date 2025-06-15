@@ -31,10 +31,14 @@ descriptor_set descriptor_set::create(context* context, VkDescriptorType type)
 
     VK_CHECK(vkCreateDescriptorSetLayout(context->device, &layout_info, nullptr, &descriptor_set.layout));
 
-    vkGetDescriptorSetLayoutSizeEXT(context->device, descriptor_set.layout, &descriptor_set.size);
+    VkDeviceSize layout_size;
+    vkGetDescriptorSetLayoutSizeEXT(context->device, descriptor_set.layout, &layout_size);
+    descriptor_set.size = (uint32_t)layout_size;
     descriptor_set.size =
-        bul::align(descriptor_set.size, context->descriptor_buffer_properties.descriptorBufferOffsetAlignment);
-    vkGetDescriptorSetLayoutBindingOffsetEXT(context->device, descriptor_set.layout, 0, &descriptor_set.offset);
+        align(descriptor_set.size, (uint32_t)context->descriptor_buffer_properties.descriptorBufferOffsetAlignment);
+    VkDeviceSize offset;
+    vkGetDescriptorSetLayoutBindingOffsetEXT(context->device, descriptor_set.layout, 0, &offset);
+    descriptor_set.offset = (uint32_t)offset;
 
     buffer_description buffer_description = {};
     buffer_description.size = descriptor_set.size;
@@ -53,7 +57,7 @@ descriptor_set descriptor_set::create(context* context, VkDescriptorType type)
 
     for (uint32_t i = 0; i < max_binless_descriptors; ++i)
     {
-        descriptor_set.free_descriptors.push_back(max_binless_descriptors - i - 1);
+        descriptor_set.free_descriptors[descriptor_set.num_free_descriptors++] = max_binless_descriptors - i - 1;
     }
 
     return descriptor_set;
@@ -68,8 +72,8 @@ void descriptor_set::destroy(context* context)
 uint32_t descriptor_set::create_texture_descriptor(context* context, bul::handle<image> image_handle,
                                                    bul::handle<sampler> sampler_handle)
 {
-    ASSERT(free_descriptors.size > 0);
-    uint32_t index = free_descriptors.pop_back();
+    ASSERT(num_free_descriptors > 0);
+    uint32_t index = free_descriptors[--num_free_descriptors];
     update_texture_descriptor(context, index, image_handle, sampler_handle);
     return index;
 }
@@ -99,8 +103,8 @@ void descriptor_set::update_texture_descriptor(context* context, uint32_t index,
 
 uint32_t descriptor_set::create_image_descriptor(context* context, bul::handle<image> image_handle)
 {
-    ASSERT(free_descriptors.size > 0);
-    uint32_t index = free_descriptors.pop_back();
+    ASSERT(num_free_descriptors > 0);
+    uint32_t index = free_descriptors[--num_free_descriptors];
     update_image_descriptor(context, index, image_handle);
     return index;
 }
@@ -128,6 +132,6 @@ void descriptor_set::update_image_descriptor(context* context, uint32_t index, b
 
 void descriptor_set::destroy_descriptor(uint32_t index)
 {
-    free_descriptors.push_back(index);
+    free_descriptors[num_free_descriptors++] = index;
 }
 } // namespace vk
