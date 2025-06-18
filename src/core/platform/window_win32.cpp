@@ -1,6 +1,6 @@
 #include "core/window.h"
 
-#include <Windows.h>
+#include <windows.h>
 #include <windowsx.h>
 #include <stdlib.h>
 
@@ -11,6 +11,7 @@
 #include "imgui/imgui_impl_win32.h"
 
 static _input_state input_state;
+static window* main_window = nullptr;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -22,16 +23,25 @@ static int key_to_win32_key[KEY_COUNT] = {
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+window* window_get_main_window()
+{
+    return main_window;
+}
+
 void window_create(window* window, const char* title, vec2i size)
 {
+    if (!main_window)
+    {
+        main_window = window;
+    }
+
     window->should_close = false;
     window->resized = false;
-    window->is_cursor_visible = true;
     window->size = size;
 
     WNDCLASS wc = {};
     wc.lpfnWndProc = window_proc;
-    wc.hInstance = GetModuleHandle(nullptr);
+    wc.hInstance = GetModuleHandleA(nullptr);
     wc.lpszClassName = "Win32 Window Class";
     wc.cbWndExtra = (DWLP_USER + 1) * sizeof(void*);
     RegisterClassA(&wc);
@@ -40,8 +50,8 @@ void window_create(window* window, const char* title, vec2i size)
     AdjustWindowRectEx(&rect, WS_BORDER | WS_OVERLAPPEDWINDOW, false, 0);
     size.x = rect.right - rect.left;
     size.y = rect.bottom - rect.top;
-    window->handle = CreateWindowEx(0, wc.lpszClassName, title, WS_BORDER | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
-                                    CW_USEDEFAULT, size.x, size.y, nullptr, nullptr, wc.hInstance, nullptr);
+    window->handle = CreateWindowExA(0, wc.lpszClassName, title, WS_BORDER | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT,
+                                     CW_USEDEFAULT, size.x, size.y, nullptr, nullptr, wc.hInstance, nullptr);
 
     ENSURE(window->handle != nullptr);
     SetWindowLongPtrA((HWND)window->handle, DWLP_USER, (uint64_t)window);
@@ -66,45 +76,6 @@ void window_set_title(window* window, const char* title)
 float window_aspect_ratio(const window* window)
 {
     return (float)window->size.x / (float)window->size.y;
-}
-
-void window_show_cursor(window* window, bool show)
-{
-    window->is_cursor_visible = show;
-
-    RECT rect;
-    GetClientRect((HWND)window->handle, &rect);
-    ClientToScreen((HWND)window->handle, (POINT*)&rect.left);
-    ClientToScreen((HWND)window->handle, (POINT*)&rect.right);
-
-    if (!show)
-    {
-        window->visible_cursor_position = window->cursor_position;
-        window->cursor_position = window->invisible_cursor_position;
-
-        rect.left++;
-        rect.right--;
-        rect.top++;
-        rect.bottom--;
-
-        ClipCursor(&rect);
-        SetCursor(nullptr);
-
-        RAWINPUTDEVICE rid = {0x01, 0x02, 0, (HWND)window->handle};
-        ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
-    }
-    else
-    {
-        window->invisible_cursor_position = window->cursor_position;
-        window->cursor_position = window->visible_cursor_position;
-
-        ClipCursor(nullptr);
-        SetCursorPos(rect.left + window->cursor_position.x, rect.top + window->cursor_position.y);
-        SetCursor(LoadCursorA(nullptr, IDC_ARROW));
-
-        RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
-        ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
-    }
 }
 
 void window_poll_events()
@@ -165,12 +136,12 @@ static bool is_right_alt()
 
 static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    window* window = (::window*)GetWindowLongPtr(hwnd, DWLP_USER);
-    if (window && window->is_cursor_visible && ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+    if (input_is_cursor_visible() && ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
     {
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
     }
 
+    window* window = (::window*)GetWindowLongPtr(hwnd, DWLP_USER);
     switch (uMsg)
     {
         // Window events
@@ -193,10 +164,6 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     }
 
     case WM_ACTIVATE: {
-        if (wParam != WA_INACTIVE && !window->is_cursor_visible)
-        {
-            window_show_cursor(window, window->is_cursor_visible);
-        }
     }
 
         // Key events
@@ -221,15 +188,6 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         // Mouse events
 
     case WM_MOUSEMOVE: {
-        if (window->is_cursor_visible)
-        {
-            vec2i new_cursor_position = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-            input_state.mouse_position_delta->x = new_cursor_position.x - window->cursor_position.x;
-            input_state.mouse_position_delta->y = new_cursor_position.y - window->cursor_position.y;
-            *input_state.mouse_position = new_cursor_position;
-            window->cursor_position = new_cursor_position;
-        }
-        return 0;
     }
     case WM_LBUTTONDOWN:
     case WM_LBUTTONDBLCLK: {
@@ -288,13 +246,12 @@ static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         ENSURE(GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &raw_input, &size, sizeof(RAWINPUTHEADER)));
         if (raw_input.header.dwType == RIM_TYPEMOUSE)
         {
-            input_state.mouse_position_delta->x = raw_input.data.mouse.lLastX;
-            input_state.mouse_position_delta->y = raw_input.data.mouse.lLastY;
+            input_state.mouse_position_delta->x += raw_input.data.mouse.lLastX;
+            input_state.mouse_position_delta->y += raw_input.data.mouse.lLastY;
         }
-        window->cursor_position += *input_state.mouse_position_delta;
         return 0;
     }
     }
 
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+    return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }

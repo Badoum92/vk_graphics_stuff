@@ -34,6 +34,7 @@ add_subdirectory(third_party)
 
 add_executable(main
     src/main.cpp
+    src/pch.h
 
     src/util/implems.cpp
 
@@ -95,9 +96,7 @@ add_executable(main
     src/core/math/vector.h
     src/core/memory/linear_allocator.cpp
     src/core/memory/linear_allocator.h
-    src/core/containers/handle.h
     src/core/containers/pool.h
-    src/core/containers/ring_buffer.h
     src/core/containers/span.h
     src/core/containers/vector.h
 
@@ -120,6 +119,8 @@ target_include_directories(main
     SYSTEM PRIVATE ${Vulkan_INCLUDE_DIRS}
     SYSTEM PRIVATE third_party
 )
+
+target_precompile_headers(main PRIVATE src/pch.h)
 
 target_link_libraries(main
     default_interface

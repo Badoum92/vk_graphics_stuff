@@ -6,7 +6,6 @@
 
 #include "core/core.h"
 #include "core/window.h"
-#include "core/containers/handle.h"
 
 namespace vk
 {
@@ -48,7 +47,7 @@ surface surface::create(context* context)
     create_info.hinstance = GetModuleHandle(nullptr);
     vkCreateWin32SurfaceKHR(context->instance, &create_info, nullptr, &surface.vk_handle);
     surface.present_queue = get_present_queue(context, &surface);
-    surface.create_swapchain(context);
+    surface.create_swapchain(context, context->vsync);
     return surface;
 }
 
@@ -59,7 +58,7 @@ void surface::destroy(context* context)
     vk_handle = VK_NULL_HANDLE;
 }
 
-void surface::create_swapchain(context* context)
+void surface::create_swapchain(context* context, bool vsync)
 {
     VkSurfaceCapabilitiesKHR capabilities;
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(context->physical_device, vk_handle, &capabilities));
@@ -74,12 +73,15 @@ void surface::create_swapchain(context* context)
                                                        present_modes));
 
     present_mode = VK_PRESENT_MODE_FIFO_KHR;
-    for (uint32_t i = 0; i < num_present_modes; ++i)
+    if (!vsync)
     {
-        if (present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+        for (uint32_t i = 0; i < num_present_modes; ++i)
         {
-            present_mode = present_modes[i];
-            break;
+            if (present_modes[i] == VK_PRESENT_MODE_MAILBOX_KHR)
+            {
+                present_mode = present_modes[i];
+                break;
+            }
         }
     }
 
@@ -144,11 +146,13 @@ void surface::create_swapchain(context* context)
 
 void surface::destroy_swapchain(context* context)
 {
-    for (bul::handle<image> handle : images)
+    for (uint32_t i = 0; i < num_images; ++i)
     {
-        context->destroy_image(handle);
+        vkDestroyImageView(context->device, images[i]->full_view.vk_handle, nullptr);
+        pool_free(&context->images, images[i]);
     }
     vkDestroySwapchainKHR(context->device, swapchain, nullptr);
     swapchain = VK_NULL_HANDLE;
+    num_images = 0;
 }
 } // namespace vk

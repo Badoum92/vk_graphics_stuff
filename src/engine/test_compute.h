@@ -17,12 +17,11 @@ struct test_compute
     uint32_t width;
     uint32_t height;
 
-    bul::handle<vk::shader> compute_shader;
-    bul::handle<vk::compute_pipeline> compute_pipeline_handle;
-    bul::handle<vk::buffer> uniform_buffer_handle;
+    vk::shader* compute_shader;
+    vk::compute_pipeline* compute_pipeline;
+    vk::buffer* uniform_buffer;
 
     imgui_texture render_target;
-    uint32_t render_target_descriptor_index;
 
     vk::context* context;
 };

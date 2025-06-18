@@ -4,12 +4,7 @@
 #include <vma/vk_mem_alloc.h>
 
 #include "vk/vk_constants.h"
-#include "vk/vk_tools.h"
 #include "vk/vk_surface.h"
-#include "vk/vk_image.h"
-#include "vk/vk_buffer.h"
-#include "vk/vk_shader.h"
-#include "vk/vk_pipeline.h"
 #include "vk/vk_descriptor.h"
 #include "vk/vk_commands.h"
 
@@ -19,6 +14,18 @@ struct window;
 
 namespace vk
 {
+struct image_description;
+struct image;
+struct sampler_description;
+struct sampler;
+struct buffer_description;
+struct buffer;
+struct shader;
+struct graphics_pipeline_description;
+struct graphics_pipeline;
+struct compute_pipeline_description;
+struct compute_pipeline;
+
 struct frame_context
 {
     VkSemaphore image_acquired_semaphore = VK_NULL_HANDLE;
@@ -28,12 +35,12 @@ struct frame_context
     command_pool compute_commands;
     command_buffer* command_buffer;
     uint32_t image_index;
-    bul::handle<image> image;
+    image* image;
 };
 
 struct context
 {
-    static context create(window* _window, bool enable_validation);
+    static void create(context* context, window* _window, bool enable_validation);
     void destroy();
 
     void wait_idle();
@@ -43,8 +50,11 @@ struct context
     void submit(command_buffer* command_buffer);
     void submit(command_buffer* command_buffer, frame_context* frame_context);
 
+    void set_vsync(bool vsync);
+
     frame_context frame_contexts[max_frames_in_flight];
     uint32_t current_frame = 0;
+    bool vsync = false;
 
     window* window;
 
@@ -72,36 +82,36 @@ struct context
 
     VmaAllocator vma_allocator = VK_NULL_HANDLE;
 
-    bul::handle<sampler> default_sampler;
-    bul::handle<image> undefined_image_handle;
+    sampler* default_sampler;
+    image* undefined_image;
     uint32_t undefined_descriptor = UINT32_MAX;
 
-    bul::pool<image> images;
-    bul::pool<sampler> samplers;
-    bul::pool<buffer> buffers;
-    bul::pool<shader> shaders;
-    bul::pool<graphics_pipeline> graphics_pipelines;
-    bul::pool<compute_pipeline> compute_pipelines;
+    pool<image> images;
+    pool<sampler> samplers;
+    pool<buffer> buffers;
+    pool<shader> shaders;
+    pool<graphics_pipeline> graphics_pipelines;
+    pool<compute_pipeline> compute_pipelines;
 
     VkDescriptorPool descriptor_pool; // only used for ImGui
 
-    bul::handle<image> create_image(const image_description& description, VkImage vk_image = VK_NULL_HANDLE);
-    void destroy_image(bul::handle<image> handle);
+    image* create_image(const image_description& description, VkImage vk_image = VK_NULL_HANDLE);
+    void destroy_image(image* image);
 
-    bul::handle<sampler> create_sampler(const sampler_description& description);
-    void destroy_sampler(bul::handle<sampler> handle);
+    sampler* create_sampler(const sampler_description& description);
+    void destroy_sampler(sampler* sampler);
 
-    bul::handle<buffer> create_buffer(const buffer_description& description);
-    void destroy_buffer(bul::handle<buffer> handle);
+    buffer* create_buffer(const buffer_description& description);
+    void destroy_buffer(buffer* buffer);
 
-    bul::handle<shader> create_shader(const char* path);
-    void destroy_shader(bul::handle<shader> handle);
+    shader* create_shader(const char* path);
+    void destroy_shader(shader* shader);
 
-    bul::handle<graphics_pipeline> create_graphics_pipeline(const graphics_pipeline_description& description);
-    VkPipeline compile_graphics_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state);
-    void destroy_graphics_pipeline(bul::handle<graphics_pipeline> handle);
+    graphics_pipeline* create_graphics_pipeline(const graphics_pipeline_description& description);
+    VkPipeline compile_graphics_pipeline(graphics_pipeline* pipeline, graphics_state graphics_state);
+    void destroy_graphics_pipeline(graphics_pipeline* pipeline);
 
-    bul::handle<compute_pipeline> create_compute_pipeline(const compute_pipeline_description& description);
-    void destroy_compute_pipeline(bul::handle<compute_pipeline> handle);
+    compute_pipeline* create_compute_pipeline(const compute_pipeline_description& description);
+    void destroy_compute_pipeline(compute_pipeline* pipeline);
 };
 } // namespace vk

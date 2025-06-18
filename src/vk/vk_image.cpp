@@ -1,6 +1,7 @@
 #include "vk/vk_image.h"
 
 #include "vk/vk_context.h"
+#include "vk/vk_tools.h"
 
 namespace vk
 {
@@ -30,7 +31,7 @@ static image_view create_image_view(context* context, const image_description& d
     return view;
 }
 
-bul::handle<image> context::create_image(const image_description& description, VkImage vk_image)
+image* context::create_image(const image_description& description, VkImage vk_image)
 {
     VmaAllocation allocation = VK_NULL_HANDLE;
     if (vk_image == VK_NULL_HANDLE)
@@ -72,27 +73,28 @@ bul::handle<image> context::create_image(const image_description& description, V
         set_resource_name(this, (uint64_t)full_view.vk_handle, VK_OBJECT_TYPE_IMAGE_VIEW, description.name);
     }
 
-    return images.insert(image{vk_image, allocation, full_view, image_usage::none, description});
+    image* image = pool_alloc(&images);
+    *image = {vk_image, allocation, full_view, image_usage::none, description};
+    return image;
 }
 
-void context::destroy_image(bul::handle<image> handle)
+void context::destroy_image(image* image)
 {
-    image& image = images.get(handle);
-    if (image.full_view.vk_handle != VK_NULL_HANDLE)
+    if (image->full_view.vk_handle != VK_NULL_HANDLE)
     {
-        vkDestroyImageView(device, image.full_view.vk_handle, nullptr);
-        image.full_view.vk_handle = VK_NULL_HANDLE;
+        vkDestroyImageView(device, image->full_view.vk_handle, nullptr);
+        image->full_view.vk_handle = VK_NULL_HANDLE;
     }
-    if (image.allocation != VK_NULL_HANDLE)
+    if (image->allocation != VK_NULL_HANDLE)
     {
-        vmaDestroyImage(vma_allocator, image.vk_handle, image.allocation);
-        image.allocation = VK_NULL_HANDLE;
-        image.vk_handle = VK_NULL_HANDLE;
+        vmaDestroyImage(vma_allocator, image->vk_handle, image->allocation);
+        image->allocation = VK_NULL_HANDLE;
+        image->vk_handle = VK_NULL_HANDLE;
     }
-    images.erase(handle);
+    pool_free(&images, image);
 }
 
-bul::handle<sampler> context::create_sampler(const sampler_description& description)
+sampler* context::create_sampler(const sampler_description& description)
 {
     VkSamplerCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -117,12 +119,14 @@ bul::handle<sampler> context::create_sampler(const sampler_description& descript
     VkSampler vk_sampler;
     VK_CHECK(vkCreateSampler(device, &create_info, nullptr, &vk_sampler));
 
-    return samplers.insert(sampler{vk_sampler, description});
+    sampler* sampler = pool_alloc(&samplers);
+    *sampler = {vk_sampler, description};
+    return sampler;
 }
 
-void context::destroy_sampler(bul::handle<sampler> handle)
+void context::destroy_sampler(sampler* sampler)
 {
-    sampler& sampler = samplers.get(handle);
-    vkDestroySampler(device, sampler.vk_handle, nullptr);
+    vkDestroySampler(device, sampler->vk_handle, nullptr);
+    pool_free(&samplers, sampler);
 }
 } // namespace vk

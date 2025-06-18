@@ -3,8 +3,6 @@
 #include <volk.h>
 #include <vma/vk_mem_alloc.h>
 
-#include "core/containers/handle.h"
-
 namespace vk
 {
 constexpr VkBufferUsageFlags storage_buffer_usage =

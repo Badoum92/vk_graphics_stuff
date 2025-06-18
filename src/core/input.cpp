@@ -1,5 +1,9 @@
 #include "core/input.h"
 
+#include "core/core.h"
+#include "core/window.h"
+
+#include <windows.h>
 #include <string.h>
 
 static bool keys[KEY_COUNT] = {false};
@@ -8,15 +12,25 @@ static bool keys_prev[KEY_COUNT] = {false};
 static bool mouse_buttons[MOUSE_BUTTON_COUNT] = {false};
 static bool mouse_buttons_prev[MOUSE_BUTTON_COUNT] = {false};
 
-static vec2i mouse_position = {0, 0};
-static vec2i mouse_position_delta = {0, 0};
+static vec2i mouse_position;
+static vec2i mouse_position_delta;
+static bool cursor_visible = true;
+static vec2i visible_cursor_position;
 
 _input_state input_new_frame()
 {
     memcpy(keys_prev, keys, KEY_COUNT);
     memcpy(mouse_buttons_prev, mouse_buttons, MOUSE_BUTTON_COUNT);
-    mouse_position = {0, 0};
+
     mouse_position_delta = {0, 0};
+    vec2i new_mouse_position;
+    GetCursorPos((POINT*)&new_mouse_position);
+    if (cursor_visible)
+    {
+        mouse_position_delta = new_mouse_position - mouse_position;
+    }
+    mouse_position = new_mouse_position;
+
     return {keys, mouse_buttons, &mouse_position, &mouse_position_delta};
 }
 
@@ -46,12 +60,36 @@ bool is_key_released(KEY key)
     return !keys[key] && keys_prev[key];
 }
 
-vec2i mouse_get_position()
+vec2i input_get_mouse_position()
 {
     return mouse_position;
 }
 
-vec2i mouse_get_delta()
+vec2i input_get_mouse_delta()
 {
     return mouse_position_delta;
+}
+
+void input_show_cursor(bool show)
+{
+    cursor_visible = show;
+    ShowCursor(show);
+    if (!show)
+    {
+        visible_cursor_position = mouse_position;
+        RAWINPUTDEVICE rid = {0x01, 0x02, 0, (HWND)window_get_main_window()->handle};
+        ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+    }
+    else
+    {
+        mouse_position = visible_cursor_position;
+        SetCursorPos(mouse_position.x, mouse_position.y);
+        RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};
+        ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
+    }
+}
+
+bool input_is_cursor_visible()
+{
+    return cursor_visible;
 }

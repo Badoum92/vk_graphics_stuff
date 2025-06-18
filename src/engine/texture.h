@@ -1,19 +1,18 @@
 #pragma once
 
-#include "core/containers/handle.h"
+#include <stdint.h>
 
 namespace vk
 {
 struct image;
 struct sampler;
-}
+} // namespace vk
 
 struct texture
 {
-    static texture create(bul::handle<vk::image> _image_handle, bul::handle<vk::sampler> _sampler_handle,
-                          uint32_t _bindless_index = UINT32_MAX);
-
-    bul::handle<vk::image> image_handle;
-    bul::handle<vk::sampler> sampler_handle;
+    vk::image* image;
+    vk::sampler* sampler;
     uint32_t binldess_index;
 };
+
+texture texture_create(vk::image* _image_handle, vk::sampler* _sampler_handle, uint32_t _bindless_index = UINT32_MAX);

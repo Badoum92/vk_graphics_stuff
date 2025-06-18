@@ -12,7 +12,7 @@ struct context;
 
 image_access get_src_image_access(image_usage usage);
 image_access get_dst_image_access(image_usage usage);
-VkImageMemoryBarrier get_image_barrier(image& image, const image_access& src, const image_access& dst);
+VkImageMemoryBarrier get_image_barrier(image* image, const image_access& src, const image_access& dst);
 
 bool is_depth(VkFormat format);
 bool is_stencil(VkFormat format);

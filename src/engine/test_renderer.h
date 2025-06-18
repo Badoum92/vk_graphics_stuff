@@ -19,13 +19,13 @@ struct test_renderer
     uint32_t width;
     uint32_t height;
 
-    bul::handle<vk::shader> vertex_shader;
-    bul::handle<vk::shader> fragment_shader;
-    bul::handle<vk::graphics_pipeline> graphics_pipeline_handle;
-    bul::handle<vk::buffer> uniform_buffer_handle;
-    bul::vector<bul::handle<vk::buffer>> index_buffer_handle;
-    bul::vector<bul::handle<vk::buffer>> vertex_buffer_handle;
-    bul::handle<vk::image> depth_handle;
+    vk::shader* vertex_shader;
+    vk::shader* fragment_shader;
+    vk::graphics_pipeline* graphics_pipeline;
+    vk::buffer* uniform_buffer;
+    bul::vector<vk::buffer*> index_buffers;
+    bul::vector<vk::buffer*> vertex_buffers;
+    vk::image* depth;
 
     imgui_texture render_target;
 

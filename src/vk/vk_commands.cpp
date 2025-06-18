@@ -1,8 +1,11 @@
 #include "vk/vk_commands.h"
 
-#include "vk/vk_constants.h"
 #include "vk/vk_context.h"
 #include "vk/vk_image.h"
+#include "vk/vk_buffer.h"
+#include "vk/vk_pipeline.h"
+#include "vk/vk_constants.h"
+#include "vk/vk_tools.h"
 
 namespace vk
 {
@@ -19,18 +22,14 @@ void command_buffer::end()
     VK_CHECK(vkEndCommandBuffer(vk_handle));
 }
 
-void command_buffer::bind_descriptor_buffer(bul::handle<graphics_pipeline> pipeline_handle)
+void command_buffer::bind_descriptor_buffer(graphics_pipeline* pipeline)
 {
-    buffer& texture_descriptor_buffer = context->buffers.get(context->texture_descriptor_set.buffer_handle);
-    buffer& image_descriptor_buffer = context->buffers.get(context->image_descriptor_set.buffer_handle);
-    graphics_pipeline& pipeline = context->graphics_pipelines.get(pipeline_handle);
-
     VkDescriptorBufferBindingInfoEXT descriptor_buffer_binding_infos[2] = {};
     descriptor_buffer_binding_infos[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    descriptor_buffer_binding_infos[0].address = texture_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[0].address = context->texture_descriptor_set.buffer->device_address;
     descriptor_buffer_binding_infos[0].usage = texture_descriptor_buffer_usage;
     descriptor_buffer_binding_infos[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    descriptor_buffer_binding_infos[1].address = image_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[1].address = context->image_descriptor_set.buffer->device_address;
     descriptor_buffer_binding_infos[1].usage = image_descriptor_buffer_usage;
     vkCmdBindDescriptorBuffersEXT(vk_handle, ARRAY_SIZE(descriptor_buffer_binding_infos),
                                   descriptor_buffer_binding_infos);
@@ -38,24 +37,20 @@ void command_buffer::bind_descriptor_buffer(bul::handle<graphics_pipeline> pipel
     VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
     uint32_t index = 0;
     VkDeviceSize offset = 0;
-    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 0, 1, &index, &offset);
-    index = 1;
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline->layout, 0, 1, &index, &offset);
+    index++;
     offset += context->texture_descriptor_set.size;
-    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 1, 1, &index, &offset);
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline->layout, 1, 1, &index, &offset);
 }
 
-void command_buffer::bind_descriptor_buffer(bul::handle<compute_pipeline> pipeline_handle)
+void command_buffer::bind_descriptor_buffer(compute_pipeline* pipeline)
 {
-    buffer& texture_descriptor_buffer = context->buffers.get(context->texture_descriptor_set.buffer_handle);
-    buffer& image_descriptor_buffer = context->buffers.get(context->image_descriptor_set.buffer_handle);
-    compute_pipeline& pipeline = context->compute_pipelines.get(pipeline_handle);
-
     VkDescriptorBufferBindingInfoEXT descriptor_buffer_binding_infos[2] = {};
     descriptor_buffer_binding_infos[0].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    descriptor_buffer_binding_infos[0].address = texture_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[0].address = context->texture_descriptor_set.buffer->device_address;
     descriptor_buffer_binding_infos[0].usage = texture_descriptor_buffer_usage;
     descriptor_buffer_binding_infos[1].sType = VK_STRUCTURE_TYPE_DESCRIPTOR_BUFFER_BINDING_INFO_EXT;
-    descriptor_buffer_binding_infos[1].address = image_descriptor_buffer.device_address;
+    descriptor_buffer_binding_infos[1].address = context->image_descriptor_set.buffer->device_address;
     descriptor_buffer_binding_infos[1].usage = image_descriptor_buffer_usage;
     vkCmdBindDescriptorBuffersEXT(vk_handle, ARRAY_SIZE(descriptor_buffer_binding_infos),
                                   descriptor_buffer_binding_infos);
@@ -63,14 +58,14 @@ void command_buffer::bind_descriptor_buffer(bul::handle<compute_pipeline> pipeli
     VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
     uint32_t index = 0;
     VkDeviceSize offset = 0;
-    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 0, 1, &index, &offset);
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline->layout, 0, 1, &index, &offset);
     // index = 1; // for some reason this is does not work for compute shaders ?
     offset += context->texture_descriptor_set.size;
-    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline.layout, 1, 1, &index, &offset);
+    vkCmdSetDescriptorBufferOffsetsEXT(vk_handle, bind_point, pipeline->layout, 1, 1, &index, &offset);
 }
 
-void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachments, bul::span<load_op> color_load_ops,
-                                     bul::handle<image> depth_attachment, load_op depth_load_op)
+void command_buffer::begin_rendering(bul::span<image*> color_attachments, bul::span<load_op> color_load_ops,
+                                     image* depth_attachment, load_op depth_load_op)
 {
     ASSERT(color_attachments.size <= max_color_attachments);
     ASSERT(color_attachments.size == color_load_ops.size);
@@ -79,12 +74,11 @@ void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachm
 
     for (uint32_t i = 0; i < color_attachments.size; ++i)
     {
-        image& image = context->images.get(color_attachments[i]);
         VkRenderingAttachmentInfo& attachment_info = color_attachment_infos[i];
         memset(&attachment_info, 0, sizeof(attachment_info));
         attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         attachment_info.pNext = nullptr;
-        attachment_info.imageView = image.full_view.vk_handle;
+        attachment_info.imageView = color_attachments[i]->full_view.vk_handle;
         attachment_info.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
         attachment_info.loadOp = color_load_ops[i].vk_loadop;
         attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -94,22 +88,20 @@ void command_buffer::begin_rendering(bul::span<bul::handle<image>> color_attachm
     VkRenderingAttachmentInfo depth_attachment_info = {};
     if (depth_attachment)
     {
-        image& image = context->images.get(depth_attachment);
         depth_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         depth_attachment_info.pNext = nullptr;
-        depth_attachment_info.imageView = image.full_view.vk_handle;
+        depth_attachment_info.imageView = depth_attachment->full_view.vk_handle;
         depth_attachment_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         depth_attachment_info.loadOp = depth_load_op.vk_loadop;
         depth_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         depth_attachment_info.clearValue = depth_load_op.clear_value;
     }
 
-    image& image = context->images.get(color_attachments[0]);
-
     VkRenderingInfo rendering_info = {};
     rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     rendering_info.renderArea.offset = {0, 0};
-    rendering_info.renderArea.extent = {image.description.width, image.description.height};
+    rendering_info.renderArea.extent = {color_attachments[0]->description.width,
+                                        color_attachments[0]->description.height};
     rendering_info.layerCount = 1;
     rendering_info.colorAttachmentCount = color_attachments.size;
     rendering_info.pColorAttachments = color_attachment_infos;
@@ -123,34 +115,30 @@ void command_buffer::end_rendering()
     vkCmdEndRendering(vk_handle);
 }
 
-void command_buffer::push_constant(bul::handle<graphics_pipeline> handle, void* data, uint32_t size)
+void command_buffer::push_constant(graphics_pipeline* pipeline, void* data, uint32_t size)
 {
-    graphics_pipeline& graphics_pipeline = context->graphics_pipelines.get(handle);
-    vkCmdPushConstants(vk_handle, graphics_pipeline.layout, VK_SHADER_STAGE_ALL, 0, size, data);
+    vkCmdPushConstants(vk_handle, pipeline->layout, VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
-void command_buffer::push_constant(bul::handle<compute_pipeline> handle, void* data, uint32_t size)
+void command_buffer::push_constant(compute_pipeline* pipeline, void* data, uint32_t size)
 {
-    compute_pipeline& graphics_pipeline = context->compute_pipelines.get(handle);
-    vkCmdPushConstants(vk_handle, graphics_pipeline.layout, VK_SHADER_STAGE_ALL, 0, size, data);
+    vkCmdPushConstants(vk_handle, pipeline->layout, VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
-void command_buffer::bind_index_buffer(bul::handle<buffer> index_buffer_handle, uint32_t offset, VkIndexType index_type)
+void command_buffer::bind_index_buffer(buffer* buffer, uint32_t offset, VkIndexType index_type)
 {
-    buffer& index_buffer = context->buffers.get(index_buffer_handle);
-    vkCmdBindIndexBuffer(vk_handle, index_buffer.vk_handle, offset, index_type);
+    vkCmdBindIndexBuffer(vk_handle, buffer->vk_handle, offset, index_type);
 }
 
-void command_buffer::bind_graphics_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state)
+void command_buffer::bind_graphics_pipeline(graphics_pipeline* pipeline, const graphics_state& graphics_state)
 {
-    VkPipeline pipeline = context->compile_graphics_pipeline(handle, graphics_state);
-    vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    VkPipeline vk_pipeline_handle = context->compile_graphics_pipeline(pipeline, graphics_state);
+    vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_pipeline_handle);
 }
 
-void command_buffer::bind_compute_pipeline(bul::handle<compute_pipeline> handle)
+void command_buffer::bind_compute_pipeline(compute_pipeline* pipeline)
 {
-    VkPipeline pipeline = context->compute_pipelines.get(handle).pipeline;
-    vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    vkCmdBindPipeline(vk_handle, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_handle);
 }
 
 void command_buffer::set_scissor(const VkRect2D& rect)
@@ -194,60 +182,48 @@ command_pool command_pool::create(vk::context* context, uint32_t queue_index, Vk
     return command_pool;
 }
 
-void command_buffer::barrier(bul::handle<image> handle, image_usage dst_usage)
+void command_buffer::barrier(image* image, const image_usage& dst_usage)
 {
-    image& image = context->images.get(handle);
-    image_access src_access = get_src_image_access(image.usage);
+    image_access src_access = get_src_image_access(image->usage);
     image_access dst_access = get_dst_image_access(dst_usage);
     auto barrier = get_image_barrier(image, src_access, dst_access);
     vkCmdPipelineBarrier(vk_handle, src_access.stage, dst_access.stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    image.usage = dst_usage;
+    image->usage = dst_usage;
 }
 
-void command_buffer::copy_buffer_to_buffer(bul::handle<buffer> buffer_handle_src, bul::handle<buffer> buffer_handle_dst,
-                                           uint32_t size, uint32_t src_offset, uint32_t dst_offset)
+void command_buffer::copy_buffer_to_buffer(buffer* src, buffer* dst, uint32_t size, uint32_t src_offset,
+                                           uint32_t dst_offset)
 {
-    buffer& buffer_src = context->buffers.get(buffer_handle_src);
-    buffer& buffer_dst = context->buffers.get(buffer_handle_dst);
-
     VkBufferCopy buffer_copy = {};
     buffer_copy.srcOffset = src_offset;
     buffer_copy.dstOffset = dst_offset;
     buffer_copy.size = size;
 
-    vkCmdCopyBuffer(vk_handle, buffer_src.vk_handle, buffer_dst.vk_handle, 1, &buffer_copy);
+    vkCmdCopyBuffer(vk_handle, src->vk_handle, dst->vk_handle, 1, &buffer_copy);
 }
 
-void command_buffer::copy_image_to_buffer(bul::handle<image> image_handle, bul::handle<buffer> buffer_handle,
-                                          uint32_t dst_offset)
+void command_buffer::copy_image_to_buffer(image* image, buffer* buffer, uint32_t dst_offset)
 {
-    image& image = context->images.get(image_handle);
-    buffer& buffer = context->buffers.get(buffer_handle);
-
     VkBufferImageCopy buffer_image_copy = {};
     buffer_image_copy.bufferOffset = dst_offset;
     buffer_image_copy.bufferRowLength = 0;
     buffer_image_copy.bufferImageHeight = 0;
     buffer_image_copy.imageSubresource.aspectMask =
-        image.usage == image_usage::depth_attachment ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        image->usage == image_usage::depth_attachment ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
     buffer_image_copy.imageSubresource.mipLevel = 0;
     buffer_image_copy.imageSubresource.baseArrayLayer = 0;
     buffer_image_copy.imageSubresource.layerCount = 1;
     buffer_image_copy.imageOffset = {0, 0, 0};
-    buffer_image_copy.imageExtent = {image.description.width, image.description.height, image.description.depth};
+    buffer_image_copy.imageExtent = {image->description.width, image->description.height, image->description.depth};
 
-    barrier(image_handle, vk::image_usage::transfer_src);
+    barrier(image, vk::image_usage::transfer_src);
 
-    vkCmdCopyImageToBuffer(vk_handle, image.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer.vk_handle, 1,
+    vkCmdCopyImageToBuffer(vk_handle, image->vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer->vk_handle, 1,
                            &buffer_image_copy);
 }
 
-void command_buffer::copy_buffer_to_image(bul::handle<buffer> buffer_handle, bul::handle<image> image_handle,
-                                          uint32_t src_offset)
+void command_buffer::copy_buffer_to_image(buffer* buffer, image* image, uint32_t src_offset)
 {
-    image& image = context->images.get(image_handle);
-    buffer& buffer = context->buffers.get(buffer_handle);
-
     VkBufferImageCopy buffer_image_copy = {};
     buffer_image_copy.bufferOffset = src_offset;
     buffer_image_copy.bufferRowLength = 0;
@@ -257,28 +233,25 @@ void command_buffer::copy_buffer_to_image(bul::handle<buffer> buffer_handle, bul
     buffer_image_copy.imageSubresource.baseArrayLayer = 0;
     buffer_image_copy.imageSubresource.layerCount = 1;
     buffer_image_copy.imageOffset = {0, 0, 0};
-    buffer_image_copy.imageExtent = {image.description.width, image.description.height, image.description.depth};
+    buffer_image_copy.imageExtent = {image->description.width, image->description.height, image->description.depth};
 
-    barrier(image_handle, vk::image_usage::transfer_dst);
+    barrier(image, vk::image_usage::transfer_dst);
 
-    vkCmdCopyBufferToImage(vk_handle, buffer.vk_handle, image.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+    vkCmdCopyBufferToImage(vk_handle, buffer->vk_handle, image->vk_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
                            &buffer_image_copy);
 }
 
-void command_buffer::upload_buffer(bul::handle<buffer> buffer_handle, bul::handle<buffer> staging_buffer_handle,
-                                   void* data, uint32_t size, uint32_t src_offset, uint32_t dst_offset)
+void command_buffer::upload_buffer(buffer* buffer, ::vk::buffer* staging_buffer, void* data, uint32_t size,
+                                   uint32_t src_offset, uint32_t dst_offset)
 {
-    vk::buffer& staging_buffer = context->buffers.get(staging_buffer_handle);
-    memcpy(staging_buffer.mapped_data, data, size);
-    copy_buffer_to_buffer(staging_buffer_handle, buffer_handle, size, src_offset, dst_offset);
+    memcpy(staging_buffer->mapped_data, data, size);
+    copy_buffer_to_buffer(staging_buffer, buffer, size, src_offset, dst_offset);
 }
 
-void command_buffer::upload_image(bul::handle<image> image_handle, bul::handle<buffer> staging_buffer_handle,
-                                  void* data, uint32_t size)
+void command_buffer::upload_image(image* image, buffer* staging_buffer, void* data, uint32_t size)
 {
-    buffer& staging_buffer = context->buffers.get(staging_buffer_handle);
-    memcpy(staging_buffer.mapped_data, data, size);
-    copy_buffer_to_image(staging_buffer_handle, image_handle);
+    memcpy(staging_buffer->mapped_data, data, size);
+    copy_buffer_to_image(staging_buffer, image);
 }
 
 void command_pool::destroy()
@@ -301,7 +274,7 @@ command_buffer* command_pool::get_command_buffer()
     if (current_index == command_buffers.size)
     {
         command_buffer& command_buffer = command_buffers.push_back();
-        VkCommandBufferAllocateInfo alloc_info{};
+        VkCommandBufferAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         alloc_info.commandPool = vk_handle;
         alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;

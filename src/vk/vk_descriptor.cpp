@@ -1,7 +1,9 @@
 #include "vk/vk_descriptor.h"
 
-#include "vk/vk_tools.h"
 #include "vk/vk_context.h"
+#include "vk/vk_buffer.h"
+#include "vk/vk_image.h"
+#include "vk/vk_tools.h"
 
 namespace vk
 {
@@ -53,7 +55,7 @@ descriptor_set descriptor_set::create(context* context, VkDescriptorType type)
     }
     buffer_description.memory_usage = VMA_MEMORY_USAGE_AUTO;
     buffer_description.name = "descriptor buffer";
-    descriptor_set.buffer_handle = context->create_buffer(buffer_description);
+    descriptor_set.buffer = context->create_buffer(buffer_description);
 
     for (uint32_t i = 0; i < max_binless_descriptors; ++i)
     {
@@ -65,29 +67,25 @@ descriptor_set descriptor_set::create(context* context, VkDescriptorType type)
 
 void descriptor_set::destroy(context* context)
 {
-    context->destroy_buffer(buffer_handle);
+    context->destroy_buffer(buffer);
     vkDestroyDescriptorSetLayout(context->device, layout, nullptr);
 }
 
-uint32_t descriptor_set::create_texture_descriptor(context* context, bul::handle<image> image_handle,
-                                                   bul::handle<sampler> sampler_handle)
+uint32_t descriptor_set::create_texture_descriptor(context* context, image* image, sampler* sampler)
 {
     ASSERT(num_free_descriptors > 0);
     uint32_t index = free_descriptors[--num_free_descriptors];
-    update_texture_descriptor(context, index, image_handle, sampler_handle);
+    update_texture_descriptor(context, index, image, sampler);
     return index;
 }
 
-void descriptor_set::update_texture_descriptor(context* context, uint32_t index, bul::handle<image> image_handle,
-                                               bul::handle<sampler> sampler_handle)
+void descriptor_set::update_texture_descriptor(context* context, uint32_t index, image* image, sampler* sampler)
 {
-    image& image = context->images.get(image_handle);
-
     VkDescriptorImageInfo descriptor = {};
-    descriptor.sampler = context->samplers.get(sampler_handle).vk_handle;
-    descriptor.imageView = image.full_view.vk_handle;
-    descriptor.imageLayout = is_depth(image.description.format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-                                                                : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    descriptor.sampler = sampler->vk_handle;
+    descriptor.imageView = image->full_view.vk_handle;
+    descriptor.imageLayout = is_depth(image->description.format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+                                                                 : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkDescriptorGetInfoEXT descriptor_info = {};
     descriptor_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_GET_INFO_EXT;
@@ -96,26 +94,23 @@ void descriptor_set::update_texture_descriptor(context* context, uint32_t index,
     descriptor_info.data.pCombinedImageSampler = &descriptor;
 
     size_t descriptor_size = context->descriptor_buffer_properties.combinedImageSamplerDescriptorSize;
-    buffer& buffer = context->buffers.get(buffer_handle);
     vkGetDescriptorEXT(context->device, &descriptor_info, descriptor_size,
-                       (uint8_t*)buffer.mapped_data + index * descriptor_size + offset);
+                       (uint8_t*)buffer->mapped_data + index * descriptor_size + offset);
 }
 
-uint32_t descriptor_set::create_image_descriptor(context* context, bul::handle<image> image_handle)
+uint32_t descriptor_set::create_image_descriptor(context* context, image* image)
 {
     ASSERT(num_free_descriptors > 0);
     uint32_t index = free_descriptors[--num_free_descriptors];
-    update_image_descriptor(context, index, image_handle);
+    update_image_descriptor(context, index, image);
     return index;
 }
 
-void descriptor_set::update_image_descriptor(context* context, uint32_t index, bul::handle<image> image_handle)
+void descriptor_set::update_image_descriptor(context* context, uint32_t index, image* image)
 {
-    image& image = context->images.get(image_handle);
-
     VkDescriptorImageInfo descriptor = {};
     descriptor.sampler = VK_NULL_HANDLE;
-    descriptor.imageView = image.full_view.vk_handle;
+    descriptor.imageView = image->full_view.vk_handle;
     descriptor.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
     VkDescriptorGetInfoEXT descriptor_info = {};
@@ -125,9 +120,8 @@ void descriptor_set::update_image_descriptor(context* context, uint32_t index, b
     descriptor_info.data.pStorageImage = &descriptor;
 
     size_t descriptor_size = context->descriptor_buffer_properties.storageImageDescriptorSize;
-    buffer& buffer = context->buffers.get(buffer_handle);
     vkGetDescriptorEXT(context->device, &descriptor_info, descriptor_size,
-                       (uint8_t*)buffer.mapped_data + index * descriptor_size + offset);
+                       (uint8_t*)buffer->mapped_data + index * descriptor_size + offset);
 }
 
 void descriptor_set::destroy_descriptor(uint32_t index)

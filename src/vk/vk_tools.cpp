@@ -130,7 +130,7 @@ image_access get_dst_image_access(image_usage usage)
     return access;
 }
 
-VkImageMemoryBarrier get_image_barrier(image& image, const image_access& src, const image_access& dst)
+VkImageMemoryBarrier get_image_barrier(image* image, const image_access& src, const image_access& dst)
 {
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -140,8 +140,8 @@ VkImageMemoryBarrier get_image_barrier(image& image, const image_access& src, co
     barrier.dstAccessMask = dst.access;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image.vk_handle;
-    barrier.subresourceRange = image.full_view.range;
+    barrier.image = image->vk_handle;
+    barrier.subresourceRange = image->full_view.range;
     return barrier;
 }
 

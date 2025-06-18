@@ -1,6 +1,8 @@
 #include "vk/vk_pipeline.h"
 
 #include "vk/vk_context.h"
+#include "vk/vk_shader.h"
+#include "vk/vk_tools.h"
 
 namespace vk
 {
@@ -21,11 +23,11 @@ bool operator==(const graphics_state& a, const graphics_state& b)
     return memcmp(&a, &b, sizeof(graphics_state)) == 0;
 }
 
-bul::handle<graphics_pipeline> context::create_graphics_pipeline(const graphics_pipeline_description& description)
+graphics_pipeline* context::create_graphics_pipeline(const graphics_pipeline_description& description)
 {
-    graphics_pipeline graphics_pipeline = {};
-    graphics_pipeline.description = description;
-    graphics_pipeline.num_graphics_states = 0;
+    graphics_pipeline* pipeline = pool_alloc(&graphics_pipelines);
+    pipeline->description = description;
+    pipeline->num_graphics_states = 0;
 
     VkPushConstantRange push_constant_range = {};
     push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
@@ -44,28 +46,24 @@ bul::handle<graphics_pipeline> context::create_graphics_pipeline(const graphics_
         layout_create_info.pPushConstantRanges = &push_constant_range;
     }
 
-    VK_CHECK(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &graphics_pipeline.layout));
-
-    set_resource_name(this, (uint64_t)graphics_pipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, description.name);
-
-    return graphics_pipelines.insert(graphics_pipeline);
+    VK_CHECK(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline->layout));
+    set_resource_name(this, (uint64_t)pipeline->layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, description.name);
+    return pipeline;
 } // namespace vk
 
-VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> handle, graphics_state graphics_state)
+VkPipeline context::compile_graphics_pipeline(graphics_pipeline* pipeline, graphics_state graphics_state)
 {
-    graphics_pipeline& graphics_pipeline = graphics_pipelines.get(handle);
-
-    for (uint32_t i = 0; i < graphics_pipeline.num_graphics_states; ++i)
+    for (uint32_t i = 0; i < pipeline->num_graphics_states; ++i)
     {
-        if (graphics_pipeline.graphics_states[i] == graphics_state)
+        if (pipeline->graphics_states[i] == graphics_state)
         {
-            return graphics_pipeline.pipelines[i];
+            return pipeline->vk_handles[i];
         }
     }
 
-    ASSERT(graphics_pipeline.num_graphics_states < max_graphics_states);
+    ASSERT(pipeline->num_graphics_states < max_graphics_states);
 
-    graphics_pipeline.graphics_states[graphics_pipeline.num_graphics_states] = graphics_state;
+    pipeline->graphics_states[pipeline->num_graphics_states] = graphics_state;
 
     VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
 
@@ -98,7 +96,7 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
 
     VkPipelineColorBlendAttachmentState color_attachment_states[max_color_attachments];
     uint32_t num_color_attachment_states = 0;
-    for (uint32_t i = 0; i < graphics_pipeline.description.num_color_formats; ++i)
+    for (uint32_t i = 0; i < pipeline->description.num_color_formats; ++i)
     {
         VkPipelineColorBlendAttachmentState& attachment_state = color_attachment_states[num_color_attachment_states++];
         attachment_state.colorWriteMask =
@@ -165,25 +163,25 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
     VkPipelineShaderStageCreateInfo& vertex_shader_stage_info = shader_stages[0];
     vertex_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertex_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertex_shader_stage_info.module = shaders.get(graphics_pipeline.description.vertex_shader).vk_handle;
+    vertex_shader_stage_info.module = pipeline->description.vertex_shader->vk_handle;
     vertex_shader_stage_info.pName = "main";
     VkPipelineShaderStageCreateInfo& fragment_shader_stage_info = shader_stages[1];
     fragment_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragment_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragment_shader_stage_info.module = shaders.get(graphics_pipeline.description.fragment_shader).vk_handle;
+    fragment_shader_stage_info.module = pipeline->description.fragment_shader->vk_handle;
     fragment_shader_stage_info.pName = "main";
 
     VkPipelineRenderingCreateInfo rendering_create_info = {};
     rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    rendering_create_info.colorAttachmentCount = graphics_pipeline.description.num_color_formats;
-    rendering_create_info.pColorAttachmentFormats = graphics_pipeline.description.color_formats;
-    rendering_create_info.depthAttachmentFormat = graphics_pipeline.description.depth_format;
+    rendering_create_info.colorAttachmentCount = pipeline->description.num_color_formats;
+    rendering_create_info.pColorAttachmentFormats = pipeline->description.color_formats;
+    rendering_create_info.depthAttachmentFormat = pipeline->description.depth_format;
 
     VkGraphicsPipelineCreateInfo pipeline_create_info = {};
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipeline_create_info.flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
     pipeline_create_info.pNext = &rendering_create_info;
-    pipeline_create_info.layout = graphics_pipeline.layout;
+    pipeline_create_info.layout = pipeline->layout;
     pipeline_create_info.basePipelineHandle = nullptr;
     pipeline_create_info.basePipelineIndex = 0;
     pipeline_create_info.pVertexInputState = &vertex_input_state_info;
@@ -199,28 +197,27 @@ VkPipeline context::compile_graphics_pipeline(bul::handle<graphics_pipeline> han
     pipeline_create_info.pStages = shader_stages;
     pipeline_create_info.subpass = 0;
 
-    VkPipeline& pipeline = graphics_pipeline.pipelines[graphics_pipeline.num_graphics_states++];
-    VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline));
-    set_resource_name(this, (uint64_t)pipeline, VK_OBJECT_TYPE_PIPELINE, graphics_pipeline.description.name);
-    return pipeline;
+    VkPipeline& pipeline_handle = pipeline->vk_handles[pipeline->num_graphics_states++];
+    VK_CHECK(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline_handle));
+    set_resource_name(this, (uint64_t)pipeline_handle, VK_OBJECT_TYPE_PIPELINE, pipeline->description.name);
+    return pipeline_handle;
 }
 
-void context::destroy_graphics_pipeline(bul::handle<graphics_pipeline> handle)
+void context::destroy_graphics_pipeline(graphics_pipeline* pipeline)
 {
-    graphics_pipeline& graphics_pipeline = graphics_pipelines.get(handle);
-    vkDestroyPipelineLayout(device, graphics_pipeline.layout, nullptr);
-    graphics_pipeline.layout = VK_NULL_HANDLE;
-    for (VkPipeline pipeline : graphics_pipeline.pipelines)
+    vkDestroyPipelineLayout(device, pipeline->layout, nullptr);
+    pipeline->layout = VK_NULL_HANDLE;
+    for (uint32_t i = 0; i < pipeline->num_graphics_states; ++i)
     {
-        vkDestroyPipeline(device, pipeline, nullptr);
+        vkDestroyPipeline(device, pipeline->vk_handles[i], nullptr);
     }
-    graphics_pipeline.num_graphics_states = 0;
+    pipeline->num_graphics_states = 0;
 }
 
-bul::handle<compute_pipeline> context::create_compute_pipeline(const compute_pipeline_description& description)
+compute_pipeline* context::create_compute_pipeline(const compute_pipeline_description& description)
 {
-    compute_pipeline compute_pipeline;
-    compute_pipeline.description = description;
+    compute_pipeline* pipeline = pool_alloc(&compute_pipelines);
+    pipeline->description = description;
 
     VkPushConstantRange push_constant_range = {};
     push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
@@ -239,29 +236,26 @@ bul::handle<compute_pipeline> context::create_compute_pipeline(const compute_pip
         layout_create_info.pPushConstantRanges = &push_constant_range;
     }
 
-    VK_CHECK(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &compute_pipeline.layout));
+    VK_CHECK(vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline->layout));
 
     VkComputePipelineCreateInfo pipeline_create_info = {};
     pipeline_create_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pipeline_create_info.flags = VK_PIPELINE_CREATE_DESCRIPTOR_BUFFER_BIT_EXT;
     pipeline_create_info.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     pipeline_create_info.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    pipeline_create_info.stage.module = shaders.get(description.shader).vk_handle;
+    pipeline_create_info.stage.module = description.shader->vk_handle;
     pipeline_create_info.stage.pName = "main";
-    pipeline_create_info.layout = compute_pipeline.layout;
+    pipeline_create_info.layout = pipeline->layout;
 
-    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr,
-                                      &compute_pipeline.pipeline));
-
-    return compute_pipelines.insert(compute_pipeline);
+    VK_CHECK(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipeline->vk_handle));
+    return pipeline;
 }
 
-void context::destroy_compute_pipeline(bul::handle<compute_pipeline> handle)
+void context::destroy_compute_pipeline(compute_pipeline* pipeline)
 {
-    compute_pipeline& compute_pipeline = compute_pipelines.get(handle);
-    vkDestroyPipelineLayout(device, compute_pipeline.layout, nullptr);
-    compute_pipeline.layout = VK_NULL_HANDLE;
-    vkDestroyPipeline(device, compute_pipeline.pipeline, nullptr);
-    compute_pipeline.pipeline = VK_NULL_HANDLE;
+    vkDestroyPipelineLayout(device, pipeline->layout, nullptr);
+    pipeline->layout = VK_NULL_HANDLE;
+    vkDestroyPipeline(device, pipeline->vk_handle, nullptr);
+    pipeline->vk_handle = VK_NULL_HANDLE;
 }
 } // namespace vk

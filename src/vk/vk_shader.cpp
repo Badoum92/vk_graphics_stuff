@@ -1,6 +1,7 @@
 #include "vk/vk_shader.h"
 
 #include "vk/vk_context.h"
+#include "vk/vk_tools.h"
 
 #include "core/core.h"
 #include "core/file.h"
@@ -8,7 +9,7 @@
 
 namespace vk
 {
-bul::handle<shader> context::create_shader(const char* path)
+shader* context::create_shader(const char* path)
 {
     linear_allocator* allocator = linear_allocator_get_global();
 
@@ -25,19 +26,20 @@ bul::handle<shader> context::create_shader(const char* path)
 
     VkShaderModule vk_shader = VK_NULL_HANDLE;
     VK_CHECK(vkCreateShaderModule(device, &shader_info, nullptr, &vk_shader));
-
     linear_free(allocator, data);
-    return shaders.insert(shader{vk_shader, path});
+
+    shader* shader = pool_alloc(&shaders);
+    *shader = {vk_shader, path};
+    return shader;
 }
 
-void context::destroy_shader(bul::handle<shader> handle)
+void context::destroy_shader(shader* shader)
 {
-    shader& shader = shaders.get(handle);
-    if (shader.vk_handle != VK_NULL_HANDLE)
+    if (shader->vk_handle != VK_NULL_HANDLE)
     {
-        vkDestroyShaderModule(device, shader.vk_handle, nullptr);
-        shader.vk_handle = VK_NULL_HANDLE;
+        vkDestroyShaderModule(device, shader->vk_handle, nullptr);
+        shader->vk_handle = VK_NULL_HANDLE;
     }
-    shaders.erase(handle);
+    pool_free(&shaders, shader);
 }
 } // namespace vk

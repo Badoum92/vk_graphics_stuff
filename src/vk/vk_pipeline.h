@@ -4,8 +4,6 @@
 
 #include "vk/vk_constants.h"
 
-#include "core/containers/handle.h"
-
 namespace vk
 {
 struct shader;
@@ -27,8 +25,8 @@ bool operator==(const graphics_state& a, const graphics_state& b);
 
 struct graphics_pipeline_description
 {
-    bul::handle<shader> vertex_shader;
-    bul::handle<shader> fragment_shader;
+    shader* vertex_shader;
+    shader* fragment_shader;
     VkFormat color_formats[max_color_attachments];
     uint32_t num_color_formats;
     VkFormat depth_format;
@@ -39,7 +37,7 @@ struct graphics_pipeline_description
 struct graphics_pipeline
 {
     VkPipelineLayout layout;
-    VkPipeline pipelines[max_graphics_states];
+    VkPipeline vk_handles[max_graphics_states];
     graphics_state graphics_states[max_graphics_states];
     uint32_t num_graphics_states;
     graphics_pipeline_description description;
@@ -47,7 +45,7 @@ struct graphics_pipeline
 
 struct compute_pipeline_description
 {
-    bul::handle<shader> shader;
+    shader* shader;
     uint32_t push_constant_size;
     const char* name;
 };
@@ -55,7 +53,7 @@ struct compute_pipeline_description
 struct compute_pipeline
 {
     VkPipelineLayout layout;
-    VkPipeline pipeline = VK_NULL_HANDLE;
+    VkPipeline vk_handle = VK_NULL_HANDLE;
     compute_pipeline_description description;
 };
 } // namespace vk

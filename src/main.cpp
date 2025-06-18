@@ -1,5 +1,7 @@
 #include "vk/vk_context.h"
 #include "vk/vk_surface.h"
+#include "vk/vk_image.h"
+#include "vk/vk_buffer.h"
 
 #include "test_renderer.h"
 #include "test_compute.h"
@@ -36,7 +38,8 @@ int main(int, char**)
 
     window main_window;
     window_create(&main_window, "window", {1920, 1080});
-    vk::context vk_context = vk::context::create(&main_window, true);
+    vk::context vk_context;
+    vk::context::create(&vk_context, &main_window, true);
 
     imgui_init(&vk_context, &main_window);
 
@@ -47,26 +50,25 @@ int main(int, char**)
         buffer_description.usage = vk::transfer_buffer_usage;
         buffer_description.memory_usage = VMA_MEMORY_USAGE_AUTO;
         buffer_description.name = "staging buffer";
-        bul::handle<vk::buffer> staging_buffer_handle = vk_context.create_buffer(buffer_description);
+        vk::buffer* staging_buffer = vk_context.create_buffer(buffer_description);
 
         vk::image_description image_description = {};
         image_description.width = image.width;
         image_description.height = image.height;
         image_description.format = VK_FORMAT_R8G8B8A8_UNORM;
         image_description.name = "undefined image";
-        vk_context.undefined_image_handle = vk_context.create_image(image_description);
+        vk_context.undefined_image = vk_context.create_image(image_description);
 
         vk::command_buffer* command_buffer = vk_context.transfer_commands.get_command_buffer();
-        command_buffer->upload_image(vk_context.undefined_image_handle, staging_buffer_handle, image.bytes,
-                                     image.size_bytes());
-        command_buffer->barrier(vk_context.undefined_image_handle, vk::image_usage::graphics_shader_read);
+        command_buffer->upload_image(vk_context.undefined_image, staging_buffer, image.bytes, image.size_bytes());
+        command_buffer->barrier(vk_context.undefined_image, vk::image_usage::graphics_shader_read);
         vk_context.submit(command_buffer);
         vk_context.wait_idle();
-        vk_context.destroy_buffer(staging_buffer_handle);
+        vk_context.destroy_buffer(staging_buffer);
         image.destroy();
 
         vk_context.undefined_descriptor = vk_context.texture_descriptor_set.create_texture_descriptor(
-            &vk_context, vk_context.undefined_image_handle, vk_context.default_sampler);
+            &vk_context, vk_context.undefined_image, vk_context.default_sampler);
         ASSERT(vk_context.undefined_descriptor == 0);
     }
 
@@ -88,19 +90,22 @@ int main(int, char**)
     camera.near_plane = 1.0f;
     camera.far_plane = 10000.0f;
     camera.compute_view_proj();
-    float speed = 50;
+    float speed = 200.0f;
+    float sensitivity = 0.5f;
+    bool change_vsync = false;
 
     imgui_begin_frame();
 
-    imgui_docknode main_docknode = imgui_docknode::begin_new(imgui_global_dockspace);
-    auto [up, log_docknode] = main_docknode.split_v(0.8f);
-    auto [left, viewport_docknode] = up.split_h(0.1f);
-    auto [debug_docknode, stats_docknode] = left.split_v(0.5f);
-    viewport_docknode.dock_window("Viewport");
-    log_docknode.dock_window("Logs");
-    debug_docknode.dock_window("Debug");
-    stats_docknode.dock_window("Stats");
-    main_docknode.end();
+    ImGuiID main_docknode = imgui_docknode_main();
+    imgui_docknode_begin(main_docknode);
+    auto [up, log_docknode] = imgui_docknode_split_h(main_docknode, 0.8f);
+    auto [left, viewport_docknode] = imgui_docknode_split_v(up, 0.1f);
+    auto [debug_docknode, stats_docknode] = imgui_docknode_split_h(left, 0.5f);
+    imgui_docknode_window(viewport_docknode, "Viewport");
+    imgui_docknode_window(log_docknode, "Logs");
+    imgui_docknode_window(debug_docknode, "Debug");
+    imgui_docknode_window(stats_docknode, "Stats");
+    imgui_docknode_end(main_docknode);
 
     ImGuiWindowClass viewport_window_class = {};
     viewport_window_class.ClassId = ImGui::GetID("Viewport");
@@ -125,7 +130,7 @@ int main(int, char**)
 
         if (is_key_pressed(KEY_L_ALT))
         {
-            window_show_cursor(&main_window, !main_window.is_cursor_visible);
+            input_show_cursor(!input_is_cursor_visible());
         }
 
         vec3f direction = {0, 0, 0};
@@ -159,12 +164,12 @@ int main(int, char**)
             camera.position += direction * speed * time_get_delta_s();
         }
 
-        if (!main_window.is_cursor_visible)
+        if (!input_is_cursor_visible())
         {
-            vec2i mouse_delta = mouse_get_delta();
+            vec2i mouse_delta = input_get_mouse_delta();
             vec3f camera_rotation;
-            camera_rotation.x = mouse_delta.y * time_get_delta_s() * 10.0f;
-            camera_rotation.y = mouse_delta.x * time_get_delta_s() * 10.0f;
+            camera_rotation.x = mouse_delta.y * sensitivity * 0.01f;
+            camera_rotation.y = mouse_delta.x * sensitivity * 0.01f;
             camera_rotation.z = 0.0f;
             camera.rotate(camera_rotation);
         }
@@ -181,7 +186,7 @@ int main(int, char**)
         // ImGui stuff
         frame_context->command_buffer->barrier(frame_context->image, vk::image_usage::color_attachment);
         frame_context->command_buffer->begin_rendering({{frame_context->image}}, {{vk::load_op::clear_color()}},
-                                                       bul::handle<vk::image>::invalid(), vk::load_op::dont_care());
+                                                       nullptr, vk::load_op::dont_care());
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::SetNextWindowClass(&viewport_window_class);
@@ -189,29 +194,34 @@ int main(int, char**)
         ImVec2 window_size = ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin();
         uint32_t window_width = (uint32_t)window_size.x;
         uint32_t window_height = (uint32_t)window_size.y;
-        vk::image& render_target_image = vk_context.images.get(test_renderer.render_target.image);
-        ImGui::Image(
-            (ImTextureID)test_renderer.render_target.vk_descriptorset,
-            ImVec2((float)render_target_image.description.width, (float)render_target_image.description.height));
+        ImGui::Image((ImTextureID)test_renderer.render_target.vk_descriptorset,
+                     ImVec2((float)test_renderer.render_target.image->description.width,
+                            (float)test_renderer.render_target.image->description.height));
         ImGui::End();
         ImGui::PopStyleVar();
 
-        ImGui::Begin("Stats");
         avg_frame_ms = avg_frame_ms * 0.9f + time_to_ms(time_get_delta()) * 0.1f;
-        ImGui::Text("FPS:  %u", (uint32_t)(1000.0f / avg_frame_ms));
-        ImGui::Text("Time: %g ms", avg_frame_ms);
+        if (ImGui::Begin("Stats"))
+        {
+            ImGui::Text("FPS:  %u", (uint32_t)(1000.0f / avg_frame_ms));
+            ImGui::Text("Time: %g ms", avg_frame_ms);
+        }
         ImGui::End();
 
-        ImGui::Begin("Debug");
-        ImGui::InputFloat("Speed", &speed);
-        if (ImGui::TreeNode("Input"))
+        if (ImGui::Begin("Debug"))
         {
-            vec2i mouse_position = mouse_get_position();
-            ImGui::Text("Mouse");
-            ImGui::Text("%d %d", mouse_position.x, mouse_position.y);
-            ImGui::TreePop();
+            change_vsync = ImGui::Checkbox("Vsync", &vk_context.vsync);
+            ImGui::DragFloat("Speed", &speed, 1.0f, 0.0f, 2000.0f, "%g");
+            if (ImGui::CollapsingHeader("Input", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                vec2i mouse_position = input_get_mouse_position();
+                vec2i mouse_delta = input_get_mouse_delta();
+                ImGui::Text("Mouse");
+                ImGui::DragFloat("Sensitivity", &sensitivity, 0.01f, 0.0f, 100.0f, "%g");
+                ImGui::Text("position: %d %d", mouse_position.x, mouse_position.y);
+                ImGui::Text("delta: %d %d", mouse_delta.x, mouse_delta.y);
+            }
         }
-
         ImGui::End();
 
         imgui_end_frame(frame_context->command_buffer);
@@ -231,6 +241,13 @@ int main(int, char**)
             camera.aspect_ratio = window_size.x / window_size.y;
             camera.compute_view_proj();
             test_renderer.resize(window_width, window_height);
+        }
+
+        if (change_vsync)
+        {
+            change_vsync = false;
+            vk_context.wait_idle();
+            vk_context.set_vsync(vk_context.vsync);
         }
 
         imgui_begin_frame();

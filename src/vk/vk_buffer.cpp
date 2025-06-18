@@ -7,7 +7,7 @@
 
 namespace vk
 {
-bul::handle<buffer> context::create_buffer(const buffer_description& description)
+buffer* context::create_buffer(const buffer_description& description)
 {
     VkBufferCreateInfo buffer_info{};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -46,23 +46,24 @@ bul::handle<buffer> context::create_buffer(const buffer_description& description
         set_resource_name(this, (uint64_t)vk_buffer, VK_OBJECT_TYPE_BUFFER, description.name);
     }
 
-    return buffers.insert(buffer{vk_buffer, allocation, device_address, mapped_data, description});
+    buffer* buffer = pool_alloc(&buffers);
+    *buffer = {vk_buffer, allocation, device_address, mapped_data, description};
+    return buffer;
 }
 
-void context::destroy_buffer(bul::handle<buffer> handle)
+void context::destroy_buffer(buffer* buffer)
 {
-    buffer& buffer = buffers.get(handle);
-    if (buffer.mapped_data != nullptr)
+    if (buffer->mapped_data != nullptr)
     {
-        vmaUnmapMemory(vma_allocator, buffer.allocation);
-        buffer.mapped_data = nullptr;
+        vmaUnmapMemory(vma_allocator, buffer->allocation);
+        buffer->mapped_data = nullptr;
     }
-    if (buffer.allocation != VK_NULL_HANDLE)
+    if (buffer->allocation != VK_NULL_HANDLE)
     {
-        vmaDestroyBuffer(vma_allocator, buffer.vk_handle, buffer.allocation);
-        buffer.allocation = VK_NULL_HANDLE;
-        buffer.vk_handle = VK_NULL_HANDLE;
+        vmaDestroyBuffer(vma_allocator, buffer->vk_handle, buffer->allocation);
+        buffer->allocation = VK_NULL_HANDLE;
+        buffer->vk_handle = VK_NULL_HANDLE;
     }
-    buffers.erase(handle);
+    pool_free(&buffers, buffer);
 }
 } // namespace vk

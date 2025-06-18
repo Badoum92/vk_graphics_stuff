@@ -55,5 +55,8 @@ bool is_key_down(KEY key);
 bool is_key_pressed(KEY key);
 bool is_key_released(KEY key);
 
-vec2i mouse_get_position();
-vec2i mouse_get_delta();
+vec2i input_get_mouse_position();
+vec2i input_get_mouse_delta();
+
+void input_show_cursor(bool show);
+bool input_is_cursor_visible();

@@ -1,6 +1,10 @@
 #include "vk/vk_context.h"
 
 #include "vk/vk_tools.h"
+#include "vk/vk_image.h"
+#include "vk/vk_buffer.h"
+#include "vk/vk_shader.h"
+#include "vk/vk_pipeline.h"
 
 #include "core/window.h"
 #include "core/log.h"
@@ -11,7 +15,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
                                                      VkDebugUtilsMessageTypeFlagsEXT msg_type,
                                                      const VkDebugUtilsMessengerCallbackDataEXT* callback_data, void*)
 {
-    const auto log_level = [](VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity) {
+    const LOG_LEVEL log_level = [](VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity) {
         switch (msg_severity)
         {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -27,7 +31,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverity
         }
     }(msg_severity);
 
-    const auto msg_type_str = [](VkDebugUtilsMessageTypeFlagsEXT msg_type) {
+    const char* msg_type_str = [](VkDebugUtilsMessageTypeFlagsEXT msg_type) {
         switch (msg_type)
         {
         case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
@@ -297,33 +301,35 @@ static void create_frame_contexts(context* context)
     }
 }
 
-context context::create(::window* _window, bool enable_validation)
+void context::create(context* context, ::window* _window, bool enable_validation)
 {
-    context context;
-    context.window = _window;
-    create_instance(&context, enable_validation);
-    create_physical_device(&context);
-    create_device(&context);
-    context.surface = surface::create(&context);
-    context.texture_descriptor_set = descriptor_set::create(&context, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-    context.image_descriptor_set = descriptor_set::create(&context, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-    context.transfer_commands = command_pool::create(&context, context.graphics_queue_index, context.graphics_queue);
-    create_frame_contexts(&context);
-
+    context->window = _window;
+    context->images = pool_create<image>();
+    context->samplers = pool_create<sampler>();
+    context->buffers = pool_create<buffer>();
+    context->shaders = pool_create<shader>();
+    context->graphics_pipelines = pool_create<graphics_pipeline>();
+    context->compute_pipelines = pool_create<compute_pipeline>();
+    create_instance(context, enable_validation);
+    create_physical_device(context);
+    create_device(context);
+    context->surface = surface::create(context);
+    context->texture_descriptor_set = descriptor_set::create(context, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    context->image_descriptor_set = descriptor_set::create(context, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    context->transfer_commands = command_pool::create(context, context->graphics_queue_index, context->graphics_queue);
+    create_frame_contexts(context);
     sampler_description sampler_description = {};
-    context.default_sampler = context.create_sampler(sampler_description);
-
-    return context;
+    context->default_sampler = context->create_sampler(sampler_description);
 }
 
 void context::destroy()
 {
-    destroy_image(undefined_image_handle);
+    destroy_image(undefined_image);
     destroy_sampler(default_sampler);
 
     vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
 
-    for (auto& fc : frame_contexts)
+    for (frame_context& fc : frame_contexts)
     {
         vkDestroySemaphore(device, fc.image_acquired_semaphore, nullptr);
         vkDestroySemaphore(device, fc.rendering_finished_semaphore, nullptr);
@@ -348,6 +354,13 @@ void context::destroy()
     }
     vkDestroyInstance(instance, nullptr);
     instance = VK_NULL_HANDLE;
+
+    pool_destroy(&images);
+    pool_destroy(&samplers);
+    pool_destroy(&buffers);
+    pool_destroy(&shaders);
+    pool_destroy(&graphics_pipelines);
+    pool_destroy(&compute_pipelines);
 }
 
 void context::wait_idle()
@@ -375,7 +388,7 @@ frame_context* context::acquire_next_image()
     {
         wait_idle();
         surface.destroy_swapchain(this);
-        surface.create_swapchain(this);
+        surface.create_swapchain(this, vsync);
         return nullptr;
     }
 
@@ -396,15 +409,14 @@ bool context::present(frame_context* frame_context)
     present_info.pSwapchains = &surface.swapchain;
     present_info.pImageIndices = &frame_context->image_index;
 
-    auto res = vkQueuePresentKHR(graphics_queue, &present_info);
-
+    VkResult res = vkQueuePresentKHR(graphics_queue, &present_info);
     current_frame = (current_frame + 1) % max_frames_in_flight;
 
     if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
     {
         wait_idle();
         surface.destroy_swapchain(this);
-        surface.create_swapchain(this);
+        surface.create_swapchain(this, vsync);
         return false;
     }
 
@@ -438,5 +450,12 @@ void context::submit(command_buffer* command_buffer, frame_context* frame_contex
     submit_info.pSignalSemaphores = &frame_context->rendering_finished_semaphore;
     vkResetFences(device, 1, &frame_context->rendering_finished_fence);
     VK_CHECK(vkQueueSubmit(command_buffer->vk_queue, 1, &submit_info, frame_context->rendering_finished_fence));
+}
+
+void context::set_vsync(bool _vsync)
+{
+    vsync = _vsync;
+    surface.destroy_swapchain(this);
+    surface.create_swapchain(this, vsync);
 }
 } // namespace vk

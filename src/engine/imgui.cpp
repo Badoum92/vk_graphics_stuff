@@ -1,9 +1,13 @@
 #include "imgui.h"
 
 #include "vk/vk_context.h"
+#include "vk/vk_image.h"
 #include "core/input.h"
 #include "core/log.h"
 #include "core/window.h"
+
+#include <imgui/imgui_impl_vulkan.h>
+#include <imgui/imgui_impl_win32.h>
 
 ImGuiID imgui_global_dockspace;
 
@@ -138,8 +142,7 @@ void imgui_init(vk::context* context, window* window)
     imgui_vulkan.UseDynamicRendering = true;
     imgui_vulkan.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     imgui_vulkan.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
-    imgui_vulkan.PipelineRenderingCreateInfo.pColorAttachmentFormats =
-        &context->images.get(context->surface.images[0]).description.format;
+    imgui_vulkan.PipelineRenderingCreateInfo.pColorAttachmentFormats = &context->surface.images[0]->description.format;
     ImGui_ImplVulkan_Init(&imgui_vulkan);
     ImGui_ImplWin32_Init(window->handle);
     ImGui::GetIO().Fonts->AddFontFromFileTTF("resources/CascadiaCode.ttf", 15);
@@ -264,40 +267,49 @@ void imgui_end_frame(vk::command_buffer* command_buffer)
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), command_buffer->vk_handle);
 }
 
-imgui_docknode imgui_docknode::begin(uint32_t _id)
+void imgui_add_texture(imgui_texture* texture)
 {
-    imgui_docknode node{_id};
-    return node;
+    texture->vk_descriptorset = ImGui_ImplVulkan_AddTexture(
+        texture->sampler->vk_handle, texture->image->full_view.vk_handle, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-imgui_docknode imgui_docknode::begin_new(uint32_t _id)
+void imgui_remove_texture(imgui_texture* texture)
 {
-    imgui_docknode node{_id};
-    ImGui::DockBuilderRemoveNode(_id);
-    ImGui::DockBuilderAddNode(_id, ImGuiDockNodeFlags_None);
-    return node;
+    ImGui_ImplVulkan_RemoveTexture(texture->vk_descriptorset);
+    texture->vk_descriptorset = VK_NULL_HANDLE;
 }
 
-void imgui_docknode::end()
+ImGuiID imgui_docknode_main()
+{
+    return imgui_global_dockspace;
+}
+
+void imgui_docknode_begin(ImGuiID id)
+{
+    ImGui::DockBuilderRemoveNode(id);
+    ImGui::DockBuilderAddNode(id, ImGuiDockNodeFlags_None);
+}
+
+void imgui_docknode_end(ImGuiID id)
 {
     ImGui::DockBuilderFinish(id);
 }
 
-void imgui_docknode::dock_window(const char* name)
+imgui_docknode_split imgui_docknode_split_v(ImGuiID id, float ratio)
+{
+    imgui_docknode_split split;
+    ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, ratio, &split.first, &split.second);
+    return split;
+}
+
+imgui_docknode_split imgui_docknode_split_h(ImGuiID id, float ratio)
+{
+    imgui_docknode_split split;
+    ImGui::DockBuilderSplitNode(id, ImGuiDir_Up, ratio, &split.first, &split.second);
+    return split;
+}
+
+void imgui_docknode_window(ImGuiID id, const char* name)
 {
     ImGui::DockBuilderDockWindow(name, id);
-}
-
-imgui_docknode_split_h imgui_docknode::split_h(float a_fRatio)
-{
-    imgui_docknode_split_h split;
-    ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, a_fRatio, &split.left.id, &split.right.id);
-    return split;
-}
-
-imgui_docknode_split_v imgui_docknode::split_v(float a_fRatio)
-{
-    imgui_docknode_split_v split;
-    ImGui::DockBuilderSplitNode(id, ImGuiDir_Up, a_fRatio, &split.up.id, &split.down.id);
-    return split;
 }
