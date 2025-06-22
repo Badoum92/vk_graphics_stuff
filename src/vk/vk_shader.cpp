@@ -4,8 +4,14 @@
 #include "vk/vk_tools.h"
 
 #include "core/core.h"
+#include "core/math/math.h"
 #include "core/file.h"
+#include "core/log.h"
 #include "core/memory/linear_allocator.h"
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 namespace vk
 {
@@ -43,3 +49,105 @@ void context::destroy_shader(shader* shader)
     pool_free(&shaders, shader);
 }
 } // namespace vk
+
+#if defined(_WIN32)
+static int64_t latest_change(const char* dir_name)
+{
+    int64_t ret = 0;
+    uint8_t file_info_buf[2048];
+    HANDLE dir_handle = CreateFileA(dir_name, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                                    FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    FILE_INFO_BY_HANDLE_CLASS file_info_class = FileIdExtdDirectoryRestartInfo;
+    while (true)
+    {
+        if (!GetFileInformationByHandleEx(dir_handle, file_info_class, file_info_buf, sizeof(file_info_buf)))
+        {
+            ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
+            break;
+        }
+        file_info_class = FileIdExtdDirectoryInfo;
+        PFILE_ID_EXTD_DIR_INFO entry = (PFILE_ID_EXTD_DIR_INFO)file_info_buf;
+        do
+        {
+            if (wcsncmp(entry->FileName, L".", 1) == 0 || wcsncmp(entry->FileName, L"..", 2) == 0
+                || (entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+                goto loop;
+
+            if (entry->ChangeTime.QuadPart > ret)
+                ret = entry->ChangeTime.QuadPart;
+
+        loop:
+            entry = (PFILE_ID_EXTD_DIR_INFO)((uint8_t*)entry + entry->NextEntryOffset);
+        } while (entry->NextEntryOffset != 0);
+    }
+    return ret;
+}
+
+bool vk_compile_shaders()
+{
+    CreateDirectoryA("shaders/spv", nullptr);
+    int64_t latest_src_change = math_max(latest_change("shaders"), latest_change("shaders/include"));
+    int64_t latest_dst_change = latest_change("shaders/spv");
+    if (latest_dst_change >= latest_src_change)
+        return true;
+
+    uint8_t file_info_buf[2048];
+    char file_name[MAX_PATH * 2];
+    char cmd_line[MAX_PATH + 128];
+    HANDLE shader_dir = CreateFileA("shaders", GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                                    FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+
+    STARTUPINFOA startup_info;
+    memset(&startup_info, 0, sizeof(startup_info));
+    startup_info.cb = sizeof(startup_info);
+    PROCESS_INFORMATION process_info;
+    DWORD return_value;
+
+    FILE_INFO_BY_HANDLE_CLASS file_info_class = FileIdExtdDirectoryRestartInfo;
+    while (true)
+    {
+        if (!GetFileInformationByHandleEx(shader_dir, file_info_class, file_info_buf, sizeof(file_info_buf)))
+        {
+            ASSERT(GetLastError() == ERROR_NO_MORE_FILES);
+            break;
+        }
+        file_info_class = FileIdExtdDirectoryInfo;
+        PFILE_ID_EXTD_DIR_INFO entry = (PFILE_ID_EXTD_DIR_INFO)file_info_buf;
+        do
+        {
+            if (wcsncmp(entry->FileName, L".", 1) == 0 || wcsncmp(entry->FileName, L"..", 2) == 0
+                || (entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+                goto loop;
+
+            file_name[entry->FileNameLength / 2] = 0;
+            file_name[entry->FileNameLength / 2 + 1] = 0;
+            wcstombs(file_name, entry->FileName, entry->FileNameLength / 2);
+            snprintf(cmd_line, sizeof(cmd_line),
+                     "glslc -g -I shaders/include --target-env=vulkan1.4 -std=460 shaders/%s -o shaders/spv/%s",
+                     file_name, file_name);
+            LOG_DEBUG("%s", cmd_line);
+
+            return_value = (uint32_t)-1;
+            if (CreateProcessA(nullptr, cmd_line, nullptr, nullptr, false, 0, nullptr, nullptr, &startup_info,
+                               &process_info))
+            {
+                WaitForSingleObject(process_info.hProcess, INFINITE);
+                GetExitCodeProcess(process_info.hProcess, &return_value);
+                CloseHandle(process_info.hThread);
+                CloseHandle(process_info.hProcess);
+            }
+
+            if (return_value != 0)
+            {
+                LOG_ERROR("Error compiling %s", file_name);
+                return false;
+            }
+
+        loop:
+            entry = (PFILE_ID_EXTD_DIR_INFO)((uint8_t*)entry + entry->NextEntryOffset);
+        } while (entry->NextEntryOffset != 0);
+    }
+
+    return true;
+}
+#endif

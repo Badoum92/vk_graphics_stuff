@@ -2,6 +2,7 @@
 #include "vk/vk_surface.h"
 #include "vk/vk_image.h"
 #include "vk/vk_buffer.h"
+#include "vk/vk_shader.h"
 
 #include "test_renderer.h"
 #include "test_compute.h"
@@ -94,6 +95,7 @@ int main(int, char**)
     float speed = 200.0f;
     float sensitivity = 0.5f;
     bool change_vsync = false;
+    bool reload_shaders = false;
 
     imgui_begin_frame();
 
@@ -211,6 +213,8 @@ int main(int, char**)
 
         if (ImGui::Begin("Debug"))
         {
+            reload_shaders = ImGui::Button("Reload shaders")
+                || ImGui::IsKeyChordPressed(ImGuiKey_ModCtrl | ImGuiKey_ModShift | ImGuiKey_R);
             change_vsync = ImGui::Checkbox("Vsync", &vk_context.vsync);
             ImGui::DragFloat("Speed", &speed, 1.0f, 0.0f, 2000.0f, "%g");
             if (ImGui::CollapsingHeader("Input", ImGuiTreeNodeFlags_DefaultOpen))
@@ -249,6 +253,13 @@ int main(int, char**)
             change_vsync = false;
             vk_context.wait_idle();
             vk_context.set_vsync(vk_context.vsync);
+        }
+
+        if (reload_shaders)
+        {
+            reload_shaders = false;
+            vk_compile_shaders();
+            test_renderer.reload_shaders();
         }
 
         imgui_begin_frame();

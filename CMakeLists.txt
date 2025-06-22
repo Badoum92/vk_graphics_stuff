@@ -152,11 +152,11 @@ file(GLOB_RECURSE GLSL_INCLUDE_FILES "shaders/include/*")
 foreach(GLSL ${GLSL_SOURCE_FILES})
     message("FILE: ${GLSL}")
     get_filename_component(FILE_NAME ${GLSL} NAME)
-    set(SPIRV "${PROJECT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
+    set(SPIRV "${CMAKE_SOURCE_DIR}/shaders/spv/${FILE_NAME}")
     add_custom_command(
         OUTPUT ${SPIRV}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
-        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -g -I ${CMAKE_SOURCE_DIR}/shaders/include --target-env=vulkan1.3 -std=460 ${GLSL} -o ${SPIRV}
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} -g -I ${CMAKE_SOURCE_DIR}/shaders/include --target-env=vulkan1.4 -std=460 ${GLSL} -o ${SPIRV}
         DEPENDS ${GLSL} ${GLSL_INCLUDE_FILES}
     )
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})
@@ -167,6 +167,7 @@ target_sources(shaders PRIVATE ${GLSL_INCLUDE_FILES} ${GLSL_SOURCE_FILES})
 add_dependencies(main shaders)
 
 add_custom_command(TARGET main POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_BINARY_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
+    # COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_BINARY_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:main>/resources"
 )

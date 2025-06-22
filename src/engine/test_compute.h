@@ -12,6 +12,7 @@ struct test_compute
     void destroy();
 
     void resize(uint32_t _width, uint32_t _height);
+    void reload_shaders();
     void draw(vk::frame_context* frame_context, camera* camera);
 
     uint32_t width;

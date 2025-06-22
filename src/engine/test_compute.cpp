@@ -32,7 +32,7 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
     test_compute.height = _height;
     test_compute.context = _context;
 
-    test_compute.compute_shader = _context->create_shader("shaders/test_compute.comp.spv");
+    test_compute.compute_shader = _context->create_shader("shaders/spv/test_compute.comp");
 
     vk::compute_pipeline_description compute_pipeline_description = {};
     compute_pipeline_description.shader = test_compute.compute_shader;
@@ -96,6 +96,21 @@ void test_compute::resize(uint32_t _width, uint32_t _height)
     render_target.descriptor_index =
         context->image_descriptor_set.create_image_descriptor(context, render_target.image);
     imgui_add_texture(&render_target);
+}
+
+void test_compute::reload_shaders()
+{
+    context->wait_idle();
+    context->destroy_compute_pipeline(compute_pipeline);
+    context->destroy_shader(compute_shader);
+
+    compute_shader = context->create_shader("shaders/spv/test_compute.comp");
+
+    vk::compute_pipeline_description compute_pipeline_description = {};
+    compute_pipeline_description.shader = compute_shader;
+    compute_pipeline_description.push_constant_size = sizeof(push_constant);
+    compute_pipeline_description.name = "test compute";
+    compute_pipeline = context->create_compute_pipeline(compute_pipeline_description);
 }
 
 void test_compute::draw(vk::frame_context* frame_context, camera* camera)

@@ -3,11 +3,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define _max(a, b) ((a) > (b) ? (a) : (b))
+#define _max(a, b)      ((a) > (b) ? (a) : (b))
+#define FREE_FLAG       (1ull << 63)
+#define SET_FREE(PTR)   ((T*)(((uint64_t)(PTR)) | FREE_FLAG))
+#define RESET_FREE(PTR) ((T*)(((uint64_t)(PTR)) & ~FREE_FLAG))
 
-struct _pool_node
+struct pool_node
 {
-    _pool_node* next;
+    pool_node* next;
     // uint8_t data[0];
 };
 
@@ -15,14 +18,14 @@ template <typename T>
 struct pool
 {
     T* free_list;
-    _pool_node* first_node;
+    pool_node* first_node;
     uint32_t size;
 };
 
 constexpr uint32_t pool_elements_per_node = 64;
 
 template <typename T>
-T* _pool_at(_pool_node* node, uint32_t index)
+T* _pool_at(pool_node* node, uint32_t index)
 {
     return (T*)((uint8_t*)(node + 1) + index * _max(sizeof(T), sizeof(void*)));
 }
@@ -30,7 +33,7 @@ T* _pool_at(_pool_node* node, uint32_t index)
 template <typename T>
 void _pool_add_node(pool<T>* pool)
 {
-    _pool_node* node = (_pool_node*)malloc(sizeof(node) + pool_elements_per_node * _max(sizeof(T), sizeof(void*)));
+    pool_node* node = (pool_node*)malloc(sizeof(node) + pool_elements_per_node * _max(sizeof(T), sizeof(void*)));
     node->next = nullptr;
     for (uint32_t i = 0; i < pool_elements_per_node; ++i)
     {
@@ -43,6 +46,7 @@ void _pool_add_node(pool<T>* pool)
     }
     pool->first_node = node;
     pool->free_list = (T*)(node + 1);
+    pool->free_list = SET_FREE(pool->free_list);
 }
 
 template <typename T>
@@ -57,9 +61,9 @@ pool<T> pool_create()
 template <typename T>
 void pool_destroy(pool<T>* pool)
 {
-    for (_pool_node* node = pool->first_node; node != nullptr;)
+    for (pool_node* node = pool->first_node; node != nullptr;)
     {
-        _pool_node* next = node->next;
+        pool_node* next = node->next;
         free(node);
         node = next;
     }
@@ -71,11 +75,12 @@ void pool_destroy(pool<T>* pool)
 template <typename T>
 T* pool_alloc(pool<T>* pool)
 {
+    static_assert(sizeof(T) >= sizeof(void*));
     if (pool->free_list == nullptr)
     {
         _pool_add_node(pool);
     }
-    T* ptr = pool->free_list;
+    T* ptr = RESET_FREE(pool->free_list);
     pool->free_list = *(T**)ptr;
     pool->size++;
     return ptr;
@@ -85,8 +90,22 @@ template <typename T>
 void pool_free(pool<T>* pool, T* ptr)
 {
     *(T**)ptr = pool->free_list;
-    pool->free_list = ptr;
+    pool->free_list = SET_FREE(ptr);
     pool->size--;
 }
 
+template <typename T>
+T* pool_get_data(pool_node* node)
+{
+    return (T*)node + 1;
+}
+
+inline bool pool_is_element_free(void* element)
+{
+    return ((uint64_t)element) & FREE_FLAG;
+}
+
 #undef _max
+#undef FREE_FLAG
+#undef SET_FREE
+#undef RESET_FREE

@@ -10,3 +10,5 @@ struct shader
     const char* path;
 };
 } // namespace vk
+
+bool vk_compile_shaders();

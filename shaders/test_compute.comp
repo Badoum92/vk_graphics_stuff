@@ -31,7 +31,7 @@ void main()
     float tmin, tmax;
     if (ray_box_intersection(ray, vec3(-0.5f, -0.5f, -0.5f), vec3(0.5f, 0.5f, 0.5f), tmin, tmax))
     {
-        imageStore(image2D_rgba8[image_index], ivec2(uv), vec4(0, 0, 1, 1));
+        imageStore(image2D_rgba8[image_index], ivec2(uv), vec4(1, 0, 1, 1));
     }
     else
     {
