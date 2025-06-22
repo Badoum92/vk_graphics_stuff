@@ -76,12 +76,22 @@ void input_show_cursor(bool show)
     ShowCursor(show);
     if (!show)
     {
+        HWND window_handle = (HWND)window_get_main_window()->handle;
+
+        RECT rect;
+        GetClientRect(window_handle, &rect);
+        ClientToScreen(window_handle, (POINT*)&rect.left);
+        ClientToScreen(window_handle, (POINT*)&rect.right);
+        ClipCursor(&rect);
+
         visible_cursor_position = mouse_position;
-        RAWINPUTDEVICE rid = {0x01, 0x02, 0, (HWND)window_get_main_window()->handle};
+        RAWINPUTDEVICE rid = {0x01, 0x02, 0, window_handle};
         ENSURE(RegisterRawInputDevices(&rid, 1, sizeof(rid)));
     }
     else
     {
+        ClipCursor(nullptr);
+
         mouse_position = visible_cursor_position;
         SetCursorPos(mouse_position.x, mouse_position.y);
         RAWINPUTDEVICE rid = {0x01, 0x02, RIDEV_REMOVE, nullptr};

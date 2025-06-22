@@ -19,6 +19,7 @@
 #include "core/thread.h"
 
 #include "imgui.h"
+#include "globals.h"
 
 #include "tracy/Tracy.hpp"
 
@@ -72,7 +73,7 @@ int main(int, char**)
         ASSERT(vk_context.undefined_descriptor == 0);
     }
 
-#if 1
+#if 0
     test_renderer test_renderer =
         test_renderer::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
 #else
@@ -80,7 +81,7 @@ int main(int, char**)
         test_compute::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
 #endif
 
-    camera camera = camera::create();
+    camera camera = camera_create();
     camera.position = {0.0f, 1.0f, 1.0f};
     camera.yaw = 0;
     camera.pitch = 0;
@@ -89,7 +90,7 @@ int main(int, char**)
     camera.aspect_ratio = window_aspect_ratio(&main_window);
     camera.near_plane = 1.0f;
     camera.far_plane = 10000.0f;
-    camera.compute_view_proj();
+    camera_compute_view_proj(&camera);
     float speed = 200.0f;
     float sensitivity = 0.5f;
     bool change_vsync = false;
@@ -152,11 +153,11 @@ int main(int, char**)
         }
         if (is_key_down(KEY_SPACE))
         {
-            direction += camera::WORLD_UP;
+            direction += WORLD_UP;
         }
         if (is_key_down(KEY_C))
         {
-            direction -= camera::WORLD_UP;
+            direction -= WORLD_UP;
         }
         if (direction != vec3f{0, 0, 0})
         {
@@ -167,14 +168,14 @@ int main(int, char**)
         if (!input_is_cursor_visible())
         {
             vec2i mouse_delta = input_get_mouse_delta();
-            vec3f camera_rotation;
-            camera_rotation.x = mouse_delta.y * sensitivity * 0.01f;
-            camera_rotation.y = mouse_delta.x * sensitivity * 0.01f;
-            camera_rotation.z = 0.0f;
-            camera.rotate(camera_rotation);
+            vec3f rotation;
+            rotation.x = mouse_delta.y * sensitivity * 0.01f;
+            rotation.y = mouse_delta.x * sensitivity * 0.01f;
+            rotation.z = 0.0f;
+            camera_rotate(&camera, rotation);
         }
 
-        camera.compute_view_proj();
+        camera_compute_view_proj(&camera);
 
         vk::frame_context* frame_context;
         frame_context = vk_context.acquire_next_image();
@@ -239,7 +240,7 @@ int main(int, char**)
         if (window_width != test_renderer.width || window_height != test_renderer.height)
         {
             camera.aspect_ratio = window_size.x / window_size.y;
-            camera.compute_view_proj();
+            camera_compute_view_proj(&camera);
             test_renderer.resize(window_width, window_height);
         }
 
@@ -251,6 +252,8 @@ int main(int, char**)
         }
 
         imgui_begin_frame();
+
+        g_frame++;
 
         FrameMark;
     }

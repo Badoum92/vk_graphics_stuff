@@ -1,15 +1,17 @@
 #include "global.glsl"
+#include "raytrace.glsl"
 
 BUFFER(uniform_buffer)
 {
-    mat4 mvp;
-    uint width;
-    uint height;
+    mat4 inv_view_proj;
+    vec4 position;
 };
 
 PUSH_CONSTANT(push_constant)
 {
     uniform_buffer ubo;
+    uvec2 resolution;
+    uint frame;
     uint image_index;
 };
 
@@ -17,5 +19,22 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
     uvec2 uv = GOBAL_INVOCATION_ID.xy;
-    imageStore(image2D_rgba8[image_index], ivec2(uv), vec4(uv.x / float(ubo.width), uv.y / float(ubo.height), 0, 1));
+
+    if (any(greaterThanEqual(uv, resolution)))
+    {
+        return;
+    }
+
+    uint rng = init_rng(uv, frame);
+
+    ray ray = ray_gen(uv, resolution, ubo.position, ubo.inv_view_proj, true, rng);
+    float tmin, tmax;
+    if (ray_box_intersection(ray, vec3(-0.5f, -0.5f, -0.5f), vec3(0.5f, 0.5f, 0.5f), tmin, tmax))
+    {
+        imageStore(image2D_rgba8[image_index], ivec2(uv), vec4(0, 0, 1, 1));
+    }
+    else
+    {
+        imageStore(image2D_rgba8[image_index], ivec2(uv), vec4(vec2(uv) / resolution, 0, 1));
+    }
 }

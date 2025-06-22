@@ -19,4 +19,39 @@ layout(set = 1, binding = 0, r8ui) uniform uimage3D image3D_r8[];
 #define VERTEX_INDEX        gl_VertexIndex
 #define GOBAL_INVOCATION_ID gl_GlobalInvocationID
 
+const float FLT_P_INF = 1.0f / 0.0f;
+const float FLT_N_INF = -1.0f / 0.0f;
+const float EPSILON = 0.001f;
+const float TWO_PI = 6.2831853f;
+
+uint init_rng(uvec2 pixel, uint frame_nb)
+{
+    return uint(uint(pixel.x) * uint(1973) + uint(pixel.y) * uint(9277) + uint(frame_nb) * uint(26699)) | uint(1);
+}
+
+uint wang_hash(inout uint n)
+{
+    n = uint(n ^ uint(61)) ^ uint(n >> uint(16));
+    n *= uint(9);
+    n = n ^ (n >> 4);
+    n *= uint(0x27d4eb2d);
+    n = n ^ (n >> 15);
+    return n;
+}
+
+float random_float_01(inout uint rng)
+{
+    return float(wang_hash(rng)) / 4294967296.0;
+}
+
+vec3 random_unit_vector(inout uint rng)
+{
+    float z = random_float_01(rng) * 2.0f - 1.0f;
+    float a = random_float_01(rng) * TWO_PI;
+    float r = sqrt(1.0f - z * z);
+    float x = r * cos(a);
+    float y = r * sin(a);
+    return vec3(x, y, z);
+}
+
 #endif

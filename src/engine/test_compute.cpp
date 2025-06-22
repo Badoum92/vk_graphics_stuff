@@ -1,6 +1,7 @@
 #include "test_compute.h"
 
 #include "camera.h"
+#include "globals.h"
 
 #include "vk/vk_pipeline.h"
 #include "vk/vk_image.h"
@@ -12,14 +13,15 @@
 struct push_constant
 {
     VkDeviceAddress uniform_buffer;
+    vec2u resolution;
+    uint32_t frame;
     uint32_t image_index;
 };
 
 struct uniform_buffer_data
 {
-    mat4f view_proj;
-    uint32_t width;
-    uint32_t height;
+    mat4f inv_view_proj;
+    vec4f position;
 };
 
 test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32_t _height)
@@ -101,13 +103,14 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     vk::command_buffer* command_buffer = frame_context->command_buffer;
 
     uniform_buffer_data uniform_buffer_data = {};
-    uniform_buffer_data.view_proj = camera->proj * camera->view;
-    uniform_buffer_data.width = width;
-    uniform_buffer_data.height = height;
+    uniform_buffer_data.inv_view_proj = mat4_inverse(camera->proj * camera->view);
+    uniform_buffer_data.position = {camera->position.x, camera->position.y, camera->position.z, 0.0f};
     memcpy(uniform_buffer->mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
 
     push_constant push_constant = {};
     push_constant.uniform_buffer = uniform_buffer->device_address;
+    push_constant.resolution = {width, height};
+    push_constant.frame = g_frame;
     push_constant.image_index = render_target.descriptor_index;
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read_write);

@@ -35,6 +35,8 @@ add_subdirectory(third_party)
 add_executable(main
     src/main.cpp
     src/pch.h
+    src/globals.cpp
+    src/globals.h
 
     src/util/implems.cpp
 
@@ -79,7 +81,6 @@ add_executable(main
     src/vk/vk_commands.cpp
     src/vk/vk_commands.h
 
-
     src/core/core.cpp
     src/core/core.h
     src/core/input.cpp
@@ -87,6 +88,7 @@ add_executable(main
     src/core/log.cpp
     src/core/log.h
     src/core/thread.h
+    src/core/rwlock.h
     src/core/event.h
     src/core/file.h
     src/core/window.h
@@ -101,6 +103,7 @@ add_executable(main
     src/core/containers/vector.h
 
     src/core/platform/thread_win32.cpp
+    src/core/platform/rwlock_win32.cpp
     src/core/platform/file_win32.cpp
     src/core/platform/window_win32.cpp
     src/core/platform/time_win32.cpp
@@ -160,10 +163,10 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
 endforeach(GLSL)
 
 add_custom_target(shaders DEPENDS ${SPIRV_BINARY_FILES})
+target_sources(shaders PRIVATE ${GLSL_INCLUDE_FILES} ${GLSL_SOURCE_FILES})
 add_dependencies(main shaders)
 
 add_custom_command(TARGET main POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:main>/shaders/"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_BINARY_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_BINARY_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:main>/resources"
 )

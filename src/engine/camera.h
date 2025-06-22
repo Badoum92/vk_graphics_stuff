@@ -3,17 +3,12 @@
 #include "core/math/matrix.h"
 #include "core/math/vector.h"
 
+static constexpr vec3f WORLD_RIGHT = {1, 0, 0};
+static constexpr vec3f WORLD_UP = {0, 1, 0};
+static constexpr vec3f WORLD_FORWARD = {0, 0, -1};
+
 struct camera
 {
-    static constexpr vec3f WORLD_RIGHT = {1, 0, 0};
-    static constexpr vec3f WORLD_UP = {0, 1, 0};
-    static constexpr vec3f WORLD_FORWARD = {0, 0, -1};
-
-    static camera create();
-
-    void compute_view_proj();
-    void rotate(vec3f angles);
-
     vec3f position;
     vec3f right;
     vec3f up;
@@ -36,3 +31,7 @@ struct camera
     mat4f proj;
     mat4f inv_proj;
 };
+
+camera camera_create();
+void camera_compute_view_proj(camera* camera);
+void camera_rotate(camera* camera, vec3f angles);
