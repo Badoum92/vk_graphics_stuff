@@ -18,25 +18,44 @@
 #include "core/log.h"
 #include "core/memory/linear_allocator.h"
 #include "core/thread.h"
+#include "core/thread_pool.h"
+#include "core/directory_watcher.h"
 
 #include "imgui.h"
 #include "globals.h"
 
 #include "tracy/Tracy.hpp"
 
-int main(int, char**)
-{
-    thread_init();
+static int64_t recompile_shaders = 0;
 
-    char module_directory[256];
+void shader_changed(const char* file, FILE_NOTIFY)
+{
+    if (!strstr(file, "spv"))
+        recompile_shaders = time_now();
+}
+
+void set_working_directory()
+{
+    char module_directory[MAX_PATH];
     GetModuleFileNameA(nullptr, module_directory, sizeof(module_directory));
     char* last_separator = strrchr(module_directory, '\\');
     if (last_separator)
         *last_separator = 0;
     SetCurrentDirectoryA(module_directory);
+}
+
+int main(int, char**)
+{
+    set_working_directory();
+
+    thread_init();
+    thread_pool_init();
 
     linear_allocator linear_allocator = linear_allocator_create(MB(4));
     linear_allocator_set_global(&linear_allocator);
+
+    directory_watcher watcher;
+    directory_watcher_run(&watcher, "shaders", shader_changed);
 
     window main_window;
     window_create(&main_window, "window", {1920, 1080});
@@ -95,7 +114,6 @@ int main(int, char**)
     float speed = 200.0f;
     float sensitivity = 0.5f;
     bool change_vsync = false;
-    bool reload_shaders = false;
 
     imgui_begin_frame();
 
@@ -213,8 +231,11 @@ int main(int, char**)
 
         if (ImGui::Begin("Debug"))
         {
-            reload_shaders = ImGui::Button("Reload shaders")
-                || ImGui::IsKeyChordPressed(ImGuiKey_ModCtrl | ImGuiKey_ModShift | ImGuiKey_R);
+            if (ImGui::Button("Reload shaders")
+                || ImGui::IsKeyChordPressed(ImGuiKey_ModCtrl | ImGuiKey_ModShift | ImGuiKey_R))
+            {
+                recompile_shaders = time_now();
+            }
             change_vsync = ImGui::Checkbox("Vsync", &vk_context.vsync);
             ImGui::DragFloat("Speed", &speed, 1.0f, 0.0f, 2000.0f, "%g");
             if (ImGui::CollapsingHeader("Input", ImGuiTreeNodeFlags_DefaultOpen))
@@ -255,11 +276,13 @@ int main(int, char**)
             vk_context.set_vsync(vk_context.vsync);
         }
 
-        if (reload_shaders)
+        if (recompile_shaders != 0 && time_to_ms(time_now() - recompile_shaders) > 100)
         {
-            reload_shaders = false;
-            vk_compile_shaders();
-            test_renderer.reload_shaders();
+            recompile_shaders = 0;
+            if (vk_compile_shaders())
+            {
+                test_renderer.reload_shaders();
+            }
         }
 
         imgui_begin_frame();
@@ -278,5 +301,9 @@ int main(int, char**)
     vk_context.destroy();
     window_destroy(&main_window);
 
+    directory_watcher_stop(&watcher);
+
     linear_allocator_destroy(&linear_allocator);
+
+    thread_pool_shutdown();
 }

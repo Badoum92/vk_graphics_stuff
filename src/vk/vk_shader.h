@@ -11,4 +11,5 @@ struct shader
 };
 } // namespace vk
 
+bool vk_compile_shader(const char* file);
 bool vk_compile_shaders();

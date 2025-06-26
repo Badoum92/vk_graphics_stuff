@@ -25,3 +25,14 @@ Model found in this repo: https://github.com/ephtracy/voxel-model
 
 ### glTF models + ImGui
 ![Screenshot](https://cdn.discordapp.com/attachments/892059047145119765/894162362666450974/imgui_tonemap.png)
+
+## Third party libraries
+
+* https://github.com/ocornut/imgui
+* https://github.com/cameron314/concurrentqueue
+* https://github.com/Tencent/rapidjson
+* https://github.com/nothings/stb
+* https://github.com/wolfpld/tracy
+* https://github.com/ufbx/ufbx
+* https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+* https://github.com/zeux/volk

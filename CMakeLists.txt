@@ -83,11 +83,19 @@ add_executable(main
 
     src/core/core.cpp
     src/core/core.h
+    src/core/str.cpp
+    src/core/str.h
     src/core/input.cpp
     src/core/input.h
     src/core/log.cpp
     src/core/log.h
+    src/core/random.cpp
+    src/core/random.h
+    src/core/thread_pool.h
+    src/core/thread_pool.cpp
+    src/core/directory_watcher.h
     src/core/thread.h
+    src/core/semaphore.h
     src/core/rwlock.h
     src/core/event.h
     src/core/file.h
@@ -102,7 +110,9 @@ add_executable(main
     src/core/containers/span.h
     src/core/containers/vector.h
 
+    src/core/platform/directory_watcher_win32.cpp
     src/core/platform/thread_win32.cpp
+    src/core/platform/semaphore_win32.cpp
     src/core/platform/rwlock_win32.cpp
     src/core/platform/file_win32.cpp
     src/core/platform/window_win32.cpp
@@ -140,14 +150,14 @@ set_target_properties(main PROPERTIES
 
 # --- Shaders ---
 
-file(GLOB_RECURSE GLSL_SOURCE_FILES
+file(GLOB GLSL_SOURCE_FILES
     "shaders/*.vert"
     "shaders/*.frag"
     "shaders/*.comp"
     "shaders/*.geom"
 )
 
-file(GLOB_RECURSE GLSL_INCLUDE_FILES "shaders/include/*")
+file(GLOB GLSL_INCLUDE_FILES "shaders/include/*")
 
 foreach(GLSL ${GLSL_SOURCE_FILES})
     message("FILE: ${GLSL}")
@@ -155,7 +165,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
     set(SPIRV "${CMAKE_SOURCE_DIR}/shaders/spv/${FILE_NAME}")
     add_custom_command(
         OUTPUT ${SPIRV}
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/shaders/spv/"
         COMMAND ${Vulkan_GLSLC_EXECUTABLE} -g -I ${CMAKE_SOURCE_DIR}/shaders/include --target-env=vulkan1.4 -std=460 ${GLSL} -o ${SPIRV}
         DEPENDS ${GLSL} ${GLSL_INCLUDE_FILES}
     )
@@ -167,7 +177,6 @@ target_sources(shaders PRIVATE ${GLSL_INCLUDE_FILES} ${GLSL_SOURCE_FILES})
 add_dependencies(main shaders)
 
 add_custom_command(TARGET main POST_BUILD
-    # COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_BINARY_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/shaders" "$<TARGET_FILE_DIR:main>/shaders"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/resources" "$<TARGET_FILE_DIR:main>/resources"
 )

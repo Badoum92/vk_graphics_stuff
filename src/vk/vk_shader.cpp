@@ -7,6 +7,9 @@
 #include "core/math/math.h"
 #include "core/file.h"
 #include "core/log.h"
+#include "core/thread_pool.h"
+#include "core/str.h"
+#include "core/thread.h"
 #include "core/memory/linear_allocator.h"
 
 #if defined(_WIN32)
@@ -67,8 +70,10 @@ static int64_t latest_change(const char* dir_name)
         }
         file_info_class = FileIdExtdDirectoryInfo;
         PFILE_ID_EXTD_DIR_INFO entry = (PFILE_ID_EXTD_DIR_INFO)file_info_buf;
+        bool done = false;
         do
         {
+            done = entry->NextEntryOffset == 0;
             if (wcsncmp(entry->FileName, L".", 1) == 0 || wcsncmp(entry->FileName, L"..", 2) == 0
                 || (entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
                 goto loop;
@@ -78,7 +83,7 @@ static int64_t latest_change(const char* dir_name)
 
         loop:
             entry = (PFILE_ID_EXTD_DIR_INFO)((uint8_t*)entry + entry->NextEntryOffset);
-        } while (entry->NextEntryOffset != 0);
+        } while (!done);
     }
     return ret;
 }
@@ -89,19 +94,19 @@ bool vk_compile_shaders()
     int64_t latest_src_change = math_max(latest_change("shaders"), latest_change("shaders/include"));
     int64_t latest_dst_change = latest_change("shaders/spv");
     if (latest_dst_change >= latest_src_change)
-        return true;
+        return false;
 
+    char cmd_line[MAX_PATH * 3];
     uint8_t file_info_buf[2048];
     char file_name[MAX_PATH * 2];
-    char cmd_line[MAX_PATH + 128];
-    HANDLE shader_dir = CreateFileA("shaders", GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
-                                    FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    HANDLE shader_dir = CreateFileA("shaders", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                    nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
+    uint32_t total = 0;
     STARTUPINFOA startup_info;
     memset(&startup_info, 0, sizeof(startup_info));
     startup_info.cb = sizeof(startup_info);
-    PROCESS_INFORMATION process_info;
-    DWORD return_value;
+    PROCESS_INFORMATION process_infos[64];
 
     FILE_INFO_BY_HANDLE_CLASS file_info_class = FileIdExtdDirectoryRestartInfo;
     while (true)
@@ -113,39 +118,44 @@ bool vk_compile_shaders()
         }
         file_info_class = FileIdExtdDirectoryInfo;
         PFILE_ID_EXTD_DIR_INFO entry = (PFILE_ID_EXTD_DIR_INFO)file_info_buf;
+        bool done = false;
         do
         {
+            done = entry->NextEntryOffset == 0;
+            size_t written = 0;
+            ASSERT(total < 64);
             if (wcsncmp(entry->FileName, L".", 1) == 0 || wcsncmp(entry->FileName, L"..", 2) == 0
                 || (entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
                 goto loop;
 
-            file_name[entry->FileNameLength / 2] = 0;
-            file_name[entry->FileNameLength / 2 + 1] = 0;
-            wcstombs(file_name, entry->FileName, entry->FileNameLength / 2);
+            written = wcstombs(file_name, entry->FileName, entry->FileNameLength / 2);
+            file_name[written] = 0;
+
+            if (!str_ends_with(file_name, ".vert") && !str_ends_with(file_name, ".frag")
+                && !str_ends_with(file_name, ".comp"))
+                goto loop;
+
             snprintf(cmd_line, sizeof(cmd_line),
                      "glslc -g -I shaders/include --target-env=vulkan1.4 -std=460 shaders/%s -o shaders/spv/%s",
                      file_name, file_name);
             LOG_DEBUG("%s", cmd_line);
 
-            return_value = (uint32_t)-1;
             if (CreateProcessA(nullptr, cmd_line, nullptr, nullptr, false, 0, nullptr, nullptr, &startup_info,
-                               &process_info))
+                               &process_infos[total]))
             {
-                WaitForSingleObject(process_info.hProcess, INFINITE);
-                GetExitCodeProcess(process_info.hProcess, &return_value);
-                CloseHandle(process_info.hThread);
-                CloseHandle(process_info.hProcess);
-            }
-
-            if (return_value != 0)
-            {
-                LOG_ERROR("Error compiling %s", file_name);
-                return false;
+                total++;
             }
 
         loop:
             entry = (PFILE_ID_EXTD_DIR_INFO)((uint8_t*)entry + entry->NextEntryOffset);
-        } while (entry->NextEntryOffset != 0);
+        } while (!done);
+    }
+
+    for (uint32_t i = 0; i < total; ++i)
+    {
+        WaitForSingleObject(process_infos[i].hProcess, INFINITE);
+        CloseHandle(process_infos[i].hThread);
+        CloseHandle(process_infos[i].hProcess);
     }
 
     return true;

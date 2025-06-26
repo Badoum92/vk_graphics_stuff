@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 #include <vma/vk_mem_alloc.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>

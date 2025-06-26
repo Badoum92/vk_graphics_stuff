@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "globals.h"
+#include "vox.h"
 
 #include "vk/vk_pipeline.h"
 #include "vk/vk_image.h"
@@ -13,9 +14,11 @@
 struct push_constant
 {
     VkDeviceAddress uniform_buffer;
+    VkDeviceAddress materials;
     vec2u resolution;
     uint32_t frame;
-    uint32_t image_index;
+    uint32_t output_image;
+    uint32_t voxels_index;
 };
 
 struct uniform_buffer_data
@@ -58,6 +61,47 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
         _context->image_descriptor_set.create_image_descriptor(_context, test_compute.render_target.image);
     imgui_add_texture(&test_compute.render_target);
 
+    vox vox;
+    vox_load("resources/voxel/vox/monument/monu7.vox", &vox);
+    ASSERT(vox.num_models == 1);
+
+    buffer_description.size = sizeof(vox.materials);
+    buffer_description.usage = vk::storage_buffer_usage;
+    buffer_description.name = "materials";
+    test_compute.materials = _context->create_buffer(buffer_description);
+
+    buffer_description.size = sizeof(vox.materials);
+    buffer_description.usage = vk::transfer_buffer_usage;
+    buffer_description.name = "material staging buffer";
+    vk::buffer* material_staging_buffer = _context->create_buffer(buffer_description);
+
+    image_description.width = vox.models[0].x;
+    image_description.height = vox.models[0].y;
+    image_description.depth = vox.models[0].z;
+    image_description.format = VK_FORMAT_R8_UINT;
+    image_description.type = VK_IMAGE_TYPE_3D;
+    image_description.usage = vk::image_usage_storage;
+    test_compute.voxels = _context->create_image(image_description);
+
+    buffer_description.size = vox.models[0].x * vox.models[0].y * vox.models[0].z;
+    buffer_description.usage = vk::transfer_buffer_usage;
+    buffer_description.name = "voxels staging buffer";
+    vk::buffer* voxels_staging_buffer = _context->create_buffer(buffer_description);
+
+    vk::command_buffer* cmd = _context->transfer_commands.get_command_buffer();
+    cmd->upload_buffer(test_compute.materials, material_staging_buffer, vox.materials, sizeof(vox.materials));
+    cmd->upload_image(test_compute.voxels, voxels_staging_buffer, vox.models[0].voxels,
+                      voxels_staging_buffer->description.size);
+    cmd->barrier(test_compute.voxels, vk::image_usage::compute_shader_read);
+    _context->submit(cmd);
+    _context->wait_idle();
+    _context->destroy_buffer(material_staging_buffer);
+    _context->destroy_buffer(voxels_staging_buffer);
+
+    vox_unload(&vox);
+
+    test_compute.voxels_index = _context->image_descriptor_set.create_image_descriptor(_context, test_compute.voxels);
+
     return test_compute;
 }
 
@@ -66,6 +110,9 @@ void test_compute::destroy()
     context->destroy_compute_pipeline(compute_pipeline);
     context->destroy_shader(compute_shader);
     context->destroy_buffer(uniform_buffer);
+    context->destroy_buffer(materials);
+    context->destroy_image(voxels);
+    context->image_descriptor_set.destroy_descriptor(voxels_index);
     imgui_remove_texture(&render_target);
     context->destroy_image(render_target.image);
 }
@@ -126,7 +173,7 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     push_constant.uniform_buffer = uniform_buffer->device_address;
     push_constant.resolution = {width, height};
     push_constant.frame = g_frame;
-    push_constant.image_index = render_target.descriptor_index;
+    push_constant.output_image = render_target.descriptor_index;
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read_write);
 

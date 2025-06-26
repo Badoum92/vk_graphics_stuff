@@ -21,7 +21,7 @@ layout(set = 1, binding = 0, r8ui) uniform uimage3D image3D_r8[];
 
 const float FLT_P_INF = 1.0f / 0.0f;
 const float FLT_N_INF = -1.0f / 0.0f;
-const float EPSILON = 0.001f;
+const float EPSILON = 0.0001f;
 const float TWO_PI = 6.2831853f;
 
 uint init_rng(uvec2 pixel, uint frame_nb)
@@ -52,6 +52,11 @@ vec3 random_unit_vector(inout uint rng)
     float x = r * cos(a);
     float y = r * sin(a);
     return vec3(x, y, z);
+}
+
+uint min_comp3(vec3 v)
+{
+    return uint((v.y < v.z) && (v.y < v.x)) + uint((v.z < v.y) && (v.z < v.x)) * 2;
 }
 
 #endif

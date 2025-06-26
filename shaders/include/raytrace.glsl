@@ -31,13 +31,13 @@ ray ray_gen(uvec2 pixel, uvec2 resolution, vec4 position, mat4 inv_view_proj, bo
     return ray;
 }
 
-bool ray_box_intersection(ray ray, vec3 bmin, vec3 bmax, inout float tmin, inout float tmax)
+bool ray_box_intersection(ray ray, vec3 bmin, vec3 bmax, out float _tmin, out float _tmax)
 {
     float t1 = (bmin[0] - ray.origin[0]) * ray.inv_dir[0];
     float t2 = (bmax[0] - ray.origin[0]) * ray.inv_dir[0];
 
-    tmin = min(t1, t2);
-    tmax = max(t1, t2);
+    float tmin = min(t1, t2);
+    float tmax = max(t1, t2);
 
     for (uint i = 1; i < 3; ++i)
     {
@@ -49,6 +49,8 @@ bool ray_box_intersection(ray ray, vec3 bmin, vec3 bmax, inout float tmin, inout
     }
 
     tmin = max(tmin, 0.0f);
+    _tmin = tmin;
+    _tmax = tmax;
     return tmax > tmin;
 }
 

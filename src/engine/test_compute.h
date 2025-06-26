@@ -21,6 +21,9 @@ struct test_compute
     vk::shader* compute_shader;
     vk::compute_pipeline* compute_pipeline;
     vk::buffer* uniform_buffer;
+    vk::buffer* materials;
+    vk::image* voxels;
+    uint32_t voxels_index;
 
     imgui_texture render_target;
 

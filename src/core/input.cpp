@@ -80,6 +80,7 @@ void input_show_cursor(bool show)
 
         RECT rect;
         GetClientRect(window_handle, &rect);
+        rect.bottom--;
         ClientToScreen(window_handle, (POINT*)&rect.left);
         ClientToScreen(window_handle, (POINT*)&rect.right);
         ClipCursor(&rect);
