@@ -6,4 +6,4 @@ models
 resources
 *.7z
 *.spv
-shaders/spv/*
+shaders/spv
