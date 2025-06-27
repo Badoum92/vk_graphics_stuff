@@ -16,7 +16,7 @@ struct vox_matl
 
 BUFFER(materials_buffer)
 {
-    vox_matl materials;
+    vox_matl materials[];
 };
 
 BUFFER(uniform_buffer)
@@ -37,82 +37,9 @@ PUSH_CONSTANT(push_constant)
 
 vec3 voxel_traversal(ray r)
 {
-    /*const uvec3 GRID_SIZE = uvec3(3);
-
-    const uint grid[GRID_SIZE.z][GRID_SIZE.y][GRID_SIZE.x] = {
-        {
-            {1, 0, 2},
-            {0, 0, 0},
-            {0, 0, 0},
-        },
-        {
-            {0, 0, 0},
-            {0, 3, 0},
-            {0, 0, 0},
-        },
-        {
-            {0, 0, 0},
-            {0, 0, 0},
-            {4, 0, 5},
-        },
-    };
-
+    const uvec3 grid_size = imageSize(image3D_r8[voxels_index]);
     const vec3 grid_min = vec3(0);
-    const vec3 grid_max = grid_min + GRID_SIZE;
-    const vec3 voxels_per_unit = vec3(1);
-
-    float entry_t, exit_t;
-    if (!ray_box_intersection(r, grid_min, grid_max, entry_t, exit_t))
-    {
-        return vec3(0);
-    }
-
-    const vec3 entry_pos = ((r.origin + r.dir * (entry_t + EPSILON)) - grid_min) * voxels_per_unit;
-    const vec3 stp = sign(r.dir);
-    const vec3 delta = abs(r.inv_dir);
-    vec3 pos = floor(entry_pos);
-    vec3 tmax = (pos - entry_pos + max(stp, 0.0f)) * r.inv_dir;
-
-    uint dir = -1;
-    for (int steps = 0;; ++steps)
-    {
-        const uint voxel = grid[uint(pos.z)][uint(pos.y)][uint(pos.x)];
-        if (voxel != 0)
-        {
-            vec3 c = vec3(0);
-            if (dir == -1)
-            {
-                vec3 a = abs(entry_pos - grid_min);
-                vec3 b = abs(entry_pos - grid_max);
-                uint ma = min_comp3(a);
-                uint mb = min_comp3(b);
-                if (a[ma] < b[mb])
-                    c[ma] = 0.5f;
-                else
-                    c[mb] = 1.0f;
-            }
-            else
-            {
-                c[dir] = (-sign(r.dir[dir]) * 0.5f) + 1.0f;
-                // c = vec3(entry_t + tmax[dir] - delta[dir]) / 5.0f;
-            }
-            return c;
-        }
-
-        dir = min_comp3(tmax);
-        pos[dir] += stp[dir];
-        if (pos[dir] < 0.0f || pos[dir] >= GRID_SIZE[dir]) break;
-        tmax[dir] += delta[dir];
-    }
-
-    return vec3(0);*/
-
-    const uvec3 GRID_SIZE = imageSize(image3D_r8[voxels_index]);
-
-    return vec3(GRID_SIZE) / 1000.0f;
-
-    const vec3 grid_min = vec3(0);
-    const vec3 grid_max = grid_min + GRID_SIZE;
+    const vec3 grid_max = grid_min + grid_size;
     const vec3 voxels_per_unit = vec3(1);
 
     float entry_t, exit_t;
@@ -133,7 +60,8 @@ vec3 voxel_traversal(ray r)
         const uint voxel = imageLoad(image3D_r8[voxels_index], ivec3(pos)).r;
         if (voxel != 0)
         {
-            vec3 c = vec3(0);
+            // normal
+            vec3 normal = vec3(0);
             if (dir == -1)
             {
                 vec3 a = abs(entry_pos - grid_min);
@@ -141,21 +69,28 @@ vec3 voxel_traversal(ray r)
                 uint ma = min_comp3(a);
                 uint mb = min_comp3(b);
                 if (a[ma] < b[mb])
-                    c[ma] = 0.5f;
+                    normal[ma] = -1.0f;
                 else
-                    c[mb] = 1.0f;
+                    normal[mb] = 1.0f;
             }
             else
             {
-                c[dir] = (-sign(r.dir[dir]) * 0.5f) + 1.0f;
-                // c = vec3(entry_t + tmax[dir] - delta[dir]) / 5.0f;
+                normal[dir] = -sign(r.dir[dir]);
             }
-            return c;
+
+            // color
+            uint color32 = mat.materials[voxel].color;
+            vec3 color = vec3(((color32 >> 0) & 0xff) / 255.0f, ((color32 >> 8) & 0xff) / 255.0f,
+                              ((color32 >> 16) & 0xff) / 255.0f);
+            if (normal[0] < 0 || normal[1] < 0 || normal[2] < 0)
+                color *= 0.5f;
+            return color;
         }
 
         dir = min_comp3(tmax);
         pos[dir] += stp[dir];
-        if (pos[dir] < 0.0f || pos[dir] >= GRID_SIZE[dir]) break;
+        if (pos[dir] < 0.0f || pos[dir] >= grid_size[dir])
+            break;
         tmax[dir] += delta[dir];
     }
 
@@ -175,7 +110,7 @@ void main()
     uint rng = init_rng(uv, frame);
 
     ray r = ray_gen(uv, resolution, ubo.position, ubo.inv_view_proj, false, rng);
-    
+
     vec3 color = voxel_traversal(r);
     if (color != vec3(0))
     {
@@ -185,14 +120,4 @@ void main()
     {
         imageStore(image2D_rgba8[output_image], ivec2(uv), vec4(vec2(uv) / resolution, 0, 1));
     }
- 
-    // float tmin, tmax;
-    // if (ray_box_intersection(r, vec3(-0.5f, -0.5f, -0.5f), vec3(0.5f, 0.5f, 0.5f), tmin, tmax))
-    // {
-    //     imageStore(image2D_rgba8[output_image], ivec2(uv), vec4(0, 0, 1, 1));
-    // }
-    // else
-    // {
-    //     imageStore(image2D_rgba8[output_image], ivec2(uv), vec4(vec2(uv) / resolution, 0, 1));
-    // }
 }

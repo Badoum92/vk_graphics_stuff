@@ -103,6 +103,7 @@ bool vk_compile_shaders()
                                     nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
 
     uint32_t total = 0;
+    uint32_t successes = 0;
     STARTUPINFOA startup_info;
     memset(&startup_info, 0, sizeof(startup_info));
     startup_info.cb = sizeof(startup_info);
@@ -151,12 +152,20 @@ bool vk_compile_shaders()
         } while (!done);
     }
 
+    DWORD exit_code;
     for (uint32_t i = 0; i < total; ++i)
     {
         WaitForSingleObject(process_infos[i].hProcess, INFINITE);
+        GetExitCodeProcess(process_infos[i].hProcess, &exit_code);
         CloseHandle(process_infos[i].hThread);
         CloseHandle(process_infos[i].hProcess);
+        successes += exit_code == 0;
     }
+
+    if (successes == total)
+        LOG_INFO("Shader compilation: %u / %u", successes, total);
+    else
+        LOG_ERROR("Shader compilation: %u / %u", successes, total);
 
     return true;
 }

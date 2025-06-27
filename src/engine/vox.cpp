@@ -234,9 +234,9 @@ bool vox_load(const char* path, vox* vox)
         else if (strncmp(chunk->id, "RGBA", 4) == 0)
         {
             vox_rgba* palette = (vox_rgba*)data;
-            for (uint32_t i = 1; i < 256; ++i)
+            for (uint32_t i = 0; i < 255; ++i)
             {
-                vox->materials[i].color = palette[i];
+                vox->materials[i + 1].color = palette[i];
             }
             data += 256 * sizeof(vox_rgba);
         }

@@ -171,9 +171,11 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
 
     push_constant push_constant = {};
     push_constant.uniform_buffer = uniform_buffer->device_address;
+    push_constant.materials = materials->device_address;
     push_constant.resolution = {width, height};
     push_constant.frame = g_frame;
     push_constant.output_image = render_target.descriptor_index;
+    push_constant.voxels_index = voxels_index;
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read_write);
 
