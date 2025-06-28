@@ -38,6 +38,7 @@ struct vox_model
     uint32_t x;
     uint32_t y;
     uint32_t z;
+    uint32_t num_voxels;
     uint8_t* voxels;
 };
 

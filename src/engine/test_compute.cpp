@@ -9,6 +9,7 @@
 #include "vk/vk_buffer.h"
 
 #include "core/math/matrix.h"
+#include "core/input.h"
 #include "core/log.h"
 
 struct push_constant
@@ -19,6 +20,8 @@ struct push_constant
     uint32_t frame;
     uint32_t output_image;
     uint32_t voxels_index;
+    uint32_t lod1_index;
+    uint32_t frame_acc;
 };
 
 struct uniform_buffer_data
@@ -34,6 +37,7 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
     test_compute.width = _width;
     test_compute.height = _height;
     test_compute.context = _context;
+    test_compute.frame_acc = 0;
 
     test_compute.compute_shader = _context->create_shader("shaders/spv/test_compute.comp");
 
@@ -62,8 +66,59 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
     imgui_add_texture(&test_compute.render_target);
 
     vox vox;
-    vox_load("resources/voxel/vox/monument/monu7.vox", &vox);
+    // vox_load("resources/voxel/vox/monument/monu7.vox", &vox);
+    vox_load("resources/voxel/materials.vox", &vox);
     ASSERT(vox.num_models == 1);
+
+    uint32_t w = (vox.models[0].x + 1) / 2;
+    uint32_t h = (vox.models[0].y + 1) / 2;
+    uint32_t d = (vox.models[0].z + 1) / 2;
+    uint32_t lod1_num_voxels = (vox.models[0].x + 1) * (vox.models[0].y + 1) * (vox.models[0].z + 1) / 8;
+    uint8_t* lod1 = (uint8_t*)malloc(lod1_num_voxels);
+
+#define INDEX(X, Y, Z, W, H, D) ((W) * (H) * (Z) + (W) * (Y) + (X))
+    for (uint32_t z = 0; z < d; ++z)
+    {
+        for (uint32_t y = 0; y < h; ++y)
+        {
+            for (uint32_t x = 0; x < w; ++x)
+            {
+                bool active = false;
+                uint32_t index = 0;
+                index = INDEX(x * 2 + 0, y * 2 + 0, z * 2 + 0, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                index = INDEX(x * 2 + 1, y * 2 + 0, z * 2 + 0, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                index = INDEX(x * 2 + 0, y * 2 + 1, z * 2 + 0, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                index = INDEX(x * 2 + 1, y * 2 + 1, z * 2 + 0, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                index = INDEX(x * 2 + 0, y * 2 + 0, z * 2 + 1, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                index = INDEX(x * 2 + 1, y * 2 + 0, z * 2 + 1, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                index = INDEX(x * 2 + 0, y * 2 + 1, z * 2 + 1, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                index = INDEX(x * 2 + 1, y * 2 + 1, z * 2 + 1, vox.models[0].x, vox.models[0].y, vox.models[0].z);
+                active |= index < vox.models[0].num_voxels && vox.models[0].voxels[index];
+                lod1[INDEX(x, y, z, w, h, d)] = active;
+            }
+        }
+    }
+#undef INDEX
+
+    image_description.width = w;
+    image_description.height = h;
+    image_description.depth = d;
+    image_description.format = VK_FORMAT_R8_UINT;
+    image_description.type = VK_IMAGE_TYPE_3D;
+    image_description.usage = vk::image_usage_storage;
+    test_compute.lod1 = _context->create_image(image_description);
+
+    buffer_description.size = lod1_num_voxels;
+    buffer_description.usage = vk::transfer_buffer_usage;
+    buffer_description.name = "lod1 staging buffer";
+    vk::buffer* lod1_staging_buffer = _context->create_buffer(buffer_description);
 
     buffer_description.size = sizeof(vox.materials);
     buffer_description.usage = vk::storage_buffer_usage;
@@ -92,15 +147,19 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
     cmd->upload_buffer(test_compute.materials, material_staging_buffer, vox.materials, sizeof(vox.materials));
     cmd->upload_image(test_compute.voxels, voxels_staging_buffer, vox.models[0].voxels,
                       voxels_staging_buffer->description.size);
+    cmd->upload_image(test_compute.lod1, lod1_staging_buffer, lod1, lod1_staging_buffer->description.size);
     cmd->barrier(test_compute.voxels, vk::image_usage::compute_shader_read);
+    cmd->barrier(test_compute.lod1, vk::image_usage::compute_shader_read);
     _context->submit(cmd);
     _context->wait_idle();
     _context->destroy_buffer(material_staging_buffer);
     _context->destroy_buffer(voxels_staging_buffer);
+    _context->destroy_buffer(lod1_staging_buffer);
 
     vox_unload(&vox);
 
     test_compute.voxels_index = _context->image_descriptor_set.create_image_descriptor(_context, test_compute.voxels);
+    test_compute.lod1_index = _context->image_descriptor_set.create_image_descriptor(_context, test_compute.lod1);
 
     return test_compute;
 }
@@ -112,7 +171,9 @@ void test_compute::destroy()
     context->destroy_buffer(uniform_buffer);
     context->destroy_buffer(materials);
     context->destroy_image(voxels);
+    context->destroy_image(lod1);
     context->image_descriptor_set.destroy_descriptor(voxels_index);
+    context->image_descriptor_set.destroy_descriptor(lod1_index);
     imgui_remove_texture(&render_target);
     context->destroy_image(render_target.image);
 }
@@ -128,6 +189,7 @@ void test_compute::resize(uint32_t _width, uint32_t _height)
 
     width = _width;
     height = _height;
+    frame_acc = 0;
 
     imgui_remove_texture(&render_target);
     context->image_descriptor_set.destroy_descriptor(render_target.descriptor_index);
@@ -151,6 +213,8 @@ void test_compute::reload_shaders()
     context->destroy_compute_pipeline(compute_pipeline);
     context->destroy_shader(compute_shader);
 
+    frame_acc = 0;
+
     compute_shader = context->create_shader("shaders/spv/test_compute.comp");
 
     vk::compute_pipeline_description compute_pipeline_description = {};
@@ -169,6 +233,10 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     uniform_buffer_data.position = {camera->position.x, camera->position.y, camera->position.z, 0.0f};
     memcpy(uniform_buffer->mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
 
+    if (memcmp(&uniform_buffer_data.inv_view_proj, &prev_inv_view_proj, sizeof(prev_inv_view_proj) != 0))
+        frame_acc = 0;
+    prev_inv_view_proj = uniform_buffer_data.inv_view_proj;
+
     push_constant push_constant = {};
     push_constant.uniform_buffer = uniform_buffer->device_address;
     push_constant.materials = materials->device_address;
@@ -176,6 +244,8 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     push_constant.frame = g_frame;
     push_constant.output_image = render_target.descriptor_index;
     push_constant.voxels_index = voxels_index;
+    push_constant.lod1_index = lod1_index;
+    push_constant.frame_acc = frame_acc++;
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read_write);
 

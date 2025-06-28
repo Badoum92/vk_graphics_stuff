@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/math/matrix.h"
+
 #include "vk/vk_context.h"
 
 #include "imgui.h"
@@ -23,7 +25,12 @@ struct test_compute
     vk::buffer* uniform_buffer;
     vk::buffer* materials;
     vk::image* voxels;
+    vk::image* lod1;
     uint32_t voxels_index;
+    uint32_t lod1_index;
+    uint32_t frame_acc;
+
+    mat4f prev_inv_view_proj;
 
     imgui_texture render_target;
 

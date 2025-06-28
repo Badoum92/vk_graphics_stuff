@@ -57,7 +57,7 @@ static void populate_debug_messenger_create_info(VkDebugUtilsMessengerCreateInfo
     create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     create_info.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-    // create_info.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+    create_info.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
     // create_info.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
     create_info.messageType =
         VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
@@ -79,6 +79,8 @@ static void create_instance(context* context, bool enable_validation)
     };
     uint32_t num_instance_extensions = ARRAY_SIZE(instance_extensions) - (!enable_validation);
 
+    VkValidationFeatureEnableEXT validation_features_enables[] = {VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT};
+
     VK_CHECK(volkInitialize());
 
     VkApplicationInfo app_info{};
@@ -89,21 +91,26 @@ static void create_instance(context* context, bool enable_validation)
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.apiVersion = VK_API_VERSION_1_4;
 
-    VkInstanceCreateInfo instance_create_info{};
+    VkInstanceCreateInfo instance_create_info = {};
     instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instance_create_info.pApplicationInfo = &app_info;
     instance_create_info.enabledExtensionCount = num_instance_extensions;
     instance_create_info.ppEnabledExtensionNames = instance_extensions;
     instance_create_info.enabledLayerCount = 0;
-    instance_create_info.pNext = nullptr;
 
-    VkDebugUtilsMessengerCreateInfoEXT debug_create_info;
+    VkValidationFeaturesEXT validation_features = {};
+    VkDebugUtilsMessengerCreateInfoEXT debug_create_info = {};
     if (enable_validation)
     {
         instance_create_info.enabledLayerCount = ARRAY_SIZE(validation_layers);
         instance_create_info.ppEnabledLayerNames = validation_layers;
         populate_debug_messenger_create_info(debug_create_info);
-        instance_create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
+        instance_create_info.pNext = &debug_create_info;
+
+        validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        validation_features.enabledValidationFeatureCount = ARRAY_SIZE(validation_features_enables);
+        validation_features.pEnabledValidationFeatures = validation_features_enables;
+        debug_create_info.pNext = &validation_features;
     }
 
     VK_CHECK(vkCreateInstance(&instance_create_info, nullptr, &context->instance));
@@ -279,14 +286,14 @@ static void create_device(context* context)
 
 static void create_frame_contexts(context* context)
 {
-    VkSemaphoreCreateInfo semaphore_info{};
+    VkSemaphoreCreateInfo semaphore_info = {};
     semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    VkFenceCreateInfo fence_info{};
+    VkFenceCreateInfo fence_info = {};
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VkCommandPoolCreateInfo pool_info{};
+    VkCommandPoolCreateInfo pool_info = {};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_info.flags = 0;
 
@@ -376,7 +383,8 @@ frame_context* context::get_frame_context()
 frame_context* context::acquire_next_image()
 {
     frame_context& frame_context = frame_contexts[current_frame];
-    vkWaitForFences(device, 1, &frame_context.rendering_finished_fence, VK_TRUE, UINT64_MAX);
+    VK_CHECK(vkWaitForFences(device, 1, &frame_context.rendering_finished_fence, VK_TRUE, UINT64_MAX));
+    VK_CHECK(vkResetFences(device, 1, &frame_context.rendering_finished_fence));
     VkResult res = vkAcquireNextImageKHR(device, surface.swapchain, UINT64_MAX, frame_context.image_acquired_semaphore,
                                          VK_NULL_HANDLE, &frame_context.image_index);
 
@@ -439,6 +447,36 @@ void context::submit(command_buffer* command_buffer)
 void context::submit(command_buffer* command_buffer, frame_context* frame_context)
 {
     command_buffer->end();
+
+#if 1
+    VkSemaphoreSubmitInfo wait_semaphore_info = {};
+    wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    wait_semaphore_info.semaphore = frame_context->image_acquired_semaphore;
+    wait_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
+    wait_semaphore_info.value = 1;
+
+    VkSemaphoreSubmitInfo signal_semaphore_info = {};
+    signal_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signal_semaphore_info.semaphore = frame_context->rendering_finished_semaphore;
+    signal_semaphore_info.stageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+    signal_semaphore_info.value = 1;
+
+    VkCommandBufferSubmitInfo command_buffer_info = {};
+    command_buffer_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    command_buffer_info.commandBuffer = command_buffer->vk_handle;
+    command_buffer_info.deviceMask = 0;
+
+    VkSubmitInfo2 submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submit_info.waitSemaphoreInfoCount = 1;
+    submit_info.pWaitSemaphoreInfos = &wait_semaphore_info;
+    submit_info.signalSemaphoreInfoCount = 1;
+    submit_info.pSignalSemaphoreInfos = &signal_semaphore_info;
+    submit_info.commandBufferInfoCount = 1;
+    submit_info.pCommandBufferInfos = &command_buffer_info;
+
+    VK_CHECK(vkQueueSubmit2(command_buffer->vk_queue, 1, &submit_info, frame_context->rendering_finished_fence));
+#else
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submit_info.commandBufferCount = 1;
@@ -448,8 +486,9 @@ void context::submit(command_buffer* command_buffer, frame_context* frame_contex
     submit_info.pWaitDstStageMask = &command_buffer->wait_stage;
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &frame_context->rendering_finished_semaphore;
-    vkResetFences(device, 1, &frame_context->rendering_finished_fence);
+
     VK_CHECK(vkQueueSubmit(command_buffer->vk_queue, 1, &submit_info, frame_context->rendering_finished_fence));
+#endif
 }
 
 void context::set_vsync(bool _vsync)

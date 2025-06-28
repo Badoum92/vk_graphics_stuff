@@ -79,8 +79,8 @@ static void parse_vox_matl(uint8_t** data, vox_chunk_header* chunk_header, vox* 
         return;
     }
 
-    vox_matl matl;
-    matl.type = vox_diffuse;
+    vox_matl* matl = &vox->materials[mat_id];
+    matl->type = vox_diffuse;
 
     uint32_t n_keys = **(uint32_t**)data;
     *data += sizeof(uint32_t);
@@ -90,26 +90,24 @@ static void parse_vox_matl(uint8_t** data, vox_chunk_header* chunk_header, vox* 
 
     if (strncmp(type_key.str, "_type", type_key.size) != 0)
     {
-        vox->materials[mat_id] = matl;
         *data = skip;
         return;
     }
 
     if (strncmp(type_val.str, "_metal", type_val.size) == 0)
     {
-        matl.type = vox_metal;
+        matl->type = vox_metal;
     }
     else if (strncmp(type_val.str, "_emit", type_val.size) == 0)
     {
-        matl.type = vox_emissive;
+        matl->type = vox_emissive;
     }
     else if (strncmp(type_val.str, "_glass", type_val.size) == 0)
     {
-        matl.type = vox_glass;
+        matl->type = vox_glass;
     }
     else
     {
-        vox->materials[mat_id] = matl;
         *data = skip;
         return;
     }
@@ -120,43 +118,41 @@ static void parse_vox_matl(uint8_t** data, vox_chunk_header* chunk_header, vox* 
     {
         vox_str key = parse_vox_str(data);
         uint32_t val_size = **(uint32_t**)data;
-        ASSERT(val_size < sizeof(buf));
         *data += sizeof(uint32_t);
+        ASSERT(val_size < sizeof(buf));
         memcpy(buf, *data, val_size);
         buf[val_size] = 0;
         *data += val_size;
         float val = strtof(buf, nullptr);
         if (strncmp(key.str, "_rough", key.size) == 0)
         {
-            matl.rough = val;
+            matl->rough = val;
         }
         else if (strncmp(key.str, "_metal", key.size) == 0)
         {
-            matl.metal = val;
+            matl->metal = val;
         }
         else if (strncmp(key.str, "_ior", key.size) == 0)
         {
-            matl.ior = val;
+            matl->ior = val;
         }
         else if (strncmp(key.str, "_sp", key.size) == 0)
         {
-            matl.specular = val;
+            matl->specular = val;
         }
         else if (strncmp(key.str, "_emit", key.size) == 0)
         {
-            matl.emit = val;
+            matl->emit = val;
         }
         else if (strncmp(key.str, "_flux", key.size) == 0)
         {
-            matl.flux = val;
+            matl->flux = val;
         }
         else if (strncmp(key.str, "_trans", key.size) == 0)
         {
-            matl.trans = val;
+            matl->trans = val;
         }
     }
-
-    vox->materials[mat_id] = matl;
 }
 
 static void parse_vox_model(uint8_t** data, vox_chunk_header* chunk_header, vox_model* model)
@@ -167,6 +163,7 @@ static void parse_vox_model(uint8_t** data, vox_chunk_header* chunk_header, vox_
     model->x = size->x;
     model->y = size->y;
     model->z = size->z;
+    model->num_voxels = size->x * size->y * size->z;
 
     chunk_header = parse_vox_chunk_header(data);
     ASSERT(strncmp(chunk_header->id, "XYZI", 4) == 0);
@@ -175,8 +172,8 @@ static void parse_vox_model(uint8_t** data, vox_chunk_header* chunk_header, vox_
     vox_xyzi* xyzi = (vox_xyzi*)*data;
     *data += n_voxels * sizeof(vox_xyzi);
 
-    model->voxels = (uint8_t*)malloc(size->x * size->y * size->z);
-    memset(model->voxels, 0, size->x * size->y * size->z);
+    model->voxels = (uint8_t*)malloc(model->num_voxels);
+    memset(model->voxels, 0, model->num_voxels);
     for (uint32_t i = 0; i < n_voxels; ++i)
     {
         uint32_t index = size->x * size->y * xyzi[i].z + size->x * xyzi[i].y + xyzi[i].x;

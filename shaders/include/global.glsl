@@ -41,7 +41,7 @@ uint wang_hash(inout uint n)
 
 float random_float_01(inout uint rng)
 {
-    return float(wang_hash(rng)) / 4294967296.0;
+    return float(wang_hash(rng)) / 4294967296.0f;
 }
 
 vec3 random_unit_vector(inout uint rng)
@@ -52,11 +52,50 @@ vec3 random_unit_vector(inout uint rng)
     float x = r * cos(a);
     float y = r * sin(a);
     return vec3(x, y, z);
+
+    return normalize(vec3(random_float_01(rng), random_float_01(rng), random_float_01(rng)));
 }
 
 uint min_comp3(vec3 v)
 {
     return uint((v.y < v.z) && (v.y < v.x)) + uint((v.z < v.y) && (v.z < v.x)) * 2;
+}
+
+vec3 color_from_uint(uint u)
+{
+    return vec3(((u >> 0) & 0xff), ((u >> 8) & 0xff), ((u >> 16) & 0xff)) / 255.0f;
+}
+
+vec3 turbo_colormap(float x)
+{
+    const vec4 kRedVec4 = vec4(0.13572138f, 4.61539260f, -42.66032258f, 132.13108234f);
+    const vec4 kGreenVec4 = vec4(0.09140261f, 2.19418839f, 4.84296658f, -14.18503333f);
+    const vec4 kBlueVec4 = vec4(0.10667330f, 12.64194608f, -60.58204836f, 110.36276771f);
+    const vec2 kRedVec2 = vec2(-152.94239396f, 59.28637943f);
+    const vec2 kGreenVec2 = vec2(4.27729857f, 2.82956604f);
+    const vec2 kBlueVec2 = vec2(-89.90310912f, 27.34824973f);
+
+    x = clamp(x, 0.0f, 1.0f);
+    vec4 v4 = vec4(1.0f, x, x * x, x * x * x);
+    vec2 v2 = v4.zw * v4.z;
+    return vec3(dot(v4, kRedVec4) + dot(v2, kRedVec2), dot(v4, kGreenVec4) + dot(v2, kGreenVec2),
+                dot(v4, kBlueVec4) + dot(v2, kBlueVec2));
+}
+
+vec4 linear_to_srgb(vec4 linearRGB)
+{
+    bvec3 cutoff = lessThan(linearRGB.rgb, vec3(0.0031308));
+    vec3 higher = vec3(1.055) * pow(linearRGB.rgb, vec3(1.0 / 2.4)) - vec3(0.055);
+    vec3 lower = linearRGB.rgb * vec3(12.92);
+    return vec4(mix(higher, lower, cutoff), linearRGB.a);
+}
+
+vec4 srgb_to_linear(vec4 sRGB)
+{
+    bvec3 cutoff = lessThan(sRGB.rgb, vec3(0.04045));
+    vec3 higher = pow((sRGB.rgb + vec3(0.055)) / vec3(1.055), vec3(2.4));
+    vec3 lower = sRGB.rgb / vec3(12.92);
+    return vec4(mix(higher, lower, cutoff), sRGB.a);
 }
 
 #endif
