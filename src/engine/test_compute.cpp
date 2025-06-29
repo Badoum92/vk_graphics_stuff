@@ -21,6 +21,7 @@ struct push_constant
     uint32_t output_image;
     uint32_t voxels_index;
     uint32_t lod1_index;
+    uint32_t accumulator_index;
     uint32_t frame_acc;
 };
 
@@ -56,7 +57,7 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
     vk::image_description image_description = {};
     image_description.width = test_compute.width;
     image_description.height = test_compute.height;
-    image_description.format = _context->surface.images[0]->description.format;
+    image_description.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     image_description.usage = vk::image_usage_color_attachment;
     image_description.name = "imgui render target";
     test_compute.render_target.image = _context->create_image(image_description);
@@ -64,6 +65,11 @@ test_compute test_compute::create(vk::context* _context, uint32_t _width, uint32
     test_compute.render_target.descriptor_index =
         _context->image_descriptor_set.create_image_descriptor(_context, test_compute.render_target.image);
     imgui_add_texture(&test_compute.render_target);
+
+    image_description.name = "accumulator";
+    test_compute.accumulator = _context->create_image(image_description);
+    test_compute.accumulator_index =
+        _context->image_descriptor_set.create_image_descriptor(_context, test_compute.accumulator);
 
     vox vox;
     // vox_load("resources/voxel/vox/monument/monu7.vox", &vox);
@@ -174,8 +180,10 @@ void test_compute::destroy()
     context->destroy_image(lod1);
     context->image_descriptor_set.destroy_descriptor(voxels_index);
     context->image_descriptor_set.destroy_descriptor(lod1_index);
+    context->image_descriptor_set.destroy_descriptor(accumulator_index);
     imgui_remove_texture(&render_target);
     context->destroy_image(render_target.image);
+    context->destroy_image(accumulator);
 }
 
 void test_compute::resize(uint32_t _width, uint32_t _height)
@@ -195,16 +203,23 @@ void test_compute::resize(uint32_t _width, uint32_t _height)
     context->image_descriptor_set.destroy_descriptor(render_target.descriptor_index);
     context->destroy_image(render_target.image);
 
+    context->image_descriptor_set.destroy_descriptor(accumulator_index);
+    context->destroy_image(accumulator);
+
     vk::image_description image_description = {};
     image_description.width = width;
     image_description.height = height;
-    image_description.format = context->surface.images[0]->description.format;
+    image_description.format = VK_FORMAT_R32G32B32A32_SFLOAT;
     image_description.usage = vk::image_usage_color_attachment;
     image_description.name = "imgui render target";
     render_target.image = context->create_image(image_description);
     render_target.descriptor_index =
         context->image_descriptor_set.create_image_descriptor(context, render_target.image);
     imgui_add_texture(&render_target);
+
+    image_description.name = "accumulator";
+    accumulator = context->create_image(image_description);
+    accumulator_index = context->image_descriptor_set.create_image_descriptor(context, accumulator);
 }
 
 void test_compute::reload_shaders()
@@ -245,6 +260,7 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     push_constant.output_image = render_target.descriptor_index;
     push_constant.voxels_index = voxels_index;
     push_constant.lod1_index = lod1_index;
+    push_constant.accumulator_index = accumulator_index;
     push_constant.frame_acc = frame_acc++;
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read_write);

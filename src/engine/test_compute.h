@@ -32,6 +32,8 @@ struct test_compute
 
     mat4f prev_inv_view_proj;
 
+    vk::image* accumulator;
+    uint32_t accumulator_index;
     imgui_texture render_target;
 
     vk::context* context;

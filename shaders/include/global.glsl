@@ -52,8 +52,6 @@ vec3 random_unit_vector(inout uint rng)
     float x = r * cos(a);
     float y = r * sin(a);
     return vec3(x, y, z);
-
-    return normalize(vec3(random_float_01(rng), random_float_01(rng), random_float_01(rng)));
 }
 
 uint min_comp3(vec3 v)
@@ -82,20 +80,31 @@ vec3 turbo_colormap(float x)
                 dot(v4, kBlueVec4) + dot(v2, kBlueVec2));
 }
 
-vec4 linear_to_srgb(vec4 linearRGB)
+vec3 v3_less_than(vec3 v, float f)
 {
-    bvec3 cutoff = lessThan(linearRGB.rgb, vec3(0.0031308));
-    vec3 higher = vec3(1.055) * pow(linearRGB.rgb, vec3(1.0 / 2.4)) - vec3(0.055);
-    vec3 lower = linearRGB.rgb * vec3(12.92);
-    return vec4(mix(higher, lower, cutoff), linearRGB.a);
+    return vec3(v.x < f ? 1.0f : 0.0f, v.y < f ? 1.0f : 0.0f, v.z < f ? 1.0f : 0.0f);
 }
 
-vec4 srgb_to_linear(vec4 sRGB)
+vec3 linear_to_srgb(vec3 c)
 {
-    bvec3 cutoff = lessThan(sRGB.rgb, vec3(0.04045));
-    vec3 higher = pow((sRGB.rgb + vec3(0.055)) / vec3(1.055), vec3(2.4));
-    vec3 lower = sRGB.rgb / vec3(12.92);
-    return vec4(mix(higher, lower, cutoff), sRGB.a);
+    c = clamp(c, 0.0f, 1.0f);
+    return mix(pow(c, vec3(1.0f / 2.4f)) * 1.055f - 0.055f, c * 12.92f, v3_less_than(c, 0.0031308f));
+}
+
+vec3 srgb_to_linear(vec3 c)
+{
+    c = clamp(c, 0.0f, 1.0f);
+    return mix(pow(((c + 0.055f) / 1.055f), vec3(2.4f)), c / 12.92f, v3_less_than(c, 0.04045f));
+}
+
+vec3 ACES_tone_mapping(vec3 x)
+{
+    float a = 2.51f;
+    float b = 0.03f;
+    float c = 2.43f;
+    float d = 0.59f;
+    float e = 0.14f;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0f, 1.0f);
 }
 
 #endif

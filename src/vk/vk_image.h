@@ -49,7 +49,7 @@ struct image_description
     uint32_t depth = 1;
     uint32_t mip_levels = 1;
     VkImageType type = VK_IMAGE_TYPE_2D;
-    VkFormat format = VK_FORMAT_R8G8B8A8_SRGB;
+    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     VkSampleCountFlagBits sample_count = VK_SAMPLE_COUNT_1_BIT;
     VkImageUsageFlags usage = image_usage_sampled;
     VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_AUTO;

@@ -4,6 +4,11 @@
 // #define DEBUG_STEPS 400.0f
 #extension GL_EXT_debug_printf : enable
 
+#define MATL_DIFFUSE  0
+#define MATL_METAL    1
+#define MATL_EMISSIVE 2
+#define MATL_GLASS    3
+
 struct traversal
 {
     uint image_index;
@@ -63,8 +68,31 @@ PUSH_CONSTANT(push_constant)
     uint output_image;
     uint voxels_index;
     uint lod1_index;
+    uint accumulator_index;
     uint frame_acc;
 };
+
+float fresnel_reflect_amount(float ior1, float ior2, vec3 normal, vec3 incident, float f0, float f90)
+{
+    // Schlick aproximation
+    float r0 = (ior1 - ior2) / (ior1 + ior2);
+    r0 *= r0;
+    float cosX = -dot(normal, incident);
+    if (ior1 > ior2)
+    {
+        float n = ior1 / ior2;
+        float sinT2 = n * n * (1.0 - cosX * cosX);
+        // Total internal reflection
+        if (sinT2 > 1.0)
+            return f90;
+        cosX = sqrt(1.0 - sinT2);
+    }
+    float x = 1.0 - cosX;
+    float ret = r0 + (1.0 - r0) * x * x * x * x * x;
+
+    // adjust reflect multiplier for object reflectivity
+    return mix(f0, f90, ret);
+}
 
 hit voxel_traversal(ray r, inout traversal t)
 {
@@ -72,7 +100,7 @@ hit voxel_traversal(ray r, inout traversal t)
     hit.mat_index = -1;
     hit.normal = vec3(0);
     hit.dt = 0.0f;
-    for (;; ++t.steps)
+    for (uint aze = 0; aze < 256; ++aze, ++t.steps)
     {
         const uint voxel = imageLoad(image3D_r8[t.image_index], ivec3(t.pos)).r;
         if (voxel != 0)
@@ -127,9 +155,21 @@ bool lod_traversal(inout traversal t)
 
 vec3 get_sky_color(ray r)
 {
+    float a = -0.025f;
+    float b = -a;
+    if (r.dir.y < a)
+        return vec3(0.1f);
+    else if (r.dir.y > b)
+        return vec3(0.3f);
+    else
+    {
+        float t = (r.dir.y - a) / (b - a);
+        return mix(vec3(0.1f), vec3(0.3f), t);
+    }
+
     float val = (r.dir.y + 1.0f) * 0.5f;
     const vec3 light_pos = vec3(-1, 1, -1);
-    return vec3(val * 0.15f, val * 0.45f, val * 0.8f) * clamp(dot(r.dir, light_pos), 0.25f, 1.0f) * 0.1f;
+    return vec3(val * 0.2f, val * 0.2f, val * 0.3f) * clamp(dot(r.dir, light_pos), 0, 1);
 }
 
 vec3 ray_color(ray r, inout uint rng)
@@ -145,32 +185,30 @@ vec3 ray_color(ray r, inout uint rng)
 
     traversal t;
     t.steps = 0;
+    t.grid_min = grid_min;
+    t.grid_max = grid_max;
 
-    for (uint i = 0; i < 10; ++i)
+    float entry_t, exit_t;
+    if (!ray_box_intersection(r, grid_min, grid_max, entry_t, exit_t))
     {
-        float entry_t, exit_t;
-        if (!ray_box_intersection(r, grid_min, grid_max, entry_t, exit_t))
-        {
 #if defined(DEBUG_STEPS)
-            return turbo_colormap(t.steps / DEBUG_STEPS);
+        return turbo_colormap(t.steps / DEBUG_STEPS);
 #else
-            radiance += get_sky_color(r) * throughput;
-            break;
+        return get_sky_color(r);
 #endif
-        }
+    }
 
+    for (uint i = 0; i < 16; ++i)
+    {
         t.dir = -1;
         t.dist = 0.0f;
-
-        t.grid_min = grid_min;
-        t.grid_max = grid_max;
         t.step = sign(r.dir);
         t.delta = abs(r.inv_dir);
 
         // lod 1
         t.image_index = lod1_index;
         t.voxels_per_unit = vec3(0.5f);
-        t.grid_size = imageSize(image3D_r8[t.image_index]);
+        t.grid_size = grid_size * t.voxels_per_unit;
 
         t.entry_pos = ((r.pos + r.dir * (entry_t + t.dist + EPSILON)) - t.grid_min) * t.voxels_per_unit;
         t.pos = floor(t.entry_pos);
@@ -189,7 +227,7 @@ vec3 ray_color(ray r, inout uint rng)
         // lod 0
         t.image_index = voxels_index;
         t.voxels_per_unit = vec3(1.0f);
-        t.grid_size = imageSize(image3D_r8[t.image_index]);
+        t.grid_size = grid_size * t.voxels_per_unit;
 
         t.entry_pos = ((r.pos + r.dir * (entry_t + t.dist + EPSILON)) - t.grid_min) * t.voxels_per_unit;
         t.pos = floor(t.entry_pos);
@@ -206,17 +244,28 @@ vec3 ray_color(ray r, inout uint rng)
 #endif
         }
 
-#if !defined(DEBUG_STEPS)
-        vec3 color = color_from_uint(mat.materials[hit.mat_index].color);
-        if (mat.materials[hit.mat_index].type == 2)
-        {
-            radiance += color * mat.materials[hit.mat_index].emit * throughput;
-        }
-        throughput *= color;
-#endif
+        // ray bounce
+        r.pos = (r.pos + r.dir * (entry_t + t.dist + hit.dt)) + hit.normal * 0.1f;
 
-        r.pos = (r.pos + r.dir * (entry_t + t.dist + hit.dt)) + hit.normal * EPSILON;
-        r.dir = hit.normal + random_unit_vector(rng);
+        // fresnel + specular
+        float metal = mat.materials[hit.mat_index].metal;
+        float specular_chance = metal;
+        if (specular_chance > 0.0f)
+        {
+            specular_chance =
+                fresnel_reflect_amount(1.0f, mat.materials[hit.mat_index].ior, r.dir, hit.normal, metal, 1.0f);
+        }
+        float do_specular = random_float_01(rng) < specular_chance ? 1.0f : 0.0f;
+
+        float ray_proba = do_specular == 1.0f ? specular_chance : 1.0f - specular_chance;
+        ray_proba = max(ray_proba, 0.001f);
+
+        vec3 diffuse_ray_dir = hit.normal + random_unit_vector(rng);
+        vec3 specular_ray_dir = reflect(r.dir, hit.normal);
+        float rough = mat.materials[hit.mat_index].rough;
+        specular_ray_dir = normalize(mix(specular_ray_dir, diffuse_ray_dir, rough * rough));
+
+        r.dir = mix(diffuse_ray_dir, specular_ray_dir, do_specular);
         // if any component of dir is 0 inv dir will have an inf and that breaks tmax
         if (r.dir.x == 0.0f)
             r.dir.x = EPSILON * sign((t.steps & 1) - 0.5f);
@@ -226,6 +275,24 @@ vec3 ray_color(ray r, inout uint rng)
             r.dir.z = EPSILON * sign((t.steps & 1) - 0.5f);
         r.dir = normalize(r.dir);
         r.inv_dir = 1.0f / r.dir;
+        entry_t = 0.0f;
+
+        // color
+        vec3 color = color_from_uint(mat.materials[hit.mat_index].color);
+        if (mat.materials[hit.mat_index].type == MATL_EMISSIVE)
+        {
+            float emit = mat.materials[hit.mat_index].emit;
+            float flux = mat.materials[hit.mat_index].flux;
+            radiance += color * emit * pow(2.0f, flux) * throughput;
+        }
+        throughput *= color;
+
+        // russian roulette
+        throughput /= ray_proba;
+        float proba = max(throughput.r, max(throughput.g, throughput.b));
+        if (random_float_01(rng) > proba)
+            break;
+        throughput *= 1.0f / proba;
     }
 
 #if defined(DEBUG_STEPS)
@@ -244,11 +311,19 @@ void main()
         return;
     }
     uint rng = init_rng(uv, frame);
-
     ray r = ray_gen(uv, resolution, ubo.position, ubo.inv_view_proj, true, rng);
-    vec4 old_color = imageLoad(image2D_rgba8[output_image], ivec2(uv));
-    vec4 color = vec4(ray_color(r, rng), 1);
-    color = linear_to_srgb(color);
-    color = mix(old_color, color, 1.0f / float(frame_acc + 1));
-    imageStore(image2D_rgba8[output_image], ivec2(uv), color);
+
+#if defined(DEBUG_STEPS)
+    imageStore(image2D_rgba8[output_image], ivec2(uv), vec4(ray_color(r, rng), 1));
+    return;
+#endif
+
+    vec4 old_color = imageLoad(image2D_rgba8[accumulator_index], ivec2(uv));
+    vec4 new_color = vec4(ray_color(r, rng), 1);
+    new_color = mix(old_color, new_color, 1.0f / float(frame_acc + 1));
+    imageStore(image2D_rgba8[accumulator_index], ivec2(uv), new_color);
+    new_color.rgb = new_color.rgb * 0.5f;
+    new_color.rgb = ACES_tone_mapping(new_color.rgb);
+    new_color.rgb = linear_to_srgb(new_color.rgb);
+    imageStore(image2D_rgba8[output_image], ivec2(uv), new_color);
 }
