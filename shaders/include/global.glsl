@@ -59,9 +59,14 @@ uint min_comp3(vec3 v)
     return uint((v.y < v.z) && (v.y < v.x)) + uint((v.z < v.y) && (v.z < v.x)) * 2;
 }
 
-vec3 color_from_uint(uint u)
+vec3 rgb_from_uint(uint u)
 {
     return vec3(((u >> 0) & 0xff), ((u >> 8) & 0xff), ((u >> 16) & 0xff)) / 255.0f;
+}
+
+vec4 rgba_from_uint(uint u)
+{
+    return vec4(((u >> 0) & 0xff), ((u >> 8) & 0xff), ((u >> 16) & 0xff), ((u >> 24) & 0xff)) / 255.0f;
 }
 
 vec3 turbo_colormap(float x)

@@ -10,6 +10,8 @@ graphics_state graphics_state::create()
 {
     graphics_state state;
     state.polygon_mode = VK_POLYGON_MODE_FILL;
+    state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    state.line_width = 0;
     state.cull_back_faces = true;
     state.front_face_clockwise = true;
     state.depth_test_enabled = true;
@@ -77,7 +79,7 @@ VkPipeline context::compile_graphics_pipeline(graphics_pipeline* pipeline, graph
 
     VkPipelineInputAssemblyStateCreateInfo assembly_state_info = {};
     assembly_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    assembly_state_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    assembly_state_info.topology = (VkPrimitiveTopology)graphics_state.topology;
     assembly_state_info.primitiveRestartEnable = false;
 
     VkPipelineRasterizationStateCreateInfo rasterization_state_info = {};
@@ -92,7 +94,7 @@ VkPipeline context::compile_graphics_pipeline(graphics_pipeline* pipeline, graph
     rasterization_state_info.depthBiasConstantFactor = 0;
     rasterization_state_info.depthBiasClamp = 0;
     rasterization_state_info.depthBiasSlopeFactor = 0;
-    rasterization_state_info.lineWidth = 1.0f;
+    rasterization_state_info.lineWidth = graphics_state.line_width + 1.0f;
 
     VkPipelineColorBlendAttachmentState color_attachment_states[max_color_attachments];
     uint32_t num_color_attachment_states = 0;

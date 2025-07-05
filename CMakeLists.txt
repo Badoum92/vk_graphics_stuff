@@ -52,6 +52,8 @@ add_executable(main
     src/engine/vox.h
     src/engine/imgui.cpp
     src/engine/imgui.h
+    src/engine/debug_draw.cpp
+    src/engine/debug_draw.h
 
     # src/engine/renderer.cpp
     # src/engine/renderer.h
@@ -61,6 +63,8 @@ add_executable(main
     src/engine/test_renderer.h
     src/engine/test_compute.cpp
     src/engine/test_compute.h
+    src/engine/test_anims.cpp
+    src/engine/test_anims.h
 
     src/vk/vk_tools.cpp
     src/vk/vk_tools.h
@@ -91,6 +95,8 @@ add_executable(main
     src/core/log.h
     src/core/random.cpp
     src/core/random.h
+    src/core/color.cpp
+    src/core/color.h
     src/core/thread_pool.h
     src/core/thread_pool.cpp
     src/core/directory_watcher.h
@@ -104,6 +110,8 @@ add_executable(main
     src/core/math/math.h
     src/core/math/matrix.h
     src/core/math/vector.h
+    src/core/math/quaternion.h
+    src/core/math/transform.h
     src/core/memory/linear_allocator.cpp
     src/core/memory/linear_allocator.h
     src/core/containers/pool.h

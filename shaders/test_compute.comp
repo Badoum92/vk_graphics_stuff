@@ -278,7 +278,7 @@ vec3 ray_color(ray r, inout uint rng)
         entry_t = 0.0f;
 
         // color
-        vec3 color = color_from_uint(mat.materials[hit.mat_index].color);
+        vec3 color = rgb_from_uint(mat.materials[hit.mat_index].color);
         if (mat.materials[hit.mat_index].type == MATL_EMISSIVE)
         {
             float emit = mat.materials[hit.mat_index].emit;

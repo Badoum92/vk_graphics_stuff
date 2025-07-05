@@ -6,10 +6,12 @@
 
 #include "test_renderer.h"
 #include "test_compute.h"
+#include "test_anims.h"
 // #include "renderer.h"
 // #include "path_tracing_renderer.h"
 #include "camera.h"
 #include "image.h"
+#include "debug_draw.h"
 
 #include "core/math/math.h"
 #include "core/time.h"
@@ -63,6 +65,7 @@ int main(int, char**)
     vk::context::create(&vk_context, &main_window, true);
 
     imgui_init(&vk_context, &main_window);
+    debug_draw_init(&vk_context);
 
     {
         image image = image::from_file("resources/undefined.png");
@@ -96,9 +99,12 @@ int main(int, char**)
 #if 0
     test_renderer test_renderer =
         test_renderer::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
-#else
+#elif 0
     test_compute test_renderer =
         test_compute::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
+#elif 1
+    test_anims test_renderer =
+        test_anims::create(&vk_context, vk_context.surface.extent.width, vk_context.surface.extent.height);
 #endif
 
     camera camera = camera_create();
@@ -106,9 +112,9 @@ int main(int, char**)
     camera.yaw = 0;
     camera.pitch = 0;
     camera.roll = 0;
-    camera.fov_y = math_radians(70.0f);
+    camera.fov_y = RADIANS(70.0f);
     camera.aspect_ratio = window_aspect_ratio(&main_window);
-    camera.near_plane = 1.0f;
+    camera.near_plane = 0.01f;
     camera.far_plane = 10000.0f;
     camera_compute_view_proj(&camera);
     float speed = 200.0f;
@@ -296,6 +302,7 @@ int main(int, char**)
 
     test_renderer.destroy();
 
+    debug_draw_shutdown(&vk_context);
     imgui_shutdown();
 
     vk_context.destroy();

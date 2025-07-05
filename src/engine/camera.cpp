@@ -29,7 +29,7 @@ void camera_rotate(camera* camera, vec3f angles)
     camera->yaw += angles.y;
     camera->roll += angles.z;
 
-    camera->pitch = math_clamp(-math_half_pi + 0.01f, camera->pitch, math_half_pi - 0.01f);
+    camera->pitch = CLAMP(camera->pitch, -math_half_pi + 0.01f, math_half_pi - 0.01f);
 
     mat4f rotation = mat4_rotation_x(camera->pitch) * mat4_rotation_y(camera->yaw) * mat4_rotation_z(camera->roll);
     camera->right = vec_normalize(rotation * vec4f{1, 0, 0, 0});

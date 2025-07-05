@@ -91,7 +91,7 @@ static int64_t latest_change(const char* dir_name)
 bool vk_compile_shaders()
 {
     CreateDirectoryA("shaders/spv", nullptr);
-    int64_t latest_src_change = math_max(latest_change("shaders"), latest_change("shaders/include"));
+    int64_t latest_src_change = MAX(latest_change("shaders"), latest_change("shaders/include"));
     int64_t latest_dst_change = latest_change("shaders/spv");
     if (latest_dst_change >= latest_src_change)
         return false;

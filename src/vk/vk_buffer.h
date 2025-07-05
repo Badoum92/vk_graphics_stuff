@@ -29,7 +29,7 @@ struct buffer
     VkBuffer vk_handle;
     VmaAllocation allocation = VK_NULL_HANDLE;
     VkDeviceAddress device_address;
-    void* mapped_data = nullptr;
+    uint8_t* mapped_data = nullptr;
     buffer_description description;
 };
 } // namespace vk

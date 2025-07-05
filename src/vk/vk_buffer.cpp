@@ -35,10 +35,10 @@ buffer* context::create_buffer(const buffer_description& description)
     buffer_device_address_info.buffer = vk_buffer;
     VkDeviceAddress device_address = vkGetBufferDeviceAddress(device, &buffer_device_address_info);
 
-    void* mapped_data = nullptr;
+    uint8_t* mapped_data = nullptr;
     if (host_accessible)
     {
-        vmaMapMemory(vma_allocator, allocation, &mapped_data);
+        vmaMapMemory(vma_allocator, allocation, (void**)&mapped_data);
     }
 
     if (description.name)

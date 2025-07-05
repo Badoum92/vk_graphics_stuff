@@ -201,6 +201,8 @@ static void create_device(context* context)
     VkPhysicalDeviceFeatures2 vulkan2_features = {};
     vulkan2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
     vulkan2_features.features.shaderInt64 = true;
+    vulkan2_features.features.fillModeNonSolid = true;
+    vulkan2_features.features.wideLines = true;
 
     VkPhysicalDeviceVulkan12Features vulkan12_features = {};
     vulkan12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;

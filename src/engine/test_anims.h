@@ -8,9 +8,9 @@
 
 struct camera;
 
-struct test_renderer
+struct test_anims
 {
-    static test_renderer create(vk::context* _context, uint32_t _width, uint32_t _height);
+    static test_anims create(vk::context* _context, uint32_t _width, uint32_t _height);
     void destroy();
 
     void resize(uint32_t _width, uint32_t _height);
@@ -29,8 +29,6 @@ struct test_renderer
     vk::image* depth;
 
     imgui_texture render_target;
-
-    float y_rotation_deg;
 
     vk::context* context;
 };

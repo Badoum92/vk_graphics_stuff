@@ -34,7 +34,7 @@ thread thread_create(const char* name, thread_function function, void* arg)
     ASSERT(thread_handle != INVALID_HANDLE_VALUE);
 
     wchar_t wname[64] = {0};
-    mbstowcs(wname, name, math_min(ARRAY_SIZE(wname), strlen(name)));
+    mbstowcs(wname, name, MIN(ARRAY_SIZE(wname), strlen(name)));
     SetThreadDescription(thread_handle, wname);
 
     return {thread_handle};

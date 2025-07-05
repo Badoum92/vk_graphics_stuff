@@ -186,7 +186,7 @@ void command_buffer::barrier(image* image, const image_usage& dst_usage)
 {
     image_access src_access = get_src_image_access(image->usage);
     image_access dst_access = get_dst_image_access(dst_usage);
-    auto barrier = get_image_barrier(image, src_access, dst_access);
+    VkImageMemoryBarrier barrier = get_image_barrier(image, src_access, dst_access);
     vkCmdPipelineBarrier(vk_handle, src_access.stage, dst_access.stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     image->usage = dst_usage;
 }

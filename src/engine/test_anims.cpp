@@ -1,4 +1,4 @@
-#include "test_renderer.h"
+#include "test_anims.h"
 
 #include "camera.h"
 
@@ -7,11 +7,13 @@
 #include "vk/vk_buffer.h"
 
 #include "core/math/math.h"
+#include "core/math/transform.h"
 #include "core/log.h"
 #include "core/time.h"
 
 #include "ufbx/ufbx.h"
 
+#include "debug_draw.h"
 #include "imgui.h"
 
 struct push_constant
@@ -33,125 +35,25 @@ struct uniform_buffer_data
     mat4f view_proj;
 };
 
-test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint32_t _height)
+test_anims test_anims::create(vk::context* _context, uint32_t _width, uint32_t _height)
 {
-    test_renderer test_renderer;
+    test_anims test_anims = {};
+    test_anims.context = _context;
 
-    test_renderer.width = _width;
-    test_renderer.height = _height;
-    test_renderer.context = _context;
+    test_anims.resize(_width, _height);
+    test_anims.reload_shaders();
 
-    test_renderer.vertex_shader = _context->create_shader("shaders/spv/test_triangle.vert");
-    test_renderer.fragment_shader = _context->create_shader("shaders/spv/test_triangle.frag");
-
-    vk::image* swapchain_image = _context->surface.images[0];
-
-    vk::graphics_pipeline_description pipeline_desc = {};
-    pipeline_desc.vertex_shader = test_renderer.vertex_shader;
-    pipeline_desc.fragment_shader = test_renderer.fragment_shader;
-    pipeline_desc.color_formats[pipeline_desc.num_color_formats++] = swapchain_image->full_view.format;
-    pipeline_desc.depth_format = VK_FORMAT_D32_SFLOAT;
-    pipeline_desc.push_constant_size = sizeof(push_constant);
-    pipeline_desc.name = "test pipeline";
-    test_renderer.graphics_pipeline = _context->create_graphics_pipeline(pipeline_desc);
-
-    /*uint32_t indices[] = {
-        0,  3,  2,  2,  1,  0,  4,  5,  6,  6,  7,  4,  11, 8,  9,  9,  10, 11,
-        12, 13, 14, 14, 15, 12, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20,
-    };
-    vertex vertices[] = {
-        {{-0.5f, -0.5f, -0.5f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, -0.5f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, -0.5f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, -0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.5f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, 0.5f, -0.5f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
-        {{-0.5f, -0.5f, -0.5f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-        {{-0.5f, -0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-        {{0.5f, -0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0.5f, -0.5f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-        {{0.5f, -0.5f, 0.5f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-        {{-0.5f, -0.5f, -0.5f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, -0.5f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.5f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, -0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-        {{0.5f, 0.5f, -0.5f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{-0.5f, 0.5f, -0.5f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 0.0f}},
-        {{-0.5f, 0.5f, 0.5f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-        {{0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-    };
-
-    vk::buffer_description buffer_description = {};
-    buffer_description.size = sizeof(uniform_buffer_data);
-    buffer_description.usage = vk::uniform_buffer_usage;
-    buffer_description.name = "uniform buffer";
-    test_renderer.uniform_buffer_handle = _context->create_buffer(buffer_description);
-
-    buffer_description.size = sizeof(indices);
-    buffer_description.usage = vk::index_buffer_usage;
-    buffer_description.name = "index buffer";
-    test_renderer.index_buffer_handle = _context->create_buffer(buffer_description);
-
-    buffer_description.size = sizeof(vertices);
-    buffer_description.usage = vk::storage_buffer_usage;
-    buffer_description.name = "vertex buffer";
-    test_renderer.vertex_buffer_handle = _context->create_buffer(buffer_description);
-
-    buffer_description.size = sizeof(indices);
-    buffer_description.usage = vk::transfer_buffer_usage;
-    buffer_description.name = "staging buffer";
-    vk::buffer* index_staging_buffer = _context->create_buffer(buffer_description);
-
-    buffer_description.size = sizeof(vertices);
-    buffer_description.usage = vk::transfer_buffer_usage;
-    buffer_description.name = "staging buffer";
-    vk::buffer* vertex_staging_buffer = _context->create_buffer(buffer_description);
-
-    vk::image_description image_description = {};
-    image_description.width = width;
-    image_description.height = height;
-    image_description.format = VK_FORMAT_D32_SFLOAT;
-    image_description.usage = vk::image_usage_depth_attachment;
-    image_description.name = "depth image";
-    test_renderer.depth_handle = _context->create_image(image_description);
-
-    vk::command_buffer* cmd = _context->transfer_commands.get_command_buffer();
-    cmd->upload_buffer(test_renderer.index_buffer_handle, index_staging_buffer, indices, sizeof(indices));
-    cmd->upload_buffer(test_renderer.vertex_buffer_handle, vertex_staging_buffer, vertices, sizeof(vertices));
-    cmd->barrier(test_renderer.depth_handle, vk::image_usage::depth_attachment);
-    _context->submit(cmd);
-    _context->wait_idle();
-    _context->destroy_buffer(index_staging_buffer);
-    _context->destroy_buffer(vertex_staging_buffer);*/
-
-    ufbx_load_opts opts = {}; // Optional, pass NULL for defaults
-    ufbx_error error; // Optional, pass NULL if you don't care about errors
-    // ufbx_scene* scene = ufbx_load_file("resources/cube.fbx", &opts, &error);
-    ufbx_scene* scene = ufbx_load_file("resources/sponza.fbx", &opts, &error);
-    if (!scene)
-    {
-        fprintf(stderr, "Failed to load: %s\n", error.description.data);
-        exit(1);
-    }
-
-    // Use and inspect `scene`, it's just plain data!
+    ufbx_load_opts opts = {};
+    ufbx_error error;
+    ufbx_scene* scene = ufbx_load_file("resources/adventurer.fbx", &opts, &error);
+    ASSERT(scene, "Failed to load fbx: %s", error.description.data);
 
     // Let's just list all objects within the scene for example:
     for (uint32_t i = 0; i < scene->nodes.count; i++)
     {
         ufbx_node* node = scene->nodes.data[i];
-        if (node->is_root)
+        if (node->is_root || !node->mesh)
             continue;
-
-        if (!node->mesh)
-        {
-            continue;
-        }
 
         ufbx_mesh* mesh = node->mesh;
 
@@ -163,19 +65,8 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
         for (uint32_t pi = 0; pi < mesh->material_parts.count; pi++)
         {
             ufbx_mesh_part* part = &mesh->material_parts.data[pi];
-            if (part->num_triangles == 0)
-                continue;
             max_triangles = MAX(max_triangles, part->num_triangles);
         }
-
-        /* for (uint32_t j = 0; j < mesh->materials.count; ++j)
-        {
-            ufbx_material* material = mesh->materials[j];
-            for (uint32_t k = 0; k < material->textures.count; ++k)
-            {
-                ufbx_texture* texture = material->textures[k].texture;
-            }
-        } */
 
         size_t num_tri_indices = mesh->max_face_triangles * 3;
         uint32_t* tri_indices = (uint32_t*)malloc(num_tri_indices * sizeof(uint32_t));
@@ -230,14 +121,13 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
             buffer_description.size = num_indices * sizeof(uint32_t);
             buffer_description.usage = vk::index_buffer_usage;
             buffer_description.name = "index buffer";
-            vk::buffer* index_buffer =
-                test_renderer.index_buffers.push_back(_context->create_buffer(buffer_description));
+            vk::buffer* index_buffer = test_anims.index_buffers.push_back(_context->create_buffer(buffer_description));
 
             buffer_description.size = num_vertices * sizeof(vertex);
             buffer_description.usage = vk::storage_buffer_usage;
             buffer_description.name = "vertex buffer";
             vk::buffer* vertex_buffer =
-                test_renderer.vertex_buffers.push_back(_context->create_buffer(buffer_description));
+                test_anims.vertex_buffers.push_back(_context->create_buffer(buffer_description));
 
             buffer_description.size = num_indices * sizeof(uint32_t);
             buffer_description.usage = vk::transfer_buffer_usage;
@@ -265,41 +155,22 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
     buffer_description.size = sizeof(uniform_buffer_data);
     buffer_description.usage = vk::uniform_buffer_usage;
     buffer_description.name = "uniform buffer";
-    test_renderer.uniform_buffer = _context->create_buffer(buffer_description);
-
-    vk::image_description image_description = {};
-    image_description.width = test_renderer.width;
-    image_description.height = test_renderer.height;
-    image_description.format = VK_FORMAT_D32_SFLOAT;
-    image_description.usage = vk::image_usage_depth_attachment;
-    image_description.name = "depth image";
-    test_renderer.depth = _context->create_image(image_description);
-
-    image_description.format = _context->surface.images[0]->description.format;
-    image_description.usage = vk::image_usage_color_attachment;
-    image_description.name = "imgui render target";
-    test_renderer.render_target.image = _context->create_image(image_description);
-    test_renderer.render_target.sampler = _context->default_sampler;
-    imgui_add_texture(&test_renderer.render_target);
+    test_anims.uniform_buffer = _context->create_buffer(buffer_description);
 
     vk::command_buffer* cmd = _context->transfer_commands.get_command_buffer();
-    cmd->barrier(test_renderer.depth, vk::image_usage::depth_attachment);
+    cmd->barrier(test_anims.depth, vk::image_usage::depth_attachment);
     _context->submit(cmd);
     _context->wait_idle();
 
-    test_renderer.y_rotation_deg = 0;
-
-    return test_renderer;
+    return test_anims;
 }
 
-void test_renderer::destroy()
+void test_anims::destroy()
 {
     context->destroy_graphics_pipeline(graphics_pipeline);
     context->destroy_shader(fragment_shader);
     context->destroy_shader(vertex_shader);
     context->destroy_buffer(uniform_buffer);
-    // context->destroy_buffer(index_buffer);
-    // context->destroy_buffer(vertex_buffer);
     for (vk::buffer* buffer : index_buffers)
     {
         context->destroy_buffer(buffer);
@@ -313,14 +184,20 @@ void test_renderer::destroy()
     context->destroy_image(render_target.image);
 }
 
-void test_renderer::resize(uint32_t _width, uint32_t _height)
+void test_anims::resize(uint32_t _width, uint32_t _height)
 {
     if (_width == width && _height == height)
     {
         return;
     }
 
-    context->wait_idle();
+    if (depth)
+    {
+        context->wait_idle();
+        context->destroy_image(depth);
+        imgui_remove_texture(&render_target);
+        context->destroy_image(render_target.image);
+    }
 
     width = _width;
     height = _height;
@@ -331,27 +208,28 @@ void test_renderer::resize(uint32_t _width, uint32_t _height)
     image_description.format = VK_FORMAT_D32_SFLOAT;
     image_description.usage = vk::image_usage_depth_attachment;
     image_description.name = "depth image";
-    context->destroy_image(depth);
     depth = context->create_image(image_description);
 
     image_description.format = context->surface.images[0]->description.format;
     image_description.usage = vk::image_usage_color_attachment;
     image_description.name = "imgui render target";
-    imgui_remove_texture(&render_target);
-    context->destroy_image(render_target.image);
     render_target.image = context->create_image(image_description);
+    render_target.sampler = context->default_sampler;
     imgui_add_texture(&render_target);
 }
 
-void test_renderer::reload_shaders()
+void test_anims::reload_shaders()
 {
-    context->wait_idle();
-    context->destroy_graphics_pipeline(graphics_pipeline);
-    context->destroy_shader(vertex_shader);
-    context->destroy_shader(fragment_shader);
+    if (graphics_pipeline)
+    {
+        context->wait_idle();
+        context->destroy_graphics_pipeline(graphics_pipeline);
+        context->destroy_shader(vertex_shader);
+        context->destroy_shader(fragment_shader);
+    }
 
-    vertex_shader = context->create_shader("shaders/spv/test_triangle.vert");
-    fragment_shader = context->create_shader("shaders/spv/test_triangle.frag");
+    vertex_shader = context->create_shader("shaders/spv/test_anims.vert");
+    fragment_shader = context->create_shader("shaders/spv/test_anims.frag");
 
     vk::image* swapchain_image = context->surface.images[0];
 
@@ -365,14 +243,16 @@ void test_renderer::reload_shaders()
     graphics_pipeline = context->create_graphics_pipeline(pipeline_desc);
 }
 
-void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
+void test_anims::draw(vk::frame_context* frame_context, camera* camera)
 {
     vk::command_buffer* command_buffer = frame_context->command_buffer;
 
-    // y_rotation_deg += 36 * delta_time;
+    transform t = transform_identity();
+    t.scale = {1, 1, 2};
+    mat4f m = transform_to_matrix(t);
 
     uniform_buffer_data uniform_buffer_data = {};
-    uniform_buffer_data.view_proj = camera->proj * camera->view * mat4_rotation_y(RADIANS(y_rotation_deg));
+    uniform_buffer_data.view_proj = camera->proj * camera->view * m;
     memcpy(uniform_buffer->mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
 
     VkRect2D scissor = {};
@@ -409,6 +289,11 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
     }
 
     command_buffer->end_rendering();
+
+    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, {100.0f, 0.0f, 0.0f}, COLOR_X);
+    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, {0.0f, 100.0f, 0.0f}, COLOR_Y);
+    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 100.0f}, COLOR_Z);
+    debug_draw_render(context, command_buffer, render_target.image, camera);
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read);
 }
