@@ -287,8 +287,6 @@ test_renderer test_renderer::create(vk::context* _context, uint32_t _width, uint
     _context->submit(cmd);
     _context->wait_idle();
 
-    test_renderer.y_rotation_deg = 0;
-
     return test_renderer;
 }
 
@@ -369,22 +367,21 @@ void test_renderer::draw(vk::frame_context* frame_context, camera* camera)
 {
     vk::command_buffer* command_buffer = frame_context->command_buffer;
 
-    // y_rotation_deg += 36 * delta_time;
-
     uniform_buffer_data uniform_buffer_data = {};
-    uniform_buffer_data.view_proj = camera->proj * camera->view * mat4_rotation_y(RADIANS(y_rotation_deg));
+    uniform_buffer_data.view_proj = camera->view_proj;
     memcpy(uniform_buffer->mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
 
     VkRect2D scissor = {};
     scissor.offset = {0, 0};
-    scissor.extent = {width, height};
+    // scissor.extent = {width, height};
+    scissor.extent = {render_target.image->description.width, render_target.image->description.height};
     command_buffer->set_scissor(scissor);
 
     VkViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = (float)width;
-    viewport.height = (float)height;
+    viewport.width = (float)render_target.image->description.width;
+    viewport.height = (float)render_target.image->description.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     command_buffer->set_viewport(viewport);

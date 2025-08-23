@@ -18,8 +18,8 @@
 
 struct push_constant
 {
+    mat4f view_proj;
     VkDeviceAddress vertex_buffer;
-    VkDeviceAddress uniform_buffer;
 };
 
 struct vertex
@@ -31,9 +31,7 @@ struct vertex
 };
 
 struct uniform_buffer_data
-{
-    mat4f view_proj;
-};
+{};
 
 test_anims test_anims::create(vk::context* _context, uint32_t _width, uint32_t _height)
 {
@@ -247,14 +245,6 @@ void test_anims::draw(vk::frame_context* frame_context, camera* camera)
 {
     vk::command_buffer* command_buffer = frame_context->command_buffer;
 
-    transform t = transform_identity();
-    t.scale = {1, 1, 2};
-    mat4f m = transform_to_matrix(t);
-
-    uniform_buffer_data uniform_buffer_data = {};
-    uniform_buffer_data.view_proj = camera->proj * camera->view * m;
-    memcpy(uniform_buffer->mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
-
     VkRect2D scissor = {};
     scissor.offset = {0, 0};
     scissor.extent = {width, height};
@@ -277,11 +267,11 @@ void test_anims::draw(vk::frame_context* frame_context, camera* camera)
     command_buffer->bind_graphics_pipeline(graphics_pipeline, graphics_state);
     command_buffer->bind_descriptor_buffer(graphics_pipeline);
 
+    push_constant push_constant;
+    push_constant.view_proj = camera->view_proj;
     for (uint32_t i = 0; i < index_buffers.size; ++i)
     {
-        push_constant push_constant;
         push_constant.vertex_buffer = vertex_buffers[i]->device_address;
-        push_constant.uniform_buffer = uniform_buffer->device_address;
         command_buffer->push_constant(graphics_pipeline, &push_constant, sizeof(push_constant));
 
         command_buffer->bind_index_buffer(index_buffers[i]);
@@ -290,10 +280,37 @@ void test_anims::draw(vk::frame_context* frame_context, camera* camera)
 
     command_buffer->end_rendering();
 
-    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, {100.0f, 0.0f, 0.0f}, COLOR_X);
-    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, {0.0f, 100.0f, 0.0f}, COLOR_Y);
-    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 100.0f}, COLOR_Z);
-    debug_draw_render(context, command_buffer, render_target.image, camera);
+    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, WORLD_RIGHT * 100.0f, COLOR_X);
+    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, WORLD_UP * 100.0f, COLOR_Y);
+    debug_draw_line_3d({0.0f, 0.0f, 0.0f}, WORLD_FORWARD * 100.0f, COLOR_Z);
+
+    vec3f o3 = camera->position + camera->forward;
+    vec3f xp3 = o3 + WORLD_RIGHT * 0.05f;
+    vec3f yp3 = o3 + WORLD_UP * 0.05f;
+    vec3f zp3 = o3 + WORLD_FORWARD * 0.05f;
+    vec3f xn3 = o3 - WORLD_RIGHT * 0.05f;
+    vec3f yn3 = o3 - WORLD_UP * 0.05f;
+    vec3f zn3 = o3 - WORLD_FORWARD * 0.05f;
+    vec3f o2 = camera_world_to_screen(camera, o3, {width, height}) + vec3f{width * 0.5f, height * 0.5f, 0.0f} - 50.0f;
+    vec3f xp2 = camera_world_to_screen(camera, xp3, {width, height}) + vec3f{width * 0.5f, height * 0.5f, 0.0f} - 50.0f;
+    vec3f yp2 = camera_world_to_screen(camera, yp3, {width, height}) + vec3f{width * 0.5f, height * 0.5f, 0.0f} - 50.0f;
+    vec3f zp2 = camera_world_to_screen(camera, zp3, {width, height}) + vec3f{width * 0.5f, height * 0.5f, 0.0f} - 50.0f;
+    vec3f xn2 = camera_world_to_screen(camera, xn3, {width, height}) + vec3f{width * 0.5f, height * 0.5f, 0.0f} - 50.0f;
+    vec3f yn2 = camera_world_to_screen(camera, yn3, {width, height}) + vec3f{width * 0.5f, height * 0.5f, 0.0f} - 50.0f;
+    vec3f zn2 = camera_world_to_screen(camera, zn3, {width, height}) + vec3f{width * 0.5f, height * 0.5f, 0.0f} - 50.0f;
+
+    float size = 4;
+    debug_draw_line_2d(o2, xp2, COLOR_X);
+    debug_draw_line_2d(o2, yp2, COLOR_Y);
+    debug_draw_line_2d(o2, zp2, COLOR_Z);
+    debug_draw_aabox_2d_full(xp2 - size, xp2 + size, COLOR_X);
+    debug_draw_aabox_2d_full(yp2 - size, yp2 + size, COLOR_Y);
+    debug_draw_aabox_2d_full(zp2 - size, zp2 + size, COLOR_Z);
+    debug_draw_aabox_2d_wire(xn2 - size, xn2 + size, COLOR_X);
+    debug_draw_aabox_2d_wire(yn2 - size, yn2 + size, COLOR_Y);
+    debug_draw_aabox_2d_wire(zn2 - size, zn2 + size, COLOR_Z);
+
+    debug_draw_render(camera, context, command_buffer, render_target.image, depth);
 
     command_buffer->barrier(render_target.image, vk::image_usage::compute_shader_read);
 }

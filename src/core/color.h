@@ -25,6 +25,15 @@ static_assert(sizeof(color) == sizeof(uint32_t));
 #pragma warning(pop)
 #endif
 
+inline color operator*(color color, float f)
+{
+    color.r = uint8_t(color.r * f);
+    color.g = uint8_t(color.g * f);
+    color.b = uint8_t(color.b * f);
+    color.a = uint8_t(color.a * f);
+    return color;
+}
+
 constexpr color COLOR_WHITE = {.r = 255, .g = 255, .b = 255, .a = 255};
 constexpr color COLOR_BLACK = {.r = 0, .g = 0, .b = 0, .a = 255};
 constexpr color COLOR_X = {.r = 246, .g = 54, .b = 82, .a = 255};

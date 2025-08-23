@@ -60,11 +60,6 @@ struct mat4f
         }
     }
 
-    bool operator==(const mat4f& other) const
-    {
-        return memcmp(data, other.data, 16 * sizeof(float)) == 0;
-    }
-
     vec4f& operator[](uint32_t i)
     {
         ASSERT(i < 4);
@@ -77,6 +72,11 @@ struct mat4f
         return ((vec4f*)data)[i];
     }
 };
+
+inline bool operator==(const mat4f& a, const mat4f& b)
+{
+    return memcmp(&a, &b, sizeof(mat4f)) == 0;
+}
 
 inline mat4f operator+(const mat4f& a, const mat4f& b)
 {
@@ -116,21 +116,36 @@ inline mat4f operator*(const mat4f& a, const mat4f& b)
     return c;
 }
 
-inline mat4f operator*(const mat4f& a, float f)
+inline mat4f operator*(const mat4f& m, float f)
 {
-    mat4f ret = a;
+    mat4f ret = m;
     ret *= f;
     return ret;
 }
 
-inline vec4f operator*(const mat4f& a, const vec4f& v)
+inline vec4f operator*(const mat4f& m, const vec4f& v)
+{
+    vec4f ret;
+    __m128 vx = _mm_load_ps1(&v.x);
+    __m128 vy = _mm_load_ps1(&v.y);
+    __m128 vz = _mm_load_ps1(&v.z);
+    __m128 vw = _mm_load_ps1(&v.w);
+    __m128 m0 = _mm_mul_ps(_mm_loadu_ps(&m.data[0 * 4]), vx);
+    __m128 m1 = _mm_mul_ps(_mm_loadu_ps(&m.data[1 * 4]), vy);
+    __m128 m2 = _mm_mul_ps(_mm_loadu_ps(&m.data[2 * 4]), vz);
+    __m128 m3 = _mm_mul_ps(_mm_loadu_ps(&m.data[3 * 4]), vw);
+    _mm_storeu_ps(&ret.x, _mm_add_ps(_mm_add_ps(m0, m1), _mm_add_ps(m2, m3)));
+    return ret;
+}
+
+inline vec4f operator*(const vec4f& v, const mat4f& m)
 {
     vec4f ret;
     __m128 _v = _mm_loadu_ps(&v.x);
-    __m128 _a = _mm_mul_ps(_mm_loadu_ps(&a.data[0 * 4]), _v);
-    __m128 _b = _mm_mul_ps(_mm_loadu_ps(&a.data[1 * 4]), _v);
-    __m128 _c = _mm_mul_ps(_mm_loadu_ps(&a.data[2 * 4]), _v);
-    __m128 _d = _mm_mul_ps(_mm_loadu_ps(&a.data[3 * 4]), _v);
+    __m128 _a = _mm_mul_ps(_mm_loadu_ps(&m.data[0 * 4]), _v);
+    __m128 _b = _mm_mul_ps(_mm_loadu_ps(&m.data[1 * 4]), _v);
+    __m128 _c = _mm_mul_ps(_mm_loadu_ps(&m.data[2 * 4]), _v);
+    __m128 _d = _mm_mul_ps(_mm_loadu_ps(&m.data[3 * 4]), _v);
     _mm_storeu_ps(&ret.x, _mm_hadd_ps(_mm_hadd_ps(_a, _b), _mm_hadd_ps(_c, _d)));
     return ret;
 }

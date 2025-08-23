@@ -217,7 +217,7 @@ int main(int, char**)
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
         ImGui::SetNextWindowClass(&viewport_window_class);
-        ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar);
+        ImGui::Begin("Viewport", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar);
         ImVec2 window_size = ImGui::GetWindowContentRegionMax() - ImGui::GetWindowContentRegionMin();
         uint32_t window_width = (uint32_t)window_size.x;
         uint32_t window_height = (uint32_t)window_size.y;
@@ -237,6 +237,9 @@ int main(int, char**)
 
         if (ImGui::Begin("Debug"))
         {
+            vec3f p = camera_world_to_screen(&camera, {2, 2, 2}, {window_width, window_height});
+            ImGui::Text("%g %g", p.x, p.y);
+
             if (ImGui::Button("Reload shaders")
                 || ImGui::IsKeyChordPressed(ImGuiKey_ModCtrl | ImGuiKey_ModShift | ImGuiKey_R))
             {

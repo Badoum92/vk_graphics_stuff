@@ -2,7 +2,6 @@
 #include "raytrace.glsl"
 
 // #define DEBUG_STEPS 400.0f
-#extension GL_EXT_debug_printf : enable
 
 #define MATL_DIFFUSE  0
 #define MATL_METAL    1
@@ -320,9 +319,10 @@ void main()
 
     vec4 old_color = imageLoad(image2D_rgba8[accumulator_index], ivec2(uv));
     vec4 new_color = vec4(ray_color(r, rng), 1);
-    new_color = mix(old_color, new_color, 1.0f / float(frame_acc + 1));
+    new_color += old_color * float(frame_acc > 0);
     imageStore(image2D_rgba8[accumulator_index], ivec2(uv), new_color);
-    new_color.rgb = new_color.rgb * 0.5f;
+    new_color /= float(frame_acc + 1);
+    new_color.rgb *= 0.5f;
     new_color.rgb = ACES_tone_mapping(new_color.rgb);
     new_color.rgb = linear_to_srgb(new_color.rgb);
     imageStore(image2D_rgba8[output_image], ivec2(uv), new_color);

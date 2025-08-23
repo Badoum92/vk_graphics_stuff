@@ -5,6 +5,9 @@
 
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_debug_printf : enable
+
+#define printf debugPrintfEXT
 
 layout(set = 0, binding = 0) uniform sampler2D tex2D[];
 layout(set = 0, binding = 0) uniform sampler3D tex3D[];

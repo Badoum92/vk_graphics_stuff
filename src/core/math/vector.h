@@ -69,6 +69,11 @@ struct vec3
     T y;
     T z;
 
+    constexpr operator vec2<T>() const
+    {
+        return vec2<T>{x, y};
+    }
+
     constexpr void operator*=(T val)
     {
         x *= val;
@@ -198,6 +203,18 @@ struct vec4
 };
 
 template <typename T>
+constexpr vec2<T> operator+(const vec2<T>& v, float f)
+{
+    return {v.x + f, v.y + f};
+}
+
+template <typename T>
+constexpr vec2<T> operator-(const vec2<T>& v, float f)
+{
+    return {v.x - f, v.y - f};
+}
+
+template <typename T>
 constexpr vec2<T> operator*(const vec2<T>& v, T val)
 {
     return {v.x * val, v.y * val};
@@ -234,6 +251,18 @@ constexpr vec2<T> operator/(const vec2<T>& a, const vec2<T>& b)
 }
 
 template <typename T>
+constexpr vec3<T> operator+(const vec3<T>& v, float f)
+{
+    return {v.x + f, v.y + f, v.z + f};
+}
+
+template <typename T>
+constexpr vec3<T> operator-(const vec3<T>& v, float f)
+{
+    return {v.x - f, v.y - f, v.z - f};
+}
+
+template <typename T>
 constexpr vec3<T> operator*(const vec3<T>& v, T val)
 {
     return {v.x * val, v.y * val, v.z * val};
@@ -267,6 +296,18 @@ template <typename T>
 constexpr vec3<T> operator/(const vec3<T>& a, const vec3<T>& b)
 {
     return {a.x / b.x, a.y / b.y, a.z / b.z};
+}
+
+template <typename T>
+constexpr vec4<T> operator+(const vec4<T>& v, float f)
+{
+    return {v.x + f, v.y + f, v.z + f, v.w + f};
+}
+
+template <typename T>
+constexpr vec4<T> operator-(const vec4<T>& v, float f)
+{
+    return {v.x - f, v.y - f, v.z - f, v.w - f};
 }
 
 template <typename T>

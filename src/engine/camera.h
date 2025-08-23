@@ -30,8 +30,11 @@ struct camera
     mat4f inv_view;
     mat4f proj;
     mat4f inv_proj;
+    mat4f view_proj;
+    mat4f inv_view_proj;
 };
 
 camera camera_create();
 void camera_compute_view_proj(camera* camera);
 void camera_rotate(camera* camera, vec3f angles);
+vec3f camera_world_to_screen(camera const* camera, vec3f point, vec2u resolution);

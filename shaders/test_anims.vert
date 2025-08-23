@@ -13,15 +13,10 @@ BUFFER(vertex_buffer)
     vertex vertices[];
 };
 
-BUFFER(uniform_buffer)
-{
-    mat4 mvp;
-};
-
 PUSH_CONSTANT(push_constant)
 {
+    mat4 mvp;
     vertex_buffer vb;
-    uniform_buffer ubo;
 };
 
 OUTPUT(0, vec4 out_normal);
@@ -31,5 +26,5 @@ void main()
 {
     out_normal = vb.vertices[VERTEX_INDEX].normal;
     out_uv = vb.vertices[VERTEX_INDEX].uv;
-    gl_Position = ubo.mvp * vb.vertices[VERTEX_INDEX].position;
+    gl_Position = mvp * vb.vertices[VERTEX_INDEX].position;
 }

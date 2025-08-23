@@ -27,11 +27,5 @@ void _assert(bool condition, const char* str, const char* file, unsigned line, c
         va_end(args);
     }
 
-#if defined(_WIN32)
-    char debug_output[1024];
-    snprintf(debug_output, sizeof(debug_output), "%s(%d): Assertion failed: %s\n", file, line, str);
-    OutputDebugStringA(debug_output);
-#endif
-
     __debugbreak();
 }

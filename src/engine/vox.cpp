@@ -192,7 +192,7 @@ bool vox_load(const char* path, vox* vox)
     void* end_of_data = data + size;
 
     vox_header* vox_header = parse_vox_header(&data);
-    if (strncmp(vox_header->magic, "VOX ", 4) != 0)
+    if (strncmp(vox_header->magic, "VOX ", 4) != 0 || vox_header->version != 150)
     {
         linear_free(allocator, data);
         return false;
@@ -205,8 +205,6 @@ bool vox_load(const char* path, vox* vox)
         return false;
     }
 
-    vox_model* current_model;
-
     vox->num_models = 1;
     chunk = parse_vox_chunk_header(&data);
     if (strncmp(chunk->id, "PACK", 4) == 0)
@@ -217,7 +215,7 @@ bool vox_load(const char* path, vox* vox)
     }
 
     vox->models = (vox_model*)malloc(vox->num_models * sizeof(*vox->models));
-    current_model = vox->models;
+    uint32_t current_model = 0;
 
     memset(vox->materials, 0, 256 * sizeof(vox_matl));
 
@@ -225,8 +223,8 @@ bool vox_load(const char* path, vox* vox)
     {
         if (strncmp(chunk->id, "SIZE", 4) == 0)
         {
-            parse_vox_model(&data, chunk, current_model);
-            current_model++;
+            ASSERT(current_model < vox->num_models);
+            parse_vox_model(&data, chunk, &vox->models[current_model++]);
         }
         else if (strncmp(chunk->id, "RGBA", 4) == 0)
         {

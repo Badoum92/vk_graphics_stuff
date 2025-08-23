@@ -14,6 +14,7 @@ BUFFER(vertex_buffer)
 PUSH_CONSTANT(push_constant)
 {
     mat4 mvp;
+    uvec2 resolution;
     vertex_buffer vb;
 };
 

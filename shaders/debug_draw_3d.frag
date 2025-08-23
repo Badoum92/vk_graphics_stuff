@@ -14,13 +14,15 @@ BUFFER(vertex_buffer)
 PUSH_CONSTANT(push_constant)
 {
     mat4 mvp;
+    vec2 resolution;
     vertex_buffer vb;
 };
+
+INPUT(0, vec4 in_color);
 
 OUTPUT(0, vec4 out_color);
 
 void main()
 {
-    out_color = rgba_from_uint(vb.vertices[VERTEX_INDEX].color);
-    gl_Position = mvp * vec4(vb.vertices[VERTEX_INDEX].position, 1.0f);
+    out_color = in_color;
 }

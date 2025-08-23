@@ -15,9 +15,13 @@
 #include "vk/vk_buffer.h"
 #include "vk/vk_commands.h"
 
-static vk::shader* vertex_shader = nullptr;
-static vk::shader* fragment_shader = nullptr;
-static vk::graphics_pipeline* graphics_pipeline = nullptr;
+static vk::shader* vertex_shader_3d = nullptr;
+static vk::shader* fragment_shader_3d = nullptr;
+static vk::graphics_pipeline* pipeline_3d = nullptr;
+
+static vk::shader* vertex_shader_2d = nullptr;
+static vk::shader* fragment_shader_2d = nullptr;
+static vk::graphics_pipeline* pipeline_2d = nullptr;
 
 static vk::buffer* vertex_buffer = nullptr;
 static uint32_t max_num_vertices = 0;
@@ -30,43 +34,56 @@ struct debug_vertex
 
 static bul::vector<debug_vertex> lines_3d;
 static bul::vector<debug_vertex> triangles_3d;
+static bul::vector<debug_vertex> lines_2d;
+static bul::vector<debug_vertex> triangles_2d;
 static uint32_t line_width = 0;
 
 struct push_constant
 {
     mat4f view_proj;
+    vec2u resolution;
     VkDeviceAddress vertex_buffer;
 };
 
 void debug_draw_init(vk::context* vk_context)
 {
-    vertex_shader = vk_context->create_shader("shaders/spv/debug_draw.vert");
-    fragment_shader = vk_context->create_shader("shaders/spv/debug_draw.frag");
-
+    vertex_shader_3d = vk_context->create_shader("shaders/spv/debug_draw_3d.vert");
+    fragment_shader_3d = vk_context->create_shader("shaders/spv/debug_draw_3d.frag");
     vk::graphics_pipeline_description pipeline_desc = {};
-    pipeline_desc.vertex_shader = vertex_shader;
-    pipeline_desc.fragment_shader = fragment_shader;
+    pipeline_desc.vertex_shader = vertex_shader_3d;
+    pipeline_desc.fragment_shader = fragment_shader_3d;
     pipeline_desc.color_formats[pipeline_desc.num_color_formats++] = vk_context->surface.images[0]->full_view.format;
     pipeline_desc.depth_format = VK_FORMAT_D32_SFLOAT;
     pipeline_desc.push_constant_size = sizeof(push_constant);
-    pipeline_desc.name = "debug draw pipeline";
-    graphics_pipeline = vk_context->create_graphics_pipeline(pipeline_desc);
+    pipeline_desc.name = "debug draw pipeline 3d";
+    pipeline_3d = vk_context->create_graphics_pipeline(pipeline_desc);
+
+    vertex_shader_2d = vk_context->create_shader("shaders/spv/debug_draw_2d.vert");
+    fragment_shader_2d = vk_context->create_shader("shaders/spv/debug_draw_2d.frag");
+    pipeline_desc.vertex_shader = vertex_shader_2d;
+    pipeline_desc.fragment_shader = fragment_shader_2d;
+    pipeline_desc.name = "debug draw pipeline 2d";
+    pipeline_2d = vk_context->create_graphics_pipeline(pipeline_desc);
 }
 
 void debug_draw_shutdown(vk::context* vk_context)
 {
-    vk_context->destroy_shader(vertex_shader);
-    vk_context->destroy_shader(fragment_shader);
-    vk_context->destroy_graphics_pipeline(graphics_pipeline);
+    vk_context->destroy_shader(vertex_shader_3d);
+    vk_context->destroy_shader(fragment_shader_3d);
+    vk_context->destroy_graphics_pipeline(pipeline_3d);
+    vk_context->destroy_shader(vertex_shader_2d);
+    vk_context->destroy_shader(fragment_shader_2d);
+    vk_context->destroy_graphics_pipeline(pipeline_2d);
     if (vertex_buffer != nullptr)
     {
         vk_context->destroy_buffer(vertex_buffer);
     }
 }
 
-void debug_draw_render(vk::context* vk_context, vk::command_buffer* cmd, vk::image* render_target, camera* camera)
+void debug_draw_render(camera* camera, vk::context* vk_context, vk::command_buffer* cmd, vk::image* color,
+                       vk::image* depth)
 {
-    uint32_t num_vertices = lines_3d.size + triangles_3d.size;
+    uint32_t num_vertices = triangles_3d.size + lines_3d.size + triangles_2d.size + lines_2d.size;
 
     if (num_vertices > max_num_vertices)
     {
@@ -83,53 +100,104 @@ void debug_draw_render(vk::context* vk_context, vk::command_buffer* cmd, vk::ima
         vertex_buffer = vk_context->create_buffer(buffer_description);
     }
 
+    uint32_t offset = 0;
     memcpy(vertex_buffer->mapped_data, triangles_3d.data, triangles_3d.size_bytes());
-    memcpy(vertex_buffer->mapped_data + triangles_3d.size_bytes(), lines_3d.data, lines_3d.size_bytes());
+    offset += triangles_3d.size_bytes();
+    memcpy(vertex_buffer->mapped_data + offset, lines_3d.data, lines_3d.size_bytes());
+    offset += lines_3d.size_bytes();
+    memcpy(vertex_buffer->mapped_data + offset, triangles_2d.data, triangles_2d.size_bytes());
+    offset += triangles_2d.size_bytes();
+    memcpy(vertex_buffer->mapped_data + offset, lines_2d.data, lines_2d.size_bytes());
+    offset += lines_2d.size_bytes();
 
     VkRect2D scissor = {};
     scissor.offset = {0, 0};
-    scissor.extent = {render_target->description.width, render_target->description.height};
+    scissor.extent = {color->description.width, color->description.height};
     cmd->set_scissor(scissor);
 
     VkViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = (float)render_target->description.width;
-    viewport.height = (float)render_target->description.height;
+    viewport.width = (float)color->description.width;
+    viewport.height = (float)color->description.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     cmd->set_viewport(viewport);
 
-    cmd->barrier(render_target, vk::image_usage::color_attachment);
-    cmd->begin_rendering({{render_target}}, {{vk::load_op::load()}}, nullptr, vk::load_op::clear_depth());
-
+    cmd->barrier(color, vk::image_usage::color_attachment);
     push_constant push_constant;
-    push_constant.view_proj = camera->proj * camera->view;
+    push_constant.view_proj = camera->view_proj;
+    push_constant.resolution = {color->description.width, color->description.height};
     push_constant.vertex_buffer = vertex_buffer->device_address;
-    cmd->push_constant(graphics_pipeline, &push_constant, sizeof(push_constant));
+    offset = 0;
+    {
+        cmd->begin_rendering({{color}}, {{vk::load_op::load()}}, depth, vk::load_op::load());
+        cmd->push_constant(pipeline_3d, &push_constant, sizeof(push_constant));
 
-    vk::graphics_state graphics_state = vk::graphics_state::create();
+        vk::graphics_state graphics_state = vk::graphics_state::create();
 
-    graphics_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    graphics_state.cull_back_faces = true;
-    cmd->bind_graphics_pipeline(graphics_pipeline, graphics_state);
-    cmd->draw(triangles_3d.size, 0);
+        cmd->bind_graphics_pipeline(pipeline_3d, graphics_state);
+        cmd->draw(triangles_3d.size, offset);
+        offset += triangles_3d.size;
 
-    graphics_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-    graphics_state.line_width = line_width;
-    graphics_state.cull_back_faces = false;
-    cmd->bind_graphics_pipeline(graphics_pipeline, graphics_state);
-    cmd->draw(lines_3d.size, triangles_3d.size);
+        graphics_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        graphics_state.line_width = line_width;
+        graphics_state.cull_back_faces = false;
+        cmd->bind_graphics_pipeline(pipeline_3d, graphics_state);
+        cmd->draw(lines_3d.size, offset);
+        offset += lines_3d.size;
 
-    cmd->end_rendering();
+        graphics_state.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        graphics_state.depth_test_enabled = false;
+        graphics_state.depth_write_enabled = false;
+        graphics_state.depth_compare_op = VK_COMPARE_OP_ALWAYS;
+        cmd->bind_graphics_pipeline(pipeline_2d, graphics_state);
+        cmd->draw(triangles_2d.size, offset);
+        offset += triangles_2d.size;
 
+        graphics_state.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        cmd->bind_graphics_pipeline(pipeline_2d, graphics_state);
+        cmd->draw(lines_2d.size, offset);
+        offset += lines_2d.size;
+
+        cmd->end_rendering();
+    }
     lines_3d.clear();
     triangles_3d.clear();
+    lines_2d.clear();
+    triangles_2d.clear();
 }
 
 void debug_draw_set_line_width(uint32_t width)
 {
     line_width = CLAMP(width, 1, 4) - 1;
+}
+
+void debug_draw_line_2d(vec2f a, vec2f b, color color)
+{
+    lines_2d.push_back(debug_vertex{{a.x, a.y, 0}, color});
+    lines_2d.push_back(debug_vertex{{b.x, b.y, 0}, color});
+}
+
+void debug_draw_triangle_2d(vec2f a, vec2f b, vec2f c, color color)
+{
+    triangles_2d.push_back(debug_vertex{{a.x, a.y}, color});
+    triangles_2d.push_back(debug_vertex{{b.x, b.y}, color});
+    triangles_2d.push_back(debug_vertex{{c.x, c.y}, color});
+}
+
+void debug_draw_aabox_2d_full(vec2f min, vec2f max, color color)
+{
+    debug_draw_triangle_2d({min.x, min.y}, {max.x, min.y}, {max.x, max.y}, color);
+    debug_draw_triangle_2d({min.x, min.y}, {max.x, max.y}, {min.x, max.y}, color);
+}
+
+void debug_draw_aabox_2d_wire(vec2f min, vec2f max, color color)
+{
+    debug_draw_line_2d({min.x, min.y}, {max.x, min.y}, color);
+    debug_draw_line_2d({max.x, min.y}, {max.x, max.y}, color);
+    debug_draw_line_2d({max.x, max.y}, {min.x, max.y}, color);
+    debug_draw_line_2d({min.x, max.y}, {min.x, min.y}, color);
 }
 
 void debug_draw_line_3d(vec3f a, vec3f b, color color)
@@ -145,7 +213,7 @@ void debug_draw_triangle_3d(vec3f a, vec3f b, vec3f c, color color)
     triangles_3d.push_back(debug_vertex{c, color});
 }
 
-void debug_draw_aabb_wire(vec3f a, vec3f b, color color)
+void debug_draw_aabox_wire(vec3f a, vec3f b, color color)
 {
     // clang-format off
     vec3f v[8] = {
@@ -179,7 +247,7 @@ void debug_draw_aabb_wire(vec3f a, vec3f b, color color)
     debug_draw_line_3d(v[3], v[6], color);
 }
 
-void debug_draw_aabb_full(vec3f a, vec3f b, color color)
+void debug_draw_aabox_full(vec3f a, vec3f b, color color)
 {
     // clang-format off
     vec3f v[8] = {

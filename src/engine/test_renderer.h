@@ -30,7 +30,5 @@ struct test_renderer
 
     imgui_texture render_target;
 
-    float y_rotation_deg;
-
     vk::context* context;
 };

@@ -450,7 +450,6 @@ void context::submit(command_buffer* command_buffer, frame_context* frame_contex
 {
     command_buffer->end();
 
-#if 1
     VkSemaphoreSubmitInfo wait_semaphore_info = {};
     wait_semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
     wait_semaphore_info.semaphore = frame_context->image_acquired_semaphore;
@@ -478,19 +477,6 @@ void context::submit(command_buffer* command_buffer, frame_context* frame_contex
     submit_info.pCommandBufferInfos = &command_buffer_info;
 
     VK_CHECK(vkQueueSubmit2(command_buffer->vk_queue, 1, &submit_info, frame_context->rendering_finished_fence));
-#else
-    VkSubmitInfo submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &command_buffer->vk_handle;
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &frame_context->image_acquired_semaphore;
-    submit_info.pWaitDstStageMask = &command_buffer->wait_stage;
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &frame_context->rendering_finished_semaphore;
-
-    VK_CHECK(vkQueueSubmit(command_buffer->vk_queue, 1, &submit_info, frame_context->rendering_finished_fence));
-#endif
 }
 
 void context::set_vsync(bool _vsync)

@@ -244,7 +244,7 @@ void test_compute::draw(vk::frame_context* frame_context, camera* camera)
     vk::command_buffer* command_buffer = frame_context->command_buffer;
 
     uniform_buffer_data uniform_buffer_data = {};
-    uniform_buffer_data.inv_view_proj = mat4_inverse(camera->proj * camera->view);
+    uniform_buffer_data.inv_view_proj = camera->inv_view_proj;
     uniform_buffer_data.position = {camera->position.x, camera->position.y, camera->position.z, 0.0f};
     memcpy(uniform_buffer->mapped_data, &uniform_buffer_data, sizeof(uniform_buffer_data));
 
